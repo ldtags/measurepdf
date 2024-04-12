@@ -2,3 +2,9 @@
 .venv
 .vscode
 __pycache__
+
+
+# security
+config.ini
+
+minstack.py
