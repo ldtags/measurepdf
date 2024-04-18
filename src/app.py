@@ -4,9 +4,12 @@ import re
 import customtkinter as ctk
 from typing import Type, Callable
 from configparser import ConfigParser
+from reportlab.pdfgen.canvas import Canvas
 
 from src import _ROOT
 from src.etrm import ETRMConnection
+from src.etrm.models import Measure
+from src.measurepdf import MeasurePdf
 from src._exceptions import (
     UnauthorizedError,
     GUIError
@@ -33,6 +36,7 @@ class AppController(ctk.CTk):
         self.connection: ETRMConnection | None = None
         self.selected_measure: str | None = None
         self.selected_measures: list[str] = []
+        self._pdf: Canvas | None = None
 
         self.title('  eTRM Measure(s) to PDF')
         self.geometry(f'{width}x{height}')
@@ -84,19 +88,23 @@ class AppController(ctk.CTk):
         if self.connection != None:
             self.connection.close()
 
-    def run(self, run_mode: str='client'):
-        match run_mode:
-            case 'client':
-                self.show_frame(AuthFrame)
-            case 'dev':    
-                config = ConfigParser()
-                config.read(os.path.join(_ROOT, 'config.ini'))
-                self.connect(config['etrm']['type'] + ' ' + config['etrm']['token'])
-                frame: MainFrame = self.frames[MainFrame]
-                frame.add_measures()
-                self.show_frame(MainFrame)
-            case _:
-                raise GUIError(f'unknown run mode - {run_mode}')
+    def create_pdf(self):
+        self._pdf = MeasurePdf()
+        measure_objs: list[Measure] = []
+        for measure_id in self.selected_measures:
+            measure_objs.append(self.connection.get_measure(measure_id))
+
+        for measure in measure_objs:
+            self._pdf.add_measure(measure)
+
+    def run(self, auth_token: str | None=None):
+        if auth_token != None:
+            self.connect(auth_token)
+            frame: MainFrame = self.frames[MainFrame]
+            frame.add_measures()
+            self.show_frame(MainFrame)
+        else:
+            self.show_frame(AuthFrame)
 
         self.mainloop()
 
@@ -291,6 +299,7 @@ class MainFrame(Page):
         self.controller.show_frame(AuthFrame)
 
     def nav_results(self):
+        self.controller.create_pdf()
         self.controller.show_frame(ResultsFrame)
 
 
@@ -482,7 +491,6 @@ class SelectedMeasuresFrame(ctk.CTkScrollableFrame):
 
     def add_version(self, version: str):
         label = ctk.CTkLabel(self, text=version)
-        print(f'inserting {version} at row {len(self.item_list)}')
         self.place_item(label, len(self.item_list))
         self.item_list.append(label)
 
@@ -499,8 +507,7 @@ class SelectedMeasuresFrame(ctk.CTkScrollableFrame):
             return
 
         for i in range(version_index, len(self.item_list)):
-            item = self.item_list[i]
-            self.place_item(item, i)
+            self.place_item(self.item_list[i], i)
 
     def remove_versions(self, versions: list[str]):
         for version in versions:
@@ -522,6 +529,7 @@ class ResultsFrame(Page):
         super().__init__(parent, **kwargs)
 
         self.controller = controller
+        self._pdf: Canvas | None = None
 
     def show(self):
         pass

@@ -5,7 +5,8 @@ from typing import Self
 from .._exceptions import UnauthorizedError
 from .models import (
     MeasuresResponse,
-    MeasureVersionsResponse
+    MeasureVersionsResponse,
+    Measure
 )
 
 
@@ -36,6 +37,20 @@ class ETRMConnection:
 
     def __exit__(self, *args):
         self.close()
+
+    def get_measure(self, measure_id: str) -> Measure:
+        statewide_id, version_id = measure_id.split('-', 1)
+        headers = {
+            'Authorization': self.auth_token
+        }
+
+        response = requests.get(f'{self.api_url}/measures/{statewide_id}/{version_id}',
+                                headers=headers)
+
+        if response.status_code != 200:
+            raise UnauthorizedError()
+
+        return Measure(response.json())
 
     def get_measure_ids(self,
                         offset: int = 0,
