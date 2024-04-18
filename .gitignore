@@ -2,11 +2,9 @@
 .venv
 .vscode
 __pycache__
+summaries
+summaries/*
 
 
 # security
 config.ini
-
-
-# results
-summaries/*

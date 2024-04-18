@@ -88,7 +88,7 @@ class TableHeader(Paragraph):
 class MeasurePdf:
     def __init__(self,
                  file_name: str='measure_summary',
-                 relative_dir: str='summaries',
+                 relative_dir: str='',
                  pagesize: tuple[float, float]=A4,
                  override: bool=False):
         self.measures: list[Measure] = []
