@@ -5,7 +5,7 @@ from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.lib import colors
-from reportlab.lib.pagesizes import letter, inch
+from reportlab.lib.pagesizes import letter, A4, inch
 from reportlab.lib.styles import ParagraphStyle
 
 
@@ -87,11 +87,23 @@ class TableHeader(Paragraph):
 
 class MeasurePdf:
     def __init__(self,
-                 filename: str='measure_summary',
-                 pagesize: tuple[float, float]=letter):
+                 file_name: str='measure_summary',
+                 relative_dir: str='summaries',
+                 pagesize: tuple[float, float]=A4,
+                 override: bool=False):
         self.measures: list[Measure] = []
-        self.filename = filename + '.pdf'
-        self.canvas = Canvas(self.filename, pagesize=pagesize)
+        if not os.path.exists(os.path.join(_ROOT, '..', relative_dir)):
+            raise FileNotFoundError(f'no {relative_dir} folder exists')
+
+        self.relative_dir = relative_dir
+        self.file_name = file_name + '.pdf'
+        file_path = os.path.join(self.relative_dir, self.file_name)
+        if not override and os.path.exists(file_path):
+            raise FileExistsError(f'a file named {file_name} already exists'
+                                  f' in {relative_dir}')
+
+        self.file_path = file_path
+        self.canvas = Canvas(self.file_path, pagesize=pagesize)
         self.width, self.height = pagesize
         register_fonts()
 
@@ -106,7 +118,9 @@ class MeasurePdf:
         style = [
             ('GRID', (0, 0), (-1, -1), 1, colors.black)
         ]
-        Table(data, style=style)
+        details_table = Table(data, style=style)
+        details_table.wrapOn(self.canvas, self.width, self.height)
+        details_table.drawOn(self.canvas, 0, 200)
 
     def add_measure(self, measure: Measure):
         self.measures.append(measure)
@@ -115,7 +129,7 @@ class MeasurePdf:
 
     def reset(self):
         del self.canvas
-        self.canvas = Canvas(self.filename)
+        self.canvas = Canvas(self.file_name)
 
     def build(self) -> Canvas:
         self.canvas.save()

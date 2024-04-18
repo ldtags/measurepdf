@@ -2,13 +2,14 @@ import sys
 import os
 import argparse as ap
 
-from tests import measurepdf, _utils
+import measurepdf
+import utils
 
 
 MODULES = ['measurepdf', '_utils', 'etrm']
 UNIT_TEST = {
     'measurepdf': measurepdf.test,
-    '_utils': _utils.test
+    '_utils': utils.test
 }
 
 
@@ -23,15 +24,15 @@ def parse_args() -> ap.Namespace:
         type=str,
         help='specify the modules to unit test')
 
+    return parser.parse_args()
+
 
 if __name__ == '__main__':
+    sys.stdout.flush()
     args = parse_args()
-    unit_modules = getattr(args, 'unit_modules', None)
+    unit_modules = getattr(args, 'unit', None)
     if unit_modules != None:
-        if isinstance(unit_modules, str):
-            unit_modules = [unit_modules]
-
-        if not isinstance(unit_modules, list[str]):
+        if not isinstance(unit_modules, list):
             print('usage: main.py -m <module name> ...]', file=sys.stderr)
             sys.exit(os.EX_OK)
 
@@ -46,4 +47,3 @@ if __name__ == '__main__':
 
         for module in unit_modules:
             UNIT_TEST[module]()
-        

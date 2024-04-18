@@ -3,7 +3,7 @@ from typing import Any
 from src._exceptions import (
     ETRMResponseError
 )
-from src._utils import (
+from src.utils import (
     getc
 )
 

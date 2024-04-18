@@ -7,4 +7,6 @@ __pycache__
 # security
 config.ini
 
-minstack.py
+
+# results
+summaries/*
