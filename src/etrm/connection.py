@@ -70,7 +70,7 @@ class ETRMConnection:
                                 headers=headers)
 
         if response.status_code != 200:
-            raise UnauthorizedError()
+            raise UnauthorizedError(f'invalid auth token: {self.auth_token}')
 
         response_body = MeasuresResponse(response.json())
         return list(map(lambda result: extract_id(result.url),
