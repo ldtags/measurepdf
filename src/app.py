@@ -39,7 +39,7 @@ class AppController(ctk.CTk):
         self.offset = ctk.IntVar(self, 0)
         self.limit = ctk.IntVar(self, 25)
 
-        self.title('  eTRM Measure(s) to PDF')
+        self.title('  Measure Summary Generator')
         self.geometry(f'{width}x{height}')
 
         container = ctk.CTkFrame(self)
