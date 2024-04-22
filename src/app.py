@@ -1,12 +1,11 @@
 from abc import abstractmethod
-import os
 import re
+import tkinter as tk
 import customtkinter as ctk
 from typing import Type, Callable
-from configparser import ConfigParser
 from reportlab.pdfgen.canvas import Canvas
 
-from src import _ROOT
+import src.assets as assets
 from src.etrm import ETRMConnection
 from src.etrm.models import Measure
 from src.measurepdf import MeasurePdf
@@ -37,6 +36,8 @@ class AppController(ctk.CTk):
         self.selected_measure: str | None = None
         self.selected_measures: list[str] = []
         self._pdf: Canvas | None = None
+        self.offset = ctk.IntVar(self, 0)
+        self.limit = ctk.IntVar(self, 25)
 
         self.title('  eTRM Measure(s) to PDF')
         self.geometry(f'{width}x{height}')
@@ -59,11 +60,13 @@ class AppController(ctk.CTk):
     def set_measures(self, ids: list[str]):
         self.measure_ids = ids
 
-    def get_measures(self, offset: int = 0, limit: int = 25) -> list[str]:
+    def get_measures(self, offset: int | None=None, limit: int | None=None) -> list[str]:
         if self.connection == None:
             raise UnauthorizedError()
 
-        return self.connection.get_measure_ids(offset, limit)
+        _offset = self.offset.get() if offset == None else offset
+        _limit = self.limit.get() if limit == None else limit
+        return self.connection.get_measure_ids(_offset, _limit)
 
     def get_versions(self,
                      measure_id: str,
@@ -97,9 +100,21 @@ class AppController(ctk.CTk):
         for measure in measure_objs:
             self._pdf.add_measure(measure)
 
-    def run(self, auth_token: str | None=None):
-        if auth_token != None:
-            self.connect(auth_token)
+    def set_offset(self, offset: int=0):
+        self.offset.set(offset)
+
+    def increment_offset(self):
+        self.offset.set(self.offset.get() + self.limit.get())
+
+    def decrement_offset(self):
+        offset = self.offset.get() - self.limit.get()
+        if offset < 0:
+            offset = 0
+
+        self.offset.set(offset)
+
+    def run(self):
+        if self.connection != None:
             frame: MainFrame = self.frames[MainFrame]
             frame.add_measures()
             self.show_frame(MainFrame)
@@ -181,11 +196,19 @@ class AuthFrame(Page):
             self.auth_input.delete(0, ctk.END)
             self.auth_input.insert(0, self.controller.connection.auth_token)
 
+        self.err_label.destroy()
+
         self.tkraise()
+
+    def display_success(self):
+        self.err_label.grid(row=2, column=0, pady=(2, 2), padx=(15, 15))
+        self.err_label.configure(text='Success! Feching measures...',
+                                 text_color='green')
 
     def display_err(self, err_msg: str):
         self.err_label.grid(row=2, column=0, pady=(2, 2), padx=(15, 15))
-        self.err_label.configure(text=err_msg)
+        self.err_label.configure(text=err_msg,
+                                 text_color='red')
 
     def auth_btn_onclick(self):
         token_header = 'Token'
@@ -228,40 +251,32 @@ class MainFrame(Page):
         self.grid_rowconfigure((1), weight=1)
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
-        self.measure_list = MeasureListFrame(self, controller)
-        self.measure_list.grid(row=1,
+        self.measure_list = MeasureListFrame(self,
+                                             controller)
+        self.measure_list.grid(row=0,
+                               rowspan=3,
                                column=0,
-                               sticky=ctk.NSEW)
+                               sticky=ctk.NSEW,
+                               padx=(20, 20),
+                               pady=(20, 20))
 
-        self.measure_versions = MeasureVersionsFrame(self, controller)
-        self.measure_versions.grid(row=1,
+        self.measure_versions = MeasureVersionsFrame(self,
+                                                     controller,
+                                                     fg_color=self._fg_color)
+        self.measure_versions.grid(row=0,
+                                   rowspan=3,
                                    column=1,
-                                   sticky=ctk.NSEW)
+                                   sticky=ctk.NSEW,
+                                   padx=(20, 20),
+                                   pady=(20, 20))
 
-        self.back_btn = ctk.CTkButton(self,
-                                      text='Reset Auth Token',
-                                      command=self.nav_auth)
-        self.back_btn.grid(row=0,
-                           column=2,
-                           sticky=ctk.NSEW,
-                           padx=(10, 10),
-                           pady=(10, 10))
-
-        self.measures_selected = SelectedMeasuresFrame(self)
-        self.measures_selected.grid(row=1,
+        self.measures_selected = SelectedMeasuresFrame(self, controller)
+        self.measures_selected.grid(row=0,
+                                    rowspan=3,
                                     column=2,
                                     sticky=ctk.NSEW,
-                                    padx=(10, 10),
-                                    pady=(10, 10))
-
-        self.add_btn = ctk.CTkButton(self,
-                                     text='Create PDF',
-                                     command=self.nav_results)
-        self.add_btn.grid(row=2,
-                          column=2,
-                          sticky=ctk.NSEW,
-                          padx=(10, 10),
-                          pady=(10, 10))
+                                    padx=(20, 20),
+                                    pady=(20, 20))
 
     def show(self):
         if self.controller.connection == None:
@@ -295,6 +310,28 @@ class MainFrame(Page):
                 self.controller.selected_measures.remove(version)
                 self.measures_selected.remove_version(version)
 
+    def reset_measures(self, offset: int | None=None):
+        self.measure_list.unselect_measure()
+        self.controller.selected_measure = None
+        self.measure_list.clear_measures()
+        self.measure_versions.clear_versions()
+        if offset != None:
+            self.controller.set_offset(offset)
+        measure_ids = self.controller.get_measures()
+        self.measure_list.add_measures(measure_ids)
+
+    def search_for(self, measure_id: str):
+        if measure_id == '':
+            self.reset_measures()
+            return
+
+        versions = self.controller.get_versions(measure_id)
+        if versions != []:
+            self.measure_list.clear_measures()
+            self.measure_list.add_measure(measure_id.upper(), True)
+            self.measure_versions.clear_versions()
+            self.measure_versions.add_versions(versions)
+
     def nav_auth(self):
         self.controller.show_frame(AuthFrame)
 
@@ -314,36 +351,139 @@ class MeasureListFrame(ctk.CTkFrame):
         self.grid_rowconfigure((1), weight=1)
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
-        self.measure_frame = ScrollableRadiobuttonFrame(self, self.select_measure)
+        self.search_bar = SearchBar(self,
+                                    search_command=self.search_for,
+                                    reset_command=self.reset_measures,
+                                    fg_color=self._fg_color)
+        self.search_bar.grid(row=0,
+                             column=0,
+                             columnspan=3,
+                             sticky=ctk.NSEW,
+                             padx=(10, 10),
+                             pady=(10, 10))
+
+        self.measure_frame = ScrollableRadioButtonFrame(self,
+                                                        self.select_measure)
         self.measure_frame.grid(row=1,
                                 column=0,
                                 columnspan=3,
-                                sticky=ctk.NSEW)
+                                sticky=ctk.NSEW,
+                                padx=(10, 10))
 
         back_btn = ctk.CTkButton(self,
-                                 text='<<')
+                                 text='<<',
+                                 command=self.prev_measures)
         back_btn.grid(row=2,
                       column=0,
-                      sticky=ctk.SW)
+                      sticky=ctk.SW,
+                      padx=(10, 10),
+                      pady=(10, 10))
 
         next_btn = ctk.CTkButton(self,
-                                 text='>>')
+                                 text='>>',
+                                 command=self.next_measures)
         next_btn.grid(row=2,
                       column=2,
-                      sticky=ctk.SE)
+                      sticky=ctk.SE,
+                      padx=(10, 10),
+                      pady=(10, 10))
+
+    def next_measures(self):
+        self.controller.increment_offset()
+        self.measure_frame.clear_items()
+        measure_ids = self.controller.get_measures()
+        self.add_measures(measure_ids)
+
+    def prev_measures(self):
+        self.controller.decrement_offset()
+        self.measure_frame.clear_items()
+        measure_ids = self.controller.get_measures()
+        self.add_measures(measure_ids)
+
+    def search_for(self, event: tk.Event | None=None):
+        search_val = self.search_bar.get()
+        self.parent.search_for(search_val)
+
+    def reset_measures(self):
+        self.parent.reset_measures(0)
+        self.search_bar.clear()
 
     def select_measure(self):
         self.parent.select_measure(self.measure_frame.get_checked_item())
+
+    def unselect_measure(self):
+        self.measure_frame.uncheck_item()
+
+    def add_measure(self, id: str, selected: bool=False):
+        self.measure_frame.add_item(id, selected)
 
     def add_measures(self, ids: list[str]):
         for measure_id in ids:
             self.measure_frame.add_item(measure_id)
 
+    def clear_measures(self):
+        self.measure_frame.clear_items()
+
     def is_empty(self):
-        return len(self.measure_frame.radiobutton_list) == 0
+        return self.measure_frame.is_empty()
 
 
-class ScrollableRadiobuttonFrame(ctk.CTkScrollableFrame):
+class SearchBar(ctk.CTkFrame):
+    def __init__(self,
+                 parent: MeasureListFrame,
+                 search_command: Callable[[tk.Event], None] | None=None,
+                 reset_command: Callable[[], None] | None=None,
+                 **kwargs):
+        super().__init__(parent, **kwargs)
+
+        self.grid_rowconfigure((1), weight=1)
+        self.grid_columnconfigure((0, 1), weight=1)
+        self.grid_columnconfigure((2), weight=1)
+
+        self.search_bar = ctk.CTkEntry(self,
+                                       placeholder_text='Search for a measure...')
+        self.search_bar.grid(row=0,
+                             column=0,
+                             columnspan=7,
+                             sticky=ctk.NSEW,
+                             padx=(5, 5))
+
+        self.search_btn = ctk.CTkButton(self,
+                                        text='',
+                                        image=assets.get_tkimage(
+                                            'search.png',
+                                            size=(25, 25)),
+                                        width=parent.winfo_width() / 8)
+        self.search_btn.grid(row=0,
+                             column=7,
+                             padx=(5, 5))
+
+        self.reset_btn = ctk.CTkButton(self,
+                                       text='',
+                                       image=assets.get_tkimage(
+                                           'reset.png',
+                                           size=(25, 25)),
+                                       width=parent.winfo_width() / 8)
+        self.reset_btn.grid(row=0,
+                            column=8,
+                            padx=(5, 5))
+
+        if search_command != None:
+            self.search_bar.bind('<Return>', search_command)
+            self.search_btn.configure(command=search_command)
+
+        if reset_command != None:
+            self.reset_btn.configure(command=reset_command)
+
+    def get(self) -> str:
+        return self.search_bar.get()
+
+    def clear(self):
+        self.search_bar.delete(0, ctk.END)
+        self.search_bar.configure(placeholder_text='Search for a measure...')
+
+
+class ScrollableRadioButtonFrame(ctk.CTkScrollableFrame):
     def __init__(self,
                  master: MeasureListFrame,
                  command: Callable[[], None] | None=None,
@@ -353,6 +493,9 @@ class ScrollableRadiobuttonFrame(ctk.CTkScrollableFrame):
         self.command = command
         self.radiobutton_variable = ctk.StringVar()
         self.radiobutton_list: list[ctk.CTkRadioButton] = []
+
+    def is_empty(self) -> bool:
+        return self.radiobutton_list == []
 
     def remove_item(self, checkbox: ctk.CTkRadioButton):
         for radiobutton in self.radiobutton_list:
@@ -366,11 +509,14 @@ class ScrollableRadiobuttonFrame(ctk.CTkScrollableFrame):
             radiobutton.destroy()
         self.radiobutton_list.clear()
 
-    def add_item(self, item: str):
+    def add_item(self, item: str, selected: bool=False):
         radiobutton = ctk.CTkRadioButton(self,
                                          text=item,
                                          value=item,
                                          variable=self.radiobutton_variable)
+        if selected:
+            radiobutton.select()
+
         if self.command is not None:
             radiobutton.configure(command=self.command)
 
@@ -380,8 +526,22 @@ class ScrollableRadiobuttonFrame(ctk.CTkScrollableFrame):
 
         self.radiobutton_list.append(radiobutton)
 
+    def get_radio_button(self, item: str) -> ctk.CTkRadioButton | None:
+        for button in self.radiobutton_list:
+            if button.cget('text') == item:
+                return button
+        return None
+
     def get_checked_item(self) -> str:
         return self.radiobutton_variable.get()
+
+    def uncheck_item(self):
+        checked_item = self.get_checked_item()
+        button = self.get_radio_button(checked_item)
+        if button == None:
+            return
+
+        button.deselect()
 
 
 class MeasureVersionsFrame(ctk.CTkFrame):
@@ -478,8 +638,46 @@ class ScrollableCheckBoxFrame(ctk.CTkScrollableFrame):
                     if checkbox.get() == 0]
 
 
-class SelectedMeasuresFrame(ctk.CTkScrollableFrame):
-    def __init__(self, master: MainFrame, **kwargs):
+class SelectedMeasuresFrame(ctk.CTkFrame):
+    def __init__(self, master: MainFrame, controller: AppController, **kwargs):
+        super().__init__(master, **kwargs)
+
+        self.controller = controller
+
+        self.grid_rowconfigure((0), weight=1)
+        self.grid_rowconfigure((1), weight=0)
+        self.grid_columnconfigure((0, 2), weight=1)
+        self.grid_columnconfigure((1), weight=0)
+        
+        self.measures_frame = ScrollableFrame(self)
+        self.measures_frame.grid(row=0,
+                                 column=0,
+                                 columnspan=3,
+                                 sticky=ctk.NSEW,
+                                 padx=(10, 10),
+                                 pady=(10, 10))
+
+        self.add_btn = ctk.CTkButton(self,
+                                     text='Create PDF',
+                                     command=self.nav_results)
+        self.add_btn.grid(row=1,
+                          column=1,
+                          sticky=ctk.NSEW,
+                          padx=(10, 10),
+                          pady=(0, 10))
+
+    def nav_results(self):
+        self.controller.nav_results()
+        
+    def add_version(self, version: str):
+        self.measures_frame.add_version(version)
+
+    def remove_version(self, version: str):
+        self.measures_frame.remove_version(version)
+
+
+class ScrollableFrame(ctk.CTkScrollableFrame):
+    def __init__(self, master: SelectedMeasuresFrame, **kwargs):
         super().__init__(master, **kwargs)
 
         self.item_list: list[ctk.CTkLabel] = []

@@ -27,9 +27,9 @@ class Font:
     Font styles are case specific
     """
 
-    def __init__(self, name: str, asset_dir: str):
+    def __init__(self, name: str, font_dir: str):
         self.name = name
-        self.path = os.path.join(_ROOT, 'assets', asset_dir)
+        self.path = os.path.join(_ROOT, 'assets', 'fonts', font_dir)
         self.regular = TTFont(
             f'{name}',
             os.path.join(self.path, f'{name}-Regular.ttf'))
