@@ -1,7 +1,7 @@
-from src.app.models import Model
-from src.app.views import View
-from src.app.controllers.auth import AuthController
-from src.app.controllers.home import HomeController
+from app.models import Model
+from app.views import View
+from app.controllers.auth import AuthController
+from app.controllers.home import HomeController
 
 
 class Controller:

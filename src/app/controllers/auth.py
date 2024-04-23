@@ -1,8 +1,8 @@
 import re
 
-from src.exceptions import UnauthorizedError
-from src.app.models import Model
-from src.app.views import View
+from exceptions import UnauthorizedError
+from app.models import Model
+from app.views import View
 
 
 def __validate_token_input_char(_input: str | None=None) -> bool:

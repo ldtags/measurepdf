@@ -1,1 +1,1 @@
-from src.app.controllers.controller import Controller
+from app.controllers.controller import Controller

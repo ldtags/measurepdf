@@ -2,8 +2,8 @@ import re
 import requests
 from typing import Self
 
-from ..exceptions import UnauthorizedError
-from .models import (
+from exceptions import UnauthorizedError
+from etrm.models import (
     MeasuresResponse,
     MeasureVersionsResponse,
     Measure
