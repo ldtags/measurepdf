@@ -11,6 +11,9 @@ class Controller:
         self.auth = AuthController(self.model, self.view)
         self.home = HomeController(self.model, self.view)
 
+    def connect(self, auth_token: str):
+        self.model.connect(auth_token)
+
     def start(self):
         if self.model.connection != None:
             self.home.update_measure_ids()

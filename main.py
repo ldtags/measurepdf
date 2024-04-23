@@ -27,7 +27,7 @@ def main():
     if mode == 'dev':
         config = configparser.ConfigParser()
         config.read(resources.get_path('config.ini'))
-        controller.model.connect(f'{config["etrm"]["type"]} {config["etrm"]["token"]}')
+        controller.connect(f'{config["etrm"]["type"]} {config["etrm"]["token"]}')
     controller.start()
 
 
