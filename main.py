@@ -1,7 +1,7 @@
 import argparse
 import configparser
 
-from src.app import AppController
+from src.app import Controller
 import resources
 
 
@@ -23,12 +23,12 @@ def parse_args() -> argparse.Namespace:
 def main():
     args = parse_args()
     mode: str = getattr(args, 'mode', 'client')
-    controller = AppController()
+    controller = Controller()
     if mode == 'dev':
         config = configparser.ConfigParser()
         config.read(resources.get_path('config.ini'))
-        controller.connect(f'{config["etrm"]["type"]} {config["etrm"]["token"]}')
-    controller.run()
+        controller.model.connect(f'{config["etrm"]["type"]} {config["etrm"]["token"]}')
+    controller.start()
 
 
 if __name__ == '__main__':
