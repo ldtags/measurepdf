@@ -1,6 +1,6 @@
 from typing import Any
 
-from src._exceptions import (
+from src.exceptions import (
     ETRMResponseError
 )
 from src.utils import (

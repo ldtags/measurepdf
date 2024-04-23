@@ -2,7 +2,7 @@ import re
 import requests
 from typing import Self
 
-from .._exceptions import UnauthorizedError
+from ..exceptions import UnauthorizedError
 from .models import (
     MeasuresResponse,
     MeasureVersionsResponse,

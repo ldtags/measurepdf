@@ -1,6 +1,6 @@
 import re
 
-from src._exceptions import UnauthorizedError
+from src.exceptions import UnauthorizedError
 from src.app.models import Model
 from src.app.views import View
 
