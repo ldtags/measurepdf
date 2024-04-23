@@ -1,7 +1,7 @@
 import customtkinter as ctk
 
-import assets
-from app.ctkobjects import (
+import src.assets as assets
+from src.app.ctkobjects import (
     ScrollableFrame,
     ScrollableCheckBoxFrame,
     ScrollableRadioButtonFrame

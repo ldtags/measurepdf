@@ -1,8 +1,6 @@
 from configparser import ConfigParser
 
-import context.resources as resources
-from context.src import etrm
-from context.src import measurepdf
+from context import resources, etrm, measurepdf
 
 
 def test():

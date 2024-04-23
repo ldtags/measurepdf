@@ -1,5 +1,5 @@
-from app.models import Model
-from app.views import View
+from src.app.models import Model
+from src.app.views import View
 
 
 class HomeController:

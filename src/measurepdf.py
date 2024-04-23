@@ -9,8 +9,8 @@ from reportlab.lib.pagesizes import letter, A4, inch
 from reportlab.lib.styles import ParagraphStyle
 
 
-from . import _ROOT
-from etrm.models import Measure
+from src import _ROOT
+from src.etrm.models import Measure
 
 
 class Font:

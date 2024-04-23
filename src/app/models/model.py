@@ -1,6 +1,6 @@
-from etrm import ETRMConnection
-from app.models.auth import AuthModel
-from app.models.home import HomeModel
+from src.etrm import ETRMConnection
+from src.app.models.auth import AuthModel
+from src.app.models.home import HomeModel
 
 
 class Model:

@@ -1,7 +1,7 @@
 from typing import Any
 
-from exceptions import ETRMResponseError
-from utils import getc
+from src.exceptions import ETRMResponseError
+from src.utils import getc
 
 
 class MeasureInfo:

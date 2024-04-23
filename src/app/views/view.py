@@ -1,8 +1,8 @@
 import customtkinter as ctk
 
-from .root import Root
-from .auth import AuthPage
-from .home import HomePage
+from src.app.views.root import Root
+from src.app.views.auth import AuthPage
+from src.app.views.home import HomePage
 
 
 class View:

@@ -1,8 +1,8 @@
 import argparse
 import configparser
 
-import resources
-from app import Controller
+import src.resources as resources
+from src.app import Controller
 
 
 def parse_args() -> argparse.Namespace:
