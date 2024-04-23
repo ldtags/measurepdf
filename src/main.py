@@ -20,16 +20,17 @@ def parse_args() -> argparse.Namespace:
     return parser.parse_args()
 
 
-def main():
-    args = parse_args()
-    mode: str = getattr(args, 'mode', 'client')
+def app_controller(mode: str) -> Controller:
     controller = Controller()
     if mode == 'dev':
         config = configparser.ConfigParser()
         config.read(resources.get_path('config.ini'))
         controller.connect(f'{config["etrm"]["type"]} {config["etrm"]["token"]}')
-    controller.start()
+    return controller
 
 
 if __name__ == '__main__':
-    main()
+    args = parse_args()
+    mode: str = getattr(args, 'mode', 'client')
+    controller = app_controller(mode)
+    controller.start()
