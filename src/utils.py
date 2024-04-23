@@ -1,5 +1,5 @@
 from typing import Type, TypeVar, overload, NewType, get_args, get_origin, Any
-from types import UnionType
+from types import UnionType, NoneType
 
 
 _NotDefined = NewType('_NotDefined', None)
@@ -110,6 +110,9 @@ def getc(o: dict,
 
         raise TypeError(f'unsupported dict type: {_type}')
     elif _origin is UnionType:
+        if NoneType in _types and attr == None:
+            return None
+
         for union_type in _types:
             try:
                 return union_type(attr)
