@@ -6,3 +6,4 @@ import src.etrm as etrm
 import src.measurepdf as measurepdf
 import src.app as app
 import src.main as main
+import src.resources as resources
