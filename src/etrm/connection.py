@@ -1,6 +1,5 @@
 import re
 import requests
-from typing import Self
 
 from src.exceptions import UnauthorizedError
 from src.etrm.models import (
@@ -28,15 +27,6 @@ class ETRMConnection:
 
     def __init__(self, auth_token: str):
         self.auth_token = auth_token
-
-    def close(self):
-        del self.auth_token
-
-    def __enter__(self) -> Self:
-        return self
-
-    def __exit__(self, *args):
-        self.close()
 
     def get_measure(self, measure_id: str) -> Measure:
         statewide_id, version_id = measure_id.split('-', 1)

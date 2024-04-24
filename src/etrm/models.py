@@ -145,15 +145,6 @@ class ExclusionTable:
             raise ETRMResponseError()
 
 
-class Characterization:
-    def __init__(self, name: str, res_json: dict[str, Any]):
-        self.name = name
-        try:
-            self.content = getc(res_json, name, str)
-        except IndexError:
-            raise ETRMResponseError()
-
-
 class Measure:
     __characterization_names = [
         'technology_summary',
@@ -208,13 +199,18 @@ class Measure:
 
         self.characterizations = self.__get_characterizations()
 
-    def __get_characterizations(self) -> list[Characterization]:
-        char_list: list[Characterization] = []
+    def __get_characterizations(self) -> dict[str, str]:
+        char_list: dict[str, str] = {}
         for char_name in self.__characterization_names:
             try:
-                char_obj = Characterization(char_name, self._json)
-            except IndexError:
+                char_list[char_name] = self._json[char_name]
+            except KeyError:
                 raise ETRMResponseError()
-            char_list.append(char_obj)
 
         return char_list
+
+    def get_shared_parameter(self, name: str) -> SharedDeterminant | None:
+        for parameter in self.shared_determinant_refs:
+            if parameter.version.split('-')[0] == name:
+                return parameter
+        return None

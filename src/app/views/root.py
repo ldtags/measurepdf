@@ -1,10 +1,14 @@
 import customtkinter as ctk
 
+from src import assets
+
+
 class Root(ctk.CTk):
     def __init__(self, width: int=1100, height: int=580):
         super().__init__()
 
         self.title('  Measure Summary Generator')
+        self.iconbitmap(assets.get_path('images', 'etrm.ico'))
         self.geometry(f'{width}x{height}')
         self.minsize(width=550, height=290)
         self.grid_rowconfigure(0, weight=1)

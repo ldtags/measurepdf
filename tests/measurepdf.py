@@ -1,7 +1,8 @@
 import sys
+import time
 from configparser import ConfigParser
 
-from context import resources, etrm, measurepdf
+from context import resources, etrm, summary
 
 
 config = ConfigParser()
@@ -10,7 +11,7 @@ connection = etrm.ETRMConnection(config['etrm']['type'] + ' ' + config['etrm']['
 
 
 def build_summary(measure_ids: list[str]):
-    measure_pdf = measurepdf.MeasurePdf(relative_dir='summaries', override=True)
+    measure_pdf = summary.MeasureSummary(relative_dir='summaries', override=True)
     print('measure pdf object created', file=sys.stderr)
 
     for measure_id in measure_ids:
@@ -22,7 +23,10 @@ def build_summary(measure_ids: list[str]):
 
 
 def test():
-    build_summary(['SWAP001-03'])
+    start = time.time()
+    build_summary(['SWHC020-03'])
+    elapsed = time.time() - start
+    print(f'took {elapsed}s', file=sys.stderr)
 
 
 if __name__ == '__main__':
