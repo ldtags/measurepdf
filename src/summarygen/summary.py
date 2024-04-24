@@ -41,13 +41,6 @@ def _theader(text: str) -> Paragraph:
     return Paragraph(text, STYLES['TableHeader'])
 
 
-def get_row_heights(data: list[list],
-                    base_height: float,
-                    col_widths: tuple[float, ...] | float
-                   ) -> tuple[float, ...]:
-    pass
-
-
 class MeasureSummary:
     def __init__(self,
                  file_name: str='measure_summary',
