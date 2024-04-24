@@ -1,6 +1,8 @@
 from src.app.models import Model
 from src.app.views import View
 
+from src.summarygen import MeasureSummary
+
 
 class HomeController:
     def __init__(self, model: Model, view: View):
@@ -86,6 +88,13 @@ class HomeController:
         self.page.measure_id_list.selected_measure = measure_id
         self.update_measure_versions()
 
+    def create_summary(self):
+        summary = MeasureSummary(relative_dir='summaries', override=True)
+        for measure_id in self.model.home.selected_versions:
+            measure = self.model.connection.get_measure(measure_id)
+            summary.add_measure(measure)
+        summary.build()
+
     def __bind(self):
         self.page.measure_id_list.measure_frame.set_command(self.select_measure_id)
         self.page.measure_id_list.next_btn.configure(command=self.next_page)
@@ -94,5 +103,6 @@ class HomeController:
         self.page.measure_id_list.search_bar.search_btn.configure(command=self.search)
         self.page.measure_id_list.search_bar.reset_btn.configure(command=self.reset)
         self.page.measure_version_list.version_frame.set_command(self.select_measure_version)
+        self.page.measures_selection_list.add_btn.configure(command=self.create_summary)
         
         
