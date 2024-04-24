@@ -7,7 +7,7 @@ from reportlab.lib.styles import ParagraphStyle, StyleSheet1, getSampleStyleShee
 from reportlab.platypus import TableStyle
 from reportlab.lib import colors
 
-from src import assets
+from src import asset_path
 from src.summarygen.models import NamedTableStyle
 
 
@@ -41,7 +41,7 @@ class Font:
 
     def __init__(self, name: str, font_dir: str):
         self.name = name
-        self.path = assets.get_path('fonts', font_dir)
+        self.path = asset_path(font_dir, 'fonts')
         self.regular = TTFont(
             f'{name}',
             os.path.join(self.path, f'{name}-Regular.ttf'))

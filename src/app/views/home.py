@@ -1,6 +1,6 @@
 import customtkinter as ctk
 
-import src.assets as assets
+from src import utils
 from src.app.ctkobjects import (
     ScrollableFrame,
     ScrollableCheckBoxFrame,
@@ -119,7 +119,7 @@ class SearchBar(ctk.CTkFrame):
 
         self.search_btn = ctk.CTkButton(self,
                                         text='',
-                                        image=assets.get_tkimage(
+                                        image=utils.get_tkimage(
                                             'search.png',
                                             size=(25, 25)),
                                         width=parent.winfo_width() / 8)
@@ -129,7 +129,7 @@ class SearchBar(ctk.CTkFrame):
 
         self.reset_btn = ctk.CTkButton(self,
                                        text='',
-                                       image=assets.get_tkimage(
+                                       image=utils.get_tkimage(
                                            'reset.png',
                                            size=(25, 25)),
                                        width=parent.winfo_width() / 8)

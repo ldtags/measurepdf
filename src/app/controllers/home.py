@@ -89,7 +89,7 @@ class HomeController:
         self.update_measure_versions()
 
     def create_summary(self):
-        summary = MeasureSummary(relative_dir='summaries', override=True)
+        summary = MeasureSummary(relative_dir='..', override=True)
         for measure_id in self.model.home.selected_versions:
             measure = self.model.connection.get_measure(measure_id)
             summary.add_measure(measure)
@@ -104,5 +104,3 @@ class HomeController:
         self.page.measure_id_list.search_bar.reset_btn.configure(command=self.reset)
         self.page.measure_version_list.version_frame.set_command(self.select_measure_version)
         self.page.measures_selection_list.add_btn.configure(command=self.create_summary)
-        
-        

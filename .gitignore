@@ -5,6 +5,9 @@ __pycache__
 summaries
 summaries/*
 
-
 # security
 config.ini
+
+# pyinstaller
+build
+dist

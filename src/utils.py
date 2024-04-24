@@ -1,5 +1,9 @@
+import customtkinter as ctk
+from PIL import Image
 from typing import Type, TypeVar, overload, NewType, get_args, get_origin, Any
 from types import UnionType, NoneType
+
+from src import asset_path
 
 
 _NotDefined = NewType('_NotDefined', None)
@@ -123,3 +127,10 @@ def getc(o: dict,
                         f' to {type_union}')
     else:
         raise TypeError(f'unsupported type: {_origin}')
+
+
+def get_tkimage(file_name: str,
+                size: tuple[int, int] | None=None
+               ) -> ctk.CTkImage:
+    file_path = asset_path(file_name, 'images')
+    return ctk.CTkImage(Image.open(file_path), size=size)
