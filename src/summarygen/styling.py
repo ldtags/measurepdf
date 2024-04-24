@@ -3,11 +3,15 @@ from typing import Any
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import ParagraphStyle, StyleSheet1
+from reportlab.lib.styles import ParagraphStyle, StyleSheet1, getSampleStyleSheet
 from reportlab.platypus import TableStyle
 from reportlab.lib import colors
 
 from src import assets
+from src.summarygen.models import NamedTableStyle
+
+
+SAMPLE_STYLES = getSampleStyleSheet()
 
 
 def rgb_color(red: float, green: float, blue: float) -> colors.Color:
@@ -74,16 +78,6 @@ def register_fonts():
     Font('Arial', 'arial').register()
 
 
-class NamedTableStyle(TableStyle):
-    def __init__(self,
-                 name: str,
-                 cmds: Any | None=None,
-                 parent: Any | None=None,
-                 **kwargs):
-        self.name = name
-        super().__init__(cmds, parent, **kwargs)
-
-
 def gen_styles() -> StyleSheet1:
     register_fonts()
     style_sheet = StyleSheet1()
@@ -92,6 +86,11 @@ def gen_styles() -> StyleSheet1:
                        fontName='SourceSansPro',
                        fontSize=13.5,
                        leading=13.5))
+    style_sheet.add(
+        ParagraphStyle('SmallParagraph',
+                       fontName='SourceSansPro',
+                       fontSize=12,
+                       leading=12))
     style_sheet.add(
         ParagraphStyle('ParagraphBold',
                        fontName='SourceSansProB',
@@ -147,7 +146,8 @@ def gen_styles() -> StyleSheet1:
     style_sheet.add(
         NamedTableStyle('ParametersTable', [
             ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (0, -1), -1),
+            ('TOPPADDING', (1, 0), (1, -1), 0.25),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('FONTNAME', (0, 0), (-1, -1), 'SourceSansPro'),

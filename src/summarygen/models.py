@@ -1,4 +1,6 @@
 import json
+from typing import Any
+from reportlab.platypus import TableStyle
 
 from src.utils import getc
 
@@ -20,3 +22,22 @@ class ReferenceTag:
         self.obj_info = getc(json_obj, 'objInfo', ObjectInfo)
         self.ref_type = getc(json_obj, 'refType', str)
         self.obj_deleted = getc(json_obj, 'objDeleted', bool)
+
+
+class NamedTableStyle(TableStyle):
+    def __init__(self,
+                 name: str,
+                 cmds: Any | None=None,
+                 parent: Any | None=None,
+                 **kwargs):
+        super().__init__(cmds, parent, **kwargs)
+
+        self.name = name
+        self.font_size: float = 12
+        self.font_name: str = 'Helvetica'
+        for cmd in cmds:
+            match cmd[0]:
+                case 'FONTSIZE':
+                    self.font_size = float(cmd[3])
+                case 'FONTNAME':
+                    self.font_name = str(cmd[3])

@@ -1,5 +1,6 @@
 import os
 from reportlab.lib.pagesizes import inch, letter, mm
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
     Table,
@@ -13,6 +14,7 @@ from src import _ROOT
 from src.etrm.models import Measure
 from src.summarygen.parser import parse_characterization
 from src.summarygen.styling import STYLES
+from src.summarygen.models import NamedTableStyle
 
 
 NEWLINE = Spacer(letter[0], 17.5)
@@ -21,12 +23,13 @@ NEWLINE = Spacer(letter[0], 17.5)
 def _params_table_row(measure: Measure,
                       label: str,
                       param_name: str
-                     ) -> tuple[str, str]:
+                     ) -> tuple[str, Paragraph]:
     param = measure.get_shared_parameter(param_name)
     if param == None:
         return ('', '')
 
-    return (label, ', '.join(sorted(set(param.active_labels))))
+    return (label, Paragraph(', '.join(sorted(set(param.active_labels))),
+                             STYLES['SmallParagraph']))
 
 
 def _link(display_text: str, link: str) -> Paragraph:
@@ -94,9 +97,20 @@ class MeasureSummary:
             _params_table_row(measure, 'Building Location', 'BldgLoc'),
             _params_table_row(measure, 'Delivery Type', 'DelivType')
         ]
+        style: NamedTableStyle = STYLES['ParametersTable']
+        col_widths: list[float] = (2.26*inch, 3.98*inch)
+        base_height = 0.24*inch
+        row_heights: list[float] = []
+        for _, value in data:
+            width = stringWidth(value.text, style.font_name, style.font_size)
+            scale = width / col_widths[1]
+            if scale > 1:
+                row_heights.append(base_height * scale)
+            else:
+                row_heights.append(base_height)
         table = Table(data,
-                      colWidths=(2.26*inch, 3.98*inch),
-                      rowHeights=(0.24*inch),
+                      colWidths=col_widths,
+                      rowHeights=row_heights,
                       style=STYLES['ParametersTable'],
                       hAlign='LEFT')
         self.flowables.append(table)
