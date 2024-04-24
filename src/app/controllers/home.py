@@ -89,7 +89,7 @@ class HomeController:
         self.update_measure_versions()
 
     def create_summary(self):
-        summary = MeasureSummary(relative_dir='..', override=True)
+        summary = MeasureSummary(relative_dir='..\\summaries', override=True)
         for measure_id in self.model.home.selected_versions:
             measure = self.model.connection.get_measure(measure_id)
             summary.add_measure(measure)
