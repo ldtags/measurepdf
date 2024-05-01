@@ -1,140 +1,91 @@
-import os
-from typing import Any
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.pdfmetrics import registerFontFamily
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.lib.styles import ParagraphStyle, StyleSheet1, getSampleStyleSheet
-from reportlab.platypus import TableStyle
 from reportlab.lib import colors
 
-from src import asset_path
-from src.summarygen.models import NamedTableStyle
+from src.summarygen.rlobjects import (
+    Font,
+    BetterTableStyle,
+    StyleSheet,
+    BetterParagraphStyle
+)
 
 
-SAMPLE_STYLES = getSampleStyleSheet()
+Font('SourceSansPro', 'source-sans-pro').register()
+Font('Merriweather', 'merriweather').register()
+Font('Helvetica', 'helvetica').register()
+Font('Arial', 'arial').register()
 
 
 def rgb_color(red: float, green: float, blue: float) -> colors.Color:
     return colors.Color(red=(red/255), green=(green/255), blue=(blue/255))
 
-
 COLORS = {
     'ValueTableHeader': rgb_color(174, 141, 100),
     'ValueTableItemLight': rgb_color(242, 242, 242),
-    'ValueTableItemDark': rgb_color(230, 230, 230)
+    'ValueTableItemDark': rgb_color(230, 230, 230),
+    'ReferenceTagBG': rgb_color(100, 162, 68)
 }
 
 
-class Font:
-    """Registerable font for the reportlab library
-    
-    Fonts must be stored in the `assets` directory as a directory named
-    `asset_dir` that contains all font files
-
-    Each font file must follow the name format `name`-`style`.ttf
-
-    Supported (and required) font styles: `Regular`, `Bold`, `Italic`,
-    `BoldItalic`
-
-    Font styles are case specific
-    """
-
-    def __init__(self, name: str, font_dir: str):
-        self.name = name
-        self.path = asset_path(font_dir, 'fonts')
-        self.regular = TTFont(
-            f'{name}',
-            os.path.join(self.path, f'{name}-Regular.ttf'))
-
-        self.bold = TTFont(
-            f'{name}B',
-            os.path.join(self.path, f'{name}-Bold.ttf'))
-
-        self.italic = TTFont(
-            f'{name}I',
-            os.path.join(self.path, f'{name}-Italic.ttf'))
-
-        self.bold_italic = TTFont(
-            f'{name}BI',
-            os.path.join(self.path, f'{name}-BoldItalic.ttf'))
-
-    def register(self):
-        pdfmetrics.registerFont(self.regular)
-        pdfmetrics.registerFont(self.bold)
-        pdfmetrics.registerFont(self.italic)
-        pdfmetrics.registerFont(self.bold_italic)
-        registerFontFamily(
-            self.name,
-            normal=self.name,
-            bold=f'{self.name}B',
-            italic=f'{self.name}I',
-            boldItalic=f'{self.name}BI')
-
-
-def register_fonts():
-    Font('SourceSansPro', 'source-sans-pro').register()
-    Font('Merriweather', 'merriweather').register()
-    Font('Helvetica', 'helvetica').register()
-    Font('Arial', 'arial').register()
-
-
-def gen_styles() -> StyleSheet1:
-    register_fonts()
-    style_sheet = StyleSheet1()
+def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
+    style_sheet = StyleSheet[BetterParagraphStyle]()
     style_sheet.add(
-        ParagraphStyle('Paragraph',
-                       fontName='SourceSansPro',
-                       fontSize=13.5,
-                       leading=13.5))
+        BetterParagraphStyle('Paragraph',
+                             fontName='SourceSansPro',
+                             fontSize=13.5,
+                             leading=16.2))
     style_sheet.add(
-        ParagraphStyle('SmallParagraph',
-                       fontName='SourceSansPro',
-                       fontSize=12,
-                       leading=12))
+        BetterParagraphStyle('SmallParagraph',
+                             fontName='SourceSansPro',
+                             fontSize=12,
+                             leading=12))
     style_sheet.add(
-        ParagraphStyle('ParagraphBold',
-                       fontName='SourceSansProB',
-                       fontSize=13.5,
-                       leading=13.5))
+        BetterParagraphStyle('ParagraphBold',
+                             fontName='SourceSansProB',
+                             fontSize=13.5,
+                             leading=13.5))
     style_sheet.add(
-        ParagraphStyle('ReferenceTag',
-                       fontName='SourceSansPro',
-                       fontSize=13.5,
-                       leading=13.5,
-                       textColor=colors.white,
-                       backColor=colors.green))
+        BetterParagraphStyle('ReferenceTag',
+                             fontName='SourceSansPro',
+                             fontSize=13.5,
+                             leading=13.5,
+                             textColor=colors.white,
+                             backColor=COLORS['ReferenceTagBG']))
     style_sheet.add(
-        ParagraphStyle('Header',
-                       fontName='Merriweather',
-                       leading=18,
-                       fontSize=18,
-                       spaceAfter=5))
+        BetterParagraphStyle('Header',
+                             fontName='Merriweather',
+                             leading=20.7,
+                             fontSize=18,
+                             spaceAfter=5))
     style_sheet.add(
-        ParagraphStyle('TableHeader',
-                       fontName='SourceSansProB',
-                       leading=16.625,
-                       fontSize=13.5))
+        BetterParagraphStyle('TableHeader',
+                             fontName='SourceSansProB',
+                             leading=16.625,
+                             fontSize=13.5))
     style_sheet.add(
-        ParagraphStyle('h3',
-                       fontName='SourceSansProB',
-                       leading=15,
-                       fontSize=15))
+        BetterParagraphStyle('h3',
+                             fontName='SourceSansProB',
+                             leading=15,
+                             fontSize=15))
     style_sheet.add(
-        ParagraphStyle('h6',
-                       fontName='SourceSansPro',
-                       leading=15,
-                       fontSize=15))
+        BetterParagraphStyle('h6',
+                             fontName='SourceSansPro',
+                             leading=15,
+                             fontSize=15))
     style_sheet.add(
-        ParagraphStyle('Link',
-                       fontName='SourceSansPro',
-                       leading=18.5,
-                       fontSize=13.5,
-                       linkUnderline=1,
-                       underlineWidth=0.25,
-                       textColor=colors.green))
+        BetterParagraphStyle('Link',
+                             fontName='SourceSansPro',
+                             leading=18.5,
+                             fontSize=13.5,
+                             linkUnderline=1,
+                             underlineWidth=0.25,
+                             textColor=colors.green))
 
+    return style_sheet
+
+
+def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
+    style_sheet = StyleSheet[BetterTableStyle]()
     style_sheet.add(
-        NamedTableStyle('DetailsTable', [
+        BetterTableStyle('DetailsTable', [
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('TOPPADDING', (0, 0), (-1, -1), 0.1),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
@@ -144,7 +95,7 @@ def gen_styles() -> StyleSheet1:
             ('FONTSIZE', (0, 0), (0, -1), 13.5),
             ('FONTSIZE', (1, 0), (-1, -1), 12)]))
     style_sheet.add(
-        NamedTableStyle('ParametersTable', [
+        BetterTableStyle('ParametersTable', [
             ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
             ('TOPPADDING', (0, 0), (0, -1), -1),
             ('TOPPADDING', (1, 0), (1, -1), 0.25),
@@ -154,7 +105,7 @@ def gen_styles() -> StyleSheet1:
             ('FONTSIZE', (0, 0), (0, -1), 13.5),
             ('FONTSIZE', (1, 0), (-1, -1), 12)]))
     style_sheet.add(
-        NamedTableStyle('SectionsTable', [
+        BetterTableStyle('SectionsTable', [
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('SPAN', (0, 0), (0, 2)),
             ('SPAN', (0, 3), (0, 6)),
@@ -166,7 +117,7 @@ def gen_styles() -> StyleSheet1:
             ('VALIGN', (0, 0), (0, -1), 'TOP'),
             ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
     style_sheet.add(
-        NamedTableStyle('ValueTable', [
+        BetterTableStyle('ValueTable', [
             ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
             ('FONTNAME', (0, 0), (0, -1), 'ArialB'),
             ('FONTNAME', (1, 0), (-1, -1), 'Arial')]))
@@ -174,14 +125,18 @@ def gen_styles() -> StyleSheet1:
     return style_sheet
 
 
-STYLES = gen_styles()
+PSTYLES = __gen_pstyles()
+TSTYLES = __gen_tstyles()
 
 
-def value_table_style(data: list[list | tuple]) -> TableStyle:
-    table_style: TableStyle = STYLES['ValueTable']
+def value_table_style(data: list[list | tuple],
+                      embedded: bool=False
+                     ) -> BetterTableStyle:
+    switch = 1 if embedded else 0
+    table_style = TSTYLES['ValueTable']
     table_styles = table_style.getCommands()
     for i, _ in enumerate(data):
-        if i % 2 == 0:
+        if i % 2 == switch:
             table_styles.append(('BACKGROUND',
                                 (0, i),
                                 (-1, i),
@@ -190,21 +145,4 @@ def value_table_style(data: list[list | tuple]) -> TableStyle:
             table_styles.append(('BACKGROUND',
                                  (0, i),
                                  (-1, i), COLORS['ValueTableItemDark']))
-    return TableStyle(table_styles)
-
-
-def embedded_table_style(data: list[list | tuple]) -> TableStyle:
-    table_style: TableStyle = STYLES['ValueTable']
-    table_styles = table_style.getCommands()
-    for i, _ in enumerate(data):
-        if i % 2 == 1:
-            table_styles.append(('BACKGROUND',
-                                 (0, i),
-                                 (-1, i),
-                                 COLORS['ValueTableItemLight']))
-        else:
-            table_styles.append(('BACKGROUND',
-                                 (0, i),
-                                 (-1, i),
-                                 COLORS['ValueTableItemDark']))
-    return TableStyle(table_styles)
+    return BetterTableStyle(table_style.name, table_styles)

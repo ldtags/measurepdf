@@ -1,4 +1,3 @@
-from reportlab.platypus import Flowable, Paragraph, Table, ListFlowable, ListItem
 from bs4 import (
     BeautifulSoup,
     Tag,
@@ -6,13 +5,22 @@ from bs4 import (
     ResultSet,
     PageElement
 )
+from reportlab.lib.pagesizes import letter
+from reportlab.platypus import (
+    Flowable,
+    Paragraph,
+    Table,
+    ListFlowable,
+    ListItem,
+    Spacer
+)
 
 from src.summarygen.styling import (
-    STYLES,
-    value_table_style,
-    embedded_table_style
+    PSTYLES,
+    value_table_style
 )
 from src.summarygen.models import ReferenceTag
+from src.summarygen.flowables import SummaryParagraph
 
 
 def is_embedded(tag: Tag) -> bool:
@@ -31,12 +39,12 @@ def is_embedded(tag: Tag) -> bool:
     return False
 
 
-def embedded_handler(tag: Tag) -> Flowable | None:
+def embedded_handler(tag: Tag) -> Flowable | str | None:
     json_str = tag.attrs.get('data-etrmreference', None)
     if json_str != None:
         ref_tag = ReferenceTag(json_str)
-        return Paragraph(ref_tag.obj_info.title.upper(),
-                         STYLES['ReferenceTag'])
+        ref_rml = f'<para> {ref_tag.obj_info.title.upper()} </para>'
+        return ref_rml
 
     json_str = tag.attrs.get('data-etrmvaluetable', None)
     if json_str != None:
@@ -46,8 +54,8 @@ def embedded_handler(tag: Tag) -> Flowable | None:
 
 
 def text_handler(text: str) -> Paragraph:
-    sanitized_text = text.replace('\\n', '\n')
-    return Paragraph(sanitized_text, STYLES['Paragraph'])
+    sanitized_text = text.replace('\n', '<br />')
+    return Paragraph(sanitized_text, PSTYLES['Paragraph'])
 
 
 def header_handler(header: Tag) -> Paragraph:
@@ -58,11 +66,10 @@ def header_handler(header: Tag) -> Paragraph:
     if not isinstance(child, NavigableString):
         raise Exception('temp exception')
 
-    return Paragraph(child.get_text(), STYLES[header.name])
+    return Paragraph(child.get_text(), PSTYLES[header.name])
 
 
 def table_handler(table_element: Tag) -> Table:
-    table_content: list[list[Flowable]] = []
     thead = table_element.find('thead')
     raw_headers: ResultSet[Tag]
     if thead == None:
@@ -77,11 +84,8 @@ def table_handler(table_element: Tag) -> Table:
         header = parse_element(raw_header)
         if header == None:
             headers.append(Paragraph(''))
-        elif isinstance(header, Flowable):
-            headers.append(header)
         else:
-            raise Exception('illegal table formatting')
-    table_content.append(headers)
+            headers.append(header)
 
     tbody = table_element.find('tbody')
     if not isinstance(tbody, Tag):
@@ -101,15 +105,27 @@ def table_handler(table_element: Tag) -> Table:
             else:
                 raise Exception('illegal table formatting')
         rows.append(row)
+
+    table_content: list[list[Flowable]] = []
+    table_content.append(headers)
     table_content.extend(rows)
     return Table(table_content, style=value_table_style(table_content))
 
 
-def list_handler(ulist: Tag) -> list[Flowable]:
-    pass
+def list_handler(ul: Tag) -> ListFlowable:
+    list_items: list[ListItem] = []
+    li_list: ResultSet[Tag] = ul.find_all('li')
+    for li in li_list:
+        item = parse_element(li)
+        if item == None:
+            list_items.append(ListItem(Paragraph('')))
+        else:
+            list_items.append(ListItem(item))
+    
+    blt_list = ListFlowable(list_items, bulletType=1, start='square')
 
 
-def parse_element(element: PageElement) -> Flowable | list[Flowable] | None:
+def parse_element(element: PageElement) -> Flowable | list[Flowable] | str | None:
     if isinstance(element, NavigableString):
         return text_handler(element.get_text())
 
@@ -119,37 +135,55 @@ def parse_element(element: PageElement) -> Flowable | list[Flowable] | None:
     if is_embedded(element):
         return embedded_handler(element)
 
-    if len(element.children) == 0:
+    if len(element.contents) == 0:
         return None
 
     match element.name:
-        case 'p' | 'div' | 'span':
-            flowables: list[Flowable] = []
-            for child in element.children:
-                flowable = parse_element(child)
-                if isinstance(flowable, Flowable):
-                    flowables.append(flowable)
-                elif isinstance(flowable, list):
-                    flowables.extend(flowable)
-            return flowables
+        case 'div' | 'span':
+            parsed_elements = parse_elements(element.contents)
+            if len(parsed_elements) == 1:
+                return parsed_elements[0]
+            return parsed_elements
+        case 'p':
+            return SummaryParagraph(element=element)
         case 'h3' | 'h6':
             return header_handler(element)
         case 'table':
             return table_handler(element)
         case 'ul':
             return list_handler(element)
+        case ('sup' | 'sub') as tag:
+            return f'<{tag}>{parse_elements(element.contents)}</{tag}>'
+        case 'strong':
+            return f'<b>{parse_elements(element.contents)}</b>'
         case tag:
             raise Exception(f'unsupported HTML tag: {tag}')
 
 
-def parse_characterization(html: str) -> list[Flowable]:
+def parse_elements(elements: list[PageElement]) -> list[Flowable | str]:
     flowables: list[Flowable] = []
-    soup = BeautifulSoup(html, 'html.parser')
-    top_level = soup.find_all(recursive=False)
-    for element in top_level:
-        flowable = parse_element(element)
-        if isinstance(flowable, Flowable):
-            flowables.append(flowable)
-        elif isinstance(flowable, list):
-            flowables.extend(flowable)
+    for element in elements:
+        sections = parse_element(element)
+        if isinstance(sections, list):
+            flowables.extend(sections)
+        elif isinstance(sections, Flowable):
+            flowables.append(sections)
+        elif isinstance(sections, str):
+            flowables.append(sections)
     return flowables
+
+
+def parse_characterization(html: str) -> list[Flowable]:
+    soup = BeautifulSoup(html, 'html.parser')
+    top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
+    flowables: list[Flowable] = []
+    for element in top_level:
+        sections = parse_element(element)
+        if isinstance(sections, list):
+            flowables.extend(sections)
+        elif isinstance(sections, Flowable):
+            flowables.append(sections)
+        if element.next_sibling == '\n':
+            flowables.append(Spacer(letter[0], 9.2))
+    return flowables
+            

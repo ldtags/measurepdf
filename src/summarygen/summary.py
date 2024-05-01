@@ -1,5 +1,5 @@
 import os
-from reportlab.lib.pagesizes import inch, letter, mm
+from reportlab.lib.pagesizes import inch, letter
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
@@ -13,8 +13,7 @@ from reportlab.platypus import (
 from src import _ROOT
 from src.etrm.models import Measure
 from src.summarygen.parser import parse_characterization
-from src.summarygen.styling import STYLES
-from src.summarygen.models import NamedTableStyle
+from src.summarygen.styling import PSTYLES, TSTYLES
 
 
 NEWLINE = Spacer(letter[0], 17.5)
@@ -29,16 +28,16 @@ def _params_table_row(measure: Measure,
         return ('', '')
 
     return (label, Paragraph(', '.join(sorted(set(param.active_labels))),
-                             STYLES['SmallParagraph']))
+                             PSTYLES['SmallParagraph']))
 
 
 def _link(display_text: str, link: str) -> Paragraph:
     return Paragraph(f'<link href=\"{link}\">{display_text}</link>',
-                     STYLES['Link'])
+                     PSTYLES['Link'])
 
 
 def _theader(text: str) -> Paragraph:
-    return Paragraph(text, STYLES['TableHeader'])
+    return Paragraph(text, PSTYLES['TableHeader']) 
 
 
 class MeasureSummary:
@@ -69,17 +68,17 @@ class MeasureSummary:
         table = Table(data,
                       colWidths=(2.25*inch, 3.03*inch),
                       rowHeights=(0.24*inch),
-                      style=STYLES['DetailsTable'],
+                      style=TSTYLES['DetailsTable'],
                       hAlign='LEFT')
         self.flowables.append(table)
 
     def add_tech_summary(self, html: str):
         self.flowables.append(Paragraph('Technology Summary',
-                                        STYLES['Header']))
+                                        PSTYLES['Header']))
         self.flowables.extend(parse_characterization(html))
 
     def add_parameters_table(self, measure: Measure):
-        self.flowables.append(Paragraph('Parameters:', STYLES['Header']))
+        self.flowables.append(Paragraph('Parameters:', PSTYLES['Header']))
         data = [
             _params_table_row(measure,
                               'Measure Application Type',
@@ -90,7 +89,7 @@ class MeasureSummary:
             _params_table_row(measure, 'Building Location', 'BldgLoc'),
             _params_table_row(measure, 'Delivery Type', 'DelivType')
         ]
-        style: NamedTableStyle = STYLES['ParametersTable']
+        style = TSTYLES['ParametersTable']
         col_widths: list[float] = (2.26*inch, 3.98*inch)
         base_height = 0.24*inch
         row_heights: list[float] = []
@@ -104,13 +103,13 @@ class MeasureSummary:
         table = Table(data,
                       colWidths=col_widths,
                       rowHeights=row_heights,
-                      style=STYLES['ParametersTable'],
+                      style=TSTYLES['ParametersTable'],
                       hAlign='LEFT')
         self.flowables.append(table)
 
     def add_sections_table(self, measure: Measure):
         self.flowables.append(Paragraph('Sections:',
-                                        STYLES['Header']))
+                                        PSTYLES['Header']))
         id_path = '/'.join(measure.full_version_id.split('-'))
         link = f'https://www.caetrm.com/measure/{id_path}'
         data = [
@@ -173,7 +172,7 @@ class MeasureSummary:
         table = Table(data,
                       colWidths=(1.42*inch, 4.81*inch),
                       rowHeights=row_heights,
-                      style=STYLES['SectionsTable'],
+                      style=TSTYLES['SectionsTable'],
                       hAlign='LEFT')
         self.flowables.append(table)
 
@@ -181,8 +180,8 @@ class MeasureSummary:
         self.measures.append(measure)
         self.add_measure_details_table(measure)
         self.flowables.append(NEWLINE)
-        # self.add_tech_summary(measure.characterizations['technology_summary'])
-        # self.flowables.append(NEWLINE)
+        self.add_tech_summary(measure.characterizations['technology_summary'])
+        self.flowables.append(NEWLINE)
         self.add_parameters_table(measure)
         self.flowables.append(NEWLINE)
         self.add_sections_table(measure)
