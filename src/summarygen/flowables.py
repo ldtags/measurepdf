@@ -274,7 +274,7 @@ class EmbeddedValueTable(Table):
         Table.__init__(self,
                        data,
                        colWidths=col_widths,
-                       rowHeights=self.style.font_size,
+                       rowHeights=self._row_height(),
                        style=self.style)
 
     def _col_width(self, text: str) -> float:
@@ -282,3 +282,7 @@ class EmbeddedValueTable(Table):
                                  self.style.font_name,
                                  self.style.font_size)
         return self.style.left_padding + text_width + self.style.right_padding
+
+    def _row_height(self) -> float:
+        padding = self.style.top_padding + self.style.bottom_padding
+        return self.style.font_size + padding
