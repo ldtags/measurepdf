@@ -50,16 +50,16 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              textColor=colors.white,
                              backColor=COLORS['ReferenceTagBG']))
     style_sheet.add(
-        BetterParagraphStyle('Header',
-                             fontName='Merriweather',
-                             leading=20.7,
-                             fontSize=18,
-                             spaceAfter=5))
-    style_sheet.add(
         BetterParagraphStyle('TableHeader',
                              fontName='SourceSansProB',
                              leading=16.625,
                              fontSize=13.5))
+    style_sheet.add(
+        BetterParagraphStyle('h2',
+                             fontName='Merriweather',
+                             leading=20.7,
+                             fontSize=18,
+                             spaceAfter=5))
     style_sheet.add(
         BetterParagraphStyle('h3',
                              fontName='SourceSansProB',
@@ -119,8 +119,11 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
     style_sheet.add(
         BetterTableStyle('ValueTable', [
             ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
-            ('FONTNAME', (0, 0), (0, -1), 'ArialB'),
-            ('FONTNAME', (1, 0), (-1, -1), 'Arial')]))
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('LEFTPADDING', (0, 0), (-1, -1), 1),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 1),
+            ('TOPPADDING', (0, 0), (-1, -1), 1),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 1)]))
 
     return style_sheet
 
@@ -132,9 +135,19 @@ TSTYLES = __gen_tstyles()
 def value_table_style(data: list[list | tuple],
                       embedded: bool=False
                      ) -> BetterTableStyle:
-    switch = 1 if embedded else 0
     table_style = TSTYLES['ValueTable']
     table_styles = table_style.getCommands()
+    if embedded:
+        switch = 1
+        table_styles.extend([
+            ('FONTNAME', (0, 0), (-1, -1), 'ArialB')
+        ])
+    else:
+        switch = 0
+        table_styles.extend([
+            ('FONTNAME', (0, 0), (0, -1), 'ArialB'),
+            ('FONTNAME', (1, 0), (-1, -1), 'Arial')])
+
     for i, _ in enumerate(data):
         if i % 2 == switch:
             table_styles.append(('BACKGROUND',
@@ -145,4 +158,5 @@ def value_table_style(data: list[list | tuple],
             table_styles.append(('BACKGROUND',
                                  (0, i),
                                  (-1, i), COLORS['ValueTableItemDark']))
+
     return BetterTableStyle(table_style.name, table_styles)

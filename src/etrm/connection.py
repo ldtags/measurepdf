@@ -1,16 +1,20 @@
 import re
 import requests
 
-from src.exceptions import UnauthorizedError
+from src.etrm import API_URL
 from src.etrm.models import (
     MeasuresResponse,
     MeasureVersionsResponse,
     Measure
 )
+from src.exceptions import UnauthorizedError
+
+
+API_URL = 'https://www.caetrm.com/api/v1'
 
 
 def extract_id(_url: str) -> str | None:
-    URL_RE = re.compile('https://www.caetrm.com/api/v1/measures/([a-zA-Z0-9]+)/')
+    URL_RE = re.compile(f'{API_URL}/measures/([a-zA-Z0-9]+)/')
     re_match = re.search(URL_RE, _url)
     if len(re_match.groups()) != 1:
         return None
@@ -23,8 +27,6 @@ def extract_id(_url: str) -> str | None:
 
 
 class ETRMConnection:
-    api_url = 'https://www.caetrm.com/api/v1'
-
     def __init__(self, auth_token: str):
         self.auth_token = auth_token
 
@@ -34,7 +36,8 @@ class ETRMConnection:
             'Authorization': self.auth_token
         }
 
-        response = requests.get(f'{self.api_url}/measures/{statewide_id}/{version_id}',
+        response = requests.get(f'{API_URL}/measures/'
+                                    + f'{statewide_id}/{version_id}',
                                 headers=headers)
 
         if response.status_code != 200:
@@ -55,7 +58,7 @@ class ETRMConnection:
             'Authorization': self.auth_token
         }
 
-        response = requests.get(f'{self.api_url}/measures',
+        response = requests.get(f'{API_URL}/measures',
                                 params=params,
                                 headers=headers)
 
@@ -80,7 +83,7 @@ class ETRMConnection:
             'Authorization': self.auth_token
         }
 
-        response = requests.get(f'{self.api_url}/measures/{measure_id}/',
+        response = requests.get(f'{API_URL}/measures/{measure_id}/',
                                 params=params,
                                 headers=headers)
 

@@ -3,15 +3,19 @@ from reportlab.lib import colors
 from reportlab.lib.utils import simpleSplit
 from reportlab.pdfgen.canvas import Canvas, PDFTextObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.platypus import Flowable, Paragraph
+from reportlab.platypus import Flowable, Paragraph, Table
 
+from src.etrm import API_URL
+from src.etrm.models import Measure
+from src.exceptions import SummaryGenError
 from src.summarygen.models import (
     ParagraphElement,
     ReferenceTag,
+    EmbeddedValueTableTag,
     ElemType,
     TextStyle
 )
-from src.summarygen.styling import PSTYLES, COLORS
+from src.summarygen.styling import PSTYLES, COLORS, value_table_style
 
 
 def _parse_element(element: PageElement) -> list[ParagraphElement]:
@@ -220,3 +224,61 @@ class SummaryParagraph(Flowable):
             text_obj.textLine()
             canvas.drawText(text_obj)
             x, y = text_obj.getCursor()
+
+
+class Reference(Paragraph):
+    def __init__(self, measure: Measure, tag: ReferenceTag):
+        statewide_id, version_id = measure.full_version_id.split('-', 1)
+        link = '/'.join([API_URL, statewide_id, version_id])
+        text = f'<link href=\"{link}\">{tag.text}</link>'
+        Paragraph.__init__(self, text=text, style=PSTYLES['ReferenceTag'])
+
+
+class ValueTableHeader(Paragraph):
+    def __init__(self, text: str, link: str | None=None):
+        header_text = text
+        if link != None:
+            header_text = f'<link href=\"{link}\">{header_text}</link>'
+        Paragraph.__init__(self, text, style=PSTYLES['h6'])
+
+
+class EmbeddedValueTable(Table):
+    def __init__(self, measure: Measure, tag: EmbeddedValueTableTag):
+        self.style = value_table_style(data, embedded=True)
+        api_name = tag.obj_info.api_name_unique
+        table = measure.get_value_table(api_name)
+        if table == None:
+            raise SummaryGenError(f'value table {api_name} does not exist'
+                                    + f' in {measure.full_version_id}')
+        column_indexes: list[int] = 0
+        headers: list[str] = []
+        for i, column in enumerate(table.columns):
+            if column.api_name in tag.obj_info.vtconf.cids:
+                column_indexes.append(i)
+                headers.append(column.name)
+        body: list[list[str]] = []
+        for values_row in table.values:
+            row: list[str] = []
+            for index in column_indexes:
+                row.append(values_row[index])
+            body.append(row)
+        data = [headers].extend(body)
+        col_widths: list[float] = []
+        for i in range(len(headers)):
+            max_width = 0
+            for j in range(len(data)):
+                col_width = self._col_width(data[j][i])
+                if col_width > max_width:
+                    max_width = col_width
+            col_widths[i] = max_width
+        Table.__init__(self,
+                       data,
+                       colWidths=col_widths,
+                       rowHeights=self.style.font_size,
+                       style=self.style)
+
+    def _col_width(self, text: str) -> float:
+        text_width = stringWidth(text,
+                                 self.style.font_name,
+                                 self.style.font_size)
+        return self.style.left_padding + text_width + self.style.right_padding

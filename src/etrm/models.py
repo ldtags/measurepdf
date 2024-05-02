@@ -114,6 +114,8 @@ class ValueTable:
             self.order = getc(res_json, 'order', int)
             self.determinants = getc(res_json, 'determinants', list[str])
             self.columns = getc(res_json, 'columns', list[Column])
+            self.values = getc(res_json, 'values', list[list[str | None]])
+            self.reference_refs = getc(res_json, 'reference_refs', list[str])
         except IndexError:
             raise ETRMResponseError()
 
@@ -213,4 +215,10 @@ class Measure:
         for parameter in self.shared_determinant_refs:
             if parameter.version.split('-')[0] == name:
                 return parameter
+        return None
+
+    def get_value_table(self, name: str) -> ValueTable | None:
+        for table in self.value_tables:
+            if table.name == name or table.api_name == name:
+                return table
         return None

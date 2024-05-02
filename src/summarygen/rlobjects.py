@@ -81,12 +81,24 @@ class BetterTableStyle(TableStyle):
         self._rml_styles: list[str] = []
         self.font_size: float = 12
         self.font_name: str = 'Helvetica'
+        self.top_padding: float = 6
+        self.bottom_padding: float = 6
+        self.left_padding: float = 6
+        self.right_padding: float = 6
         for cmd in cmds:
             match cmd[0]:
                 case 'FONTSIZE' | 'SIZE':
                     self.font_size = float(cmd[3])
                 case 'FONTNAME':
                     self.font_name = str(cmd[3])
+                case 'TOPPADDING':
+                    self.top_padding = float(cmd[3])
+                case 'BOTTOMPADDING':
+                    self.bottom_padding = float(cmd[3])
+                case 'LEFTPADDING':
+                    self.left_padding = float(cmd[3])
+                case 'RIGHTPADDING':
+                    self.right_padding = float(cmd[3])
 
     def add(self, cmd):
         self._cmds.append(cmd)

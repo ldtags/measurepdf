@@ -15,12 +15,23 @@ from reportlab.platypus import (
     Spacer
 )
 
+from src.etrm import API_URL
+from src.etrm.models import Measure
+from src.summarygen.models import (
+    ParagraphElement,
+    ReferenceTag,
+    EmbeddedValueTableTag
+)
 from src.summarygen.styling import (
     PSTYLES,
     value_table_style
 )
-from src.summarygen.models import ReferenceTag
-from src.summarygen.flowables import SummaryParagraph
+from src.summarygen.flowables import (
+    SummaryParagraph,
+    Reference,
+    EmbeddedValueTable,
+    ValueTableHeader
+)
 
 
 def is_embedded(tag: Tag) -> bool:
@@ -39,151 +50,133 @@ def is_embedded(tag: Tag) -> bool:
     return False
 
 
-def embedded_handler(tag: Tag) -> Flowable | str | None:
-    json_str = tag.attrs.get('data-etrmreference', None)
-    if json_str != None:
-        ref_tag = ReferenceTag(json_str)
-        ref_rml = f'<para> {ref_tag.obj_info.title.upper()} </para>'
-        return ref_rml
+class CharacterizationParser:
+    def __init__(self, measure: Measure, name: str):
+        self.measure = measure
+        self.html = measure.characterizations[name]
+        self.flowables: list[Flowable] = []
 
-    json_str = tag.attrs.get('data-etrmvaluetable', None)
-    if json_str != None:
-        pass
+    def _parse_text(self, text: str) -> Paragraph:
+        return Paragraph(text, PSTYLES['Paragraph'])
 
-    return None
+    def _parse_embedded_tag(self, tag: Tag) -> list[Flowable]:
+        json_str = tag.attrs.get('data-etrmreference', None)
+        if json_str != None:
+            ref_tag = ReferenceTag(json_str)
+            return [Reference(self.measure, ref_tag)]
 
+        json_str = tag.attrs.get('data-etrmvaluetable', None)
+        if json_str != None:
+            vt_tag = EmbeddedValueTableTag(json_str)
+            api_name = vt_tag.obj_info.api_name_unique
+            table_obj = self.measure.get_value_table(api_name)
+            id_path = '/'.join(self.measure.full_version_id.split('-'))
+            change_id = vt_tag.obj_info.change_url.split('/')[4]
+            table_link = f'{API_URL}/{id_path}/value-table/{change_id}/'
+            header = ValueTableHeader(table_obj.name, table_link)
+            table = EmbeddedValueTable(self.measure, vt_tag)
+            return [header, table]
 
-def text_handler(text: str) -> Paragraph:
-    sanitized_text = text.replace('\n', '<br />')
-    return Paragraph(sanitized_text, PSTYLES['Paragraph'])
+        return []
 
+    def _parse_header(self, header: Tag) -> Paragraph:
+        if len(header.children) != 1:
+            raise Exception('temp exception')
 
-def header_handler(header: Tag) -> Paragraph:
-    if len(header.children) != 1:
-        raise Exception('temp exception')
+        child = header.children[0]
+        if not isinstance(child, NavigableString):
+            raise Exception('temp exception')
 
-    child = header.children[0]
-    if not isinstance(child, NavigableString):
-        raise Exception('temp exception')
+        return Paragraph(child.get_text(), PSTYLES[header.name])
 
-    return Paragraph(child.get_text(), PSTYLES[header.name])
-
-
-def table_handler(table_element: Tag) -> Table:
-    thead = table_element.find('thead')
-    raw_headers: ResultSet[Tag]
-    if thead == None:
-        raw_headers = table_element.find_all('th')
-    elif isinstance(thead, Tag):
-        raw_headers = thead.find_all('th')
-    else:
-        raise Exception('missing table headers')
-
-    headers: list[Flowable] = []
-    for raw_header in raw_headers:
-        header = parse_element(raw_header)
-        if header == None:
-            headers.append(Paragraph(''))
+    def _parse_table(self, table_element: Tag) -> Table:
+        thead = table_element.find('thead')
+        raw_headers: ResultSet[Tag]
+        if thead == None:
+            raw_headers = table_element.find_all('th')
+        elif isinstance(thead, Tag):
+            raw_headers = thead.find_all('th')
         else:
-            headers.append(header)
+            raise Exception('missing table headers')
 
-    tbody = table_element.find('tbody')
-    if not isinstance(tbody, Tag):
-        return Exception('missing table body')
-
-    raw_rows: ResultSet[Tag] = tbody.find_all('tr')
-    rows: list[list[Flowable]] = []
-    for raw_row in raw_rows:
-        raw_cells: ResultSet[Tag] = raw_row.find_all('td')
-        row: list[Flowable] = []
-        for raw_cell in raw_cells:
-            cell = parse_element(raw_cell)
-            if cell == None:
-                row.append(Paragraph(''))
-            elif isinstance(cell, Flowable):
-                row.append(cell)
+        headers: list[Flowable] = []
+        for raw_header in raw_headers:
+            header = self._parse_element(raw_header)
+            if header == None:
+                headers.append(Paragraph(''))
             else:
-                raise Exception('illegal table formatting')
-        rows.append(row)
+                headers.append(header)
 
-    table_content: list[list[Flowable]] = []
-    table_content.append(headers)
-    table_content.extend(rows)
-    return Table(table_content, style=value_table_style(table_content))
+        tbody = table_element.find('tbody')
+        if not isinstance(tbody, Tag):
+            return Exception('missing table body')
 
+        raw_rows: ResultSet[Tag] = tbody.find_all('tr')
+        rows: list[list[Flowable]] = []
+        for raw_row in raw_rows:
+            raw_cells: ResultSet[Tag] = raw_row.find_all('td')
+            row: list[Flowable] = []
+            for raw_cell in raw_cells:
+                cell = self._parse_element(raw_cell)
+                if cell == None:
+                    row.append(Paragraph(''))
+                elif isinstance(cell, Flowable):
+                    row.append(cell)
+                else:
+                    raise Exception('illegal table formatting')
+            rows.append(row)
 
-def list_handler(ul: Tag) -> ListFlowable:
-    list_items: list[ListItem] = []
-    li_list: ResultSet[Tag] = ul.find_all('li')
-    for li in li_list:
-        item = parse_element(li)
-        if item == None:
-            list_items.append(ListItem(Paragraph('')))
-        else:
-            list_items.append(ListItem(item))
-    
-    blt_list = ListFlowable(list_items, bulletType=1, start='square')
+        table_content: list[list[Flowable]] = []
+        table_content.append(headers)
+        table_content.extend(rows)
+        return Table(table_content, style=value_table_style(table_content))
 
+    def _parse_list(self, ul: Tag) -> ListFlowable:
+        list_items: list[ListItem] = []
+        li_list: ResultSet[Tag] = ul.find_all('li')
+        for li in li_list:
+            item = self._parse_element(li)
+            if item == None:
+                list_items.append(ListItem(Paragraph('')))
+            else:
+                list_items.append(ListItem(item))
 
-def parse_element(element: PageElement) -> Flowable | list[Flowable] | str | None:
-    if isinstance(element, NavigableString):
-        return text_handler(element.get_text())
+        blt_list = ListFlowable(list_items, bulletType=1, start='square')
 
-    if not isinstance(element, Tag):
-        return None
+    def _parse_element(self, element: PageElement) -> list[Flowable]:
+        if isinstance(element, NavigableString):
+            return [self._parse_text(element.get_text())]
 
-    if is_embedded(element):
-        return embedded_handler(element)
+        if not isinstance(element, Tag):
+            return []
 
-    if len(element.contents) == 0:
-        return None
+        if is_embedded(element):
+            return self._parse_embedded_tag(element)
 
-    match element.name:
-        case 'div' | 'span':
-            parsed_elements = parse_elements(element.contents)
-            if len(parsed_elements) == 1:
-                return parsed_elements[0]
-            return parsed_elements
-        case 'p':
-            return SummaryParagraph(element=element)
-        case 'h3' | 'h6':
-            return header_handler(element)
-        case 'table':
-            return table_handler(element)
-        case 'ul':
-            return list_handler(element)
-        case ('sup' | 'sub') as tag:
-            return f'<{tag}>{parse_elements(element.contents)}</{tag}>'
-        case 'strong':
-            return f'<b>{parse_elements(element.contents)}</b>'
-        case tag:
-            raise Exception(f'unsupported HTML tag: {tag}')
+        if len(element.contents) == 0:
+            return []
 
+        match element.name:
+            case 'div' | 'span':
+                return list(
+                    map(lambda child: self._parse_element(child),
+                        element.contents))
+            case 'p':
+                return [SummaryParagraph(element=element)]
+            case 'h3' | 'h6':
+                return [self._parse_header(element)]
+            case 'table':
+                return [self._parse_table(element)]
+            case 'ul':
+                return [self._parse_list(element)]
+            case tag:
+                raise Exception(f'unsupported HTML tag: {tag}')
 
-def parse_elements(elements: list[PageElement]) -> list[Flowable | str]:
-    flowables: list[Flowable] = []
-    for element in elements:
-        sections = parse_element(element)
-        if isinstance(sections, list):
-            flowables.extend(sections)
-        elif isinstance(sections, Flowable):
-            flowables.append(sections)
-        elif isinstance(sections, str):
-            flowables.append(sections)
-    return flowables
+    def parse(self) -> list[Flowable]:
+        self.flowables = []
+        soup = BeautifulSoup(self.html, 'html.parser')
+        top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
+        for element in top_level:
+            self.flowables.extend(self._parse_element(element))
+        return self.flowables
 
-
-def parse_characterization(html: str) -> list[Flowable]:
-    soup = BeautifulSoup(html, 'html.parser')
-    top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
-    flowables: list[Flowable] = []
-    for element in top_level:
-        sections = parse_element(element)
-        if isinstance(sections, list):
-            flowables.extend(sections)
-        elif isinstance(sections, Flowable):
-            flowables.append(sections)
-        if element.next_sibling == '\n':
-            flowables.append(Spacer(letter[0], 9.2))
-    return flowables
-            

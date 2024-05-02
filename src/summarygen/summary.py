@@ -11,8 +11,9 @@ from reportlab.platypus import (
 )
 
 from src import _ROOT
+from src.etrm import API_URL
 from src.etrm.models import Measure
-from src.summarygen.parser import parse_characterization
+from src.summarygen.parser import CharacterizationParser
 from src.summarygen.styling import PSTYLES, TSTYLES
 
 
@@ -72,13 +73,14 @@ class MeasureSummary:
                       hAlign='LEFT')
         self.flowables.append(table)
 
-    def add_tech_summary(self, html: str):
+    def add_tech_summary(self, measure: Measure):
         self.flowables.append(Paragraph('Technology Summary',
-                                        PSTYLES['Header']))
-        self.flowables.extend(parse_characterization(html))
+                                        PSTYLES['h2']))
+        parser = CharacterizationParser(measure, 'technology_summary')
+        self.flowables.extend(parser.parse())
 
     def add_parameters_table(self, measure: Measure):
-        self.flowables.append(Paragraph('Parameters:', PSTYLES['Header']))
+        self.flowables.append(Paragraph('Parameters:', PSTYLES['h2']))
         data = [
             _params_table_row(measure,
                               'Measure Application Type',
@@ -109,9 +111,9 @@ class MeasureSummary:
 
     def add_sections_table(self, measure: Measure):
         self.flowables.append(Paragraph('Sections:',
-                                        PSTYLES['Header']))
+                                        PSTYLES['h2']))
         id_path = '/'.join(measure.full_version_id.split('-'))
-        link = f'https://www.caetrm.com/measure/{id_path}'
+        link = f'{API_URL}/measure/{id_path}'
         data = [
             [_theader('Descriptions'),
                 _link('Technology Summary', f'{link}#technology-summary')],
@@ -180,7 +182,7 @@ class MeasureSummary:
         self.measures.append(measure)
         self.add_measure_details_table(measure)
         self.flowables.append(NEWLINE)
-        self.add_tech_summary(measure.characterizations['technology_summary'])
+        self.add_tech_summary(measure)
         self.flowables.append(NEWLINE)
         self.add_parameters_table(measure)
         self.flowables.append(NEWLINE)
