@@ -1,7 +1,6 @@
 import re
 import requests
 
-from src.etrm import API_URL
 from src.etrm.models import (
     MeasuresResponse,
     MeasureVersionsResponse,

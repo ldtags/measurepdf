@@ -102,10 +102,10 @@ class CharacterizationParser:
         headers: list[Flowable] = []
         for raw_header in raw_headers:
             header = self._parse_element(raw_header)
-            if header == None:
-                headers.append(Paragraph(''))
+            if len(header) > 0:
+                headers.append(header[0])
             else:
-                headers.append(header)
+                headers.append(Paragraph(''))
 
         tbody = table_element.find('tbody')
         if not isinstance(tbody, Tag):
@@ -117,13 +117,11 @@ class CharacterizationParser:
             raw_cells: ResultSet[Tag] = raw_row.find_all('td')
             row: list[Flowable] = []
             for raw_cell in raw_cells:
-                cell = self._parse_element(raw_cell)
-                if cell == None:
-                    row.append(Paragraph(''))
-                elif isinstance(cell, Flowable):
-                    row.append(cell)
+                cells = self._parse_element(raw_cell)
+                if len(cells) > 0:
+                    row.append(cells[0])
                 else:
-                    raise Exception('illegal table formatting')
+                    row.append(Paragraph(''))
             rows.append(row)
 
         table_content: list[list[Flowable]] = []
@@ -135,13 +133,11 @@ class CharacterizationParser:
         list_items: list[ListItem] = []
         li_list: ResultSet[Tag] = ul.find_all('li')
         for li in li_list:
-            item = self._parse_element(li)
-            if item == None:
-                list_items.append(ListItem(Paragraph('')))
-            else:
+            items = self._parse_element(li)
+            for item in items:
                 list_items.append(ListItem(item))
 
-        blt_list = ListFlowable(list_items, bulletType=1, start='square')
+        return ListFlowable(list_items, bulletType=1, start='square')
 
     def _parse_element(self, element: PageElement) -> list[Flowable]:
         if isinstance(element, NavigableString):
@@ -179,4 +175,3 @@ class CharacterizationParser:
         for element in top_level:
             self.flowables.extend(self._parse_element(element))
         return self.flowables
-

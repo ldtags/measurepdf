@@ -52,7 +52,7 @@ class ObjectInfo:
         self.change_url = getc(json_obj, 'change_url', str)
         self.preview_url = getc(json_obj, 'preview_url', str, None)
         self.api_name_unique = getc(json_obj, 'api_name_unique', str, None)
-        self.vtconf = getc(json_obj, 'vtconf', ValueTableConfig, None)
+        self.vtconf = getc(json_obj, 'vtconf', ValueTableConfig | None)
 
 
 class ReferenceTag(ParagraphElement):
