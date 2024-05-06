@@ -123,8 +123,8 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('SPAN', (0, 7), (0, 9)),
             ('SPAN', (0, 10), (0, 13)),
             ('SPAN', (0, 14), (0, 17)),
-            ('TOPPADDING', (0, 0), (-1, -1), 3),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
             ('VALIGN', (0, 0), (0, -1), 'TOP'),
             ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
     style_sheet.add(

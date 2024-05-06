@@ -35,9 +35,10 @@ class ETRMConnection:
             'Authorization': self.auth_token
         }
 
-        response = requests.get(f'{API_URL}/measures/'
-                                    + f'{statewide_id}/{version_id}',
-                                headers=headers)
+        url = f'{API_URL}/measures/{statewide_id}/{version_id}'
+        response = requests.get(url,
+                                headers=headers,
+                                stream=True)
 
         if response.status_code != 200:
             raise UnauthorizedError()

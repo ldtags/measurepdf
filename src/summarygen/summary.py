@@ -8,7 +8,8 @@ from reportlab.platypus import (
     Paragraph,
     PageBreak,
     SimpleDocTemplate,
-    Spacer
+    Spacer,
+    KeepTogether
 )
 
 from src import _ROOT
@@ -41,26 +42,20 @@ def _link(display_text: str, link: str) -> Paragraph:
 
 def calc_row_heights(data: list[tuple[str | Paragraph, ...]],
                      table_style: BetterTableStyle,
-                     para_styles: tuple[BetterParagraphStyle, ...],
+                     para_styles: BetterParagraphStyle,
                      base_height: float,
                      base_widths: tuple[float, ...]
                     ) -> list[float]:
-    padding = table_style.top_padding + table_style.bottom_padding
-    base_height = 0.24*inch + padding
+    vpadding = table_style.top_padding + table_style.bottom_padding
+    hpadding = table_style.left_padding + table_style.right_padding
+    height = base_height + vpadding
     row_heights: list[float] = []
-    for i, row in enumerate(data):
-        try:
-            pstyle = para_styles[i]
-        except IndexError:
-            pstyle = para_styles[0]
-        
-        
     for _, value in data:
         width = stringWidth(value.text,
                             table_style.font_name,
                             table_style.font_size)
-        scale = width // base_widths[1]
-        row_heights.append(base_height + scale * para_style.leading)
+        scale = width // (base_widths[1] - hpadding)
+        row_heights.append(height + scale * para_styles.leading)
     return row_heights
 
 
@@ -110,13 +105,17 @@ class MeasureSummary:
         self.flowables.append(table)
 
     def add_tech_summary(self, measure: Measure):
-        self.flowables.append(Paragraph('Technology Summary',
-                                        PSTYLES['h2']))
+        header = Paragraph('Technology Summary', PSTYLES['h2'])
         parser = CharacterizationParser(measure, 'technology_summary')
-        self.flowables.extend(parser.parse())
+        sections = parser.parse()
+        # initial_section = sections.pop(0)
+        # headed_section = KeepTogether(header, initial_section)
+        # self.flowables.append(headed_section)
+        self.flowables.append(header)
+        self.flowables.extend(sections)
 
     def add_parameters_table(self, measure: Measure):
-        self.flowables.append(Paragraph('Parameters:', PSTYLES['h2']))
+        table_header = Paragraph('Parameters:', PSTYLES['h2'])
         data = [
             _params_table_row(measure,
                               'Measure Application Type',
@@ -140,13 +139,13 @@ class MeasureSummary:
                       rowHeights=row_heights,
                       style=TSTYLES['ParametersTable'],
                       hAlign='LEFT')
-        self.flowables.append(table)
+        headed_table = KeepTogether([table_header, table])
+        self.flowables.append(headed_table)
 
     def add_sections_table(self, measure: Measure):
-        self.flowables.append(Paragraph('Sections:',
-                                        PSTYLES['h2']))
+        table_header = Paragraph('Sections:', PSTYLES['h2'])
         hstyle = PSTYLES['TableHeader']
-        id_path = '/'.join(measure.full_version_id.split('-'))
+        id_path = '/'.join(measure.full_version_id.split('-', 1))
         link = f'{ETRM_URL}/measure/{id_path}'
         data = [
             [Paragraph('Descriptions', hstyle),
@@ -180,7 +179,7 @@ class MeasureSummary:
                       f'{link}#base-case-material-cost-unit')],
             ['',
                 _link('Measure Case Material Cost ($/Unit)',
-                      f'{link}#measure-case-material-cost')],
+                      f'{link}#measure-case-material-cost-unit')],
             ['',
                 _link('Base Case Labor Cost ($/Unit)',
                       f'{link}#base-case-labor-cost-unit')],
@@ -197,13 +196,13 @@ class MeasureSummary:
             ['',
                 _link('Non-Energy Impacts', f'{link}#non-energy-impacts')],
             [Paragraph('Cover Sheet', hstyle),
-                _link('Cover Sheet', f'{link}#cover-sheet')],
+                _link('Cover Sheet', f'{link}/cover-sheet')],
             [Paragraph('Measure Property Data', hstyle),
-                _link('Property Data', f'{link}#property-data')],
+                _link('Property Data', f'{link}/property-data')],
             [Paragraph('Subscribe', hstyle),
                 _link('Subscriptions', f'{link}/subscriptions')],
             [Paragraph('Permutations', hstyle),
-                _link('Permutations', f'{link}/permutations')]]
+                _link('Permutations', f'{link}/permutation-reports')]]
         row_heights = (*(19*[0.24*inch]), 0.48*inch, *(2*[0.24*inch]))
         tstyle = TSTYLES['SectionsTable']
         col_widths = (1.42*inch, 4.81*inch)
@@ -211,13 +210,15 @@ class MeasureSummary:
         row_heights = calc_row_heights(data,
                                        tstyle,
                                        PSTYLES['Link'],
-                                       )
+                                       base_height,
+                                       col_widths)
         table = Table(data,
                       colWidths=(1.42*inch, 4.81*inch),
                       rowHeights=row_heights,
                       style=TSTYLES['SectionsTable'],
                       hAlign='LEFT')
-        self.flowables.append(table)
+        headed_table = KeepTogether([table_header, table])
+        self.flowables.append(headed_table)
 
     def add_measure(self, measure: Measure):
         self.measures.append(measure)

@@ -1,4 +1,3 @@
-import unicodedata
 from bs4 import BeautifulSoup, PageElement, NavigableString, Tag, ResultSet
 from reportlab.lib import colors
 from reportlab.lib.utils import simpleSplit
@@ -213,23 +212,21 @@ class SummaryParagraph(Flowable):
         if TextStyle.STRONG in element.styles:
             font_name += 'B'
         font_size = self.font_size
+        rise = 0
         if TextStyle.SUP in element.styles or TextStyle.SUB in element.styles:
             font_size = 8
+            if TextStyle.SUP in element.styles:
+                rise += 4
+            if TextStyle.SUB in element.styles:
+                rise -= 4
         text_obj.setFont(font_name, font_size)
-
-        rise = 0
-        if TextStyle.SUP in element.styles:
-            rise += 4
-        if TextStyle.SUB in element.styles:
-            rise -= 4
         text_obj.setRise(rise)
 
-        for line in self._split_text(element.text):
-            x, _ = text_obj.getCursor()
-            str_width = self._string_width(line, font_name)
-            if x + str_width > self.width:
-                text_obj.moveCursor(self.x - x, 0)
-            text_obj.textOut(line)
+        x, _ = text_obj.getCursor()
+        str_width = self._string_width(element.text, font_name)
+        if x + str_width > self.width:
+            text_obj.moveCursor(self.x - x, 0)
+        text_obj.textOut(element.text.lstrip())
 
         text_obj.setFont(self.font_name, self.font_size)
         text_obj.setRise(0)
@@ -396,10 +393,8 @@ def _parse_list(ul: Tag) -> list[ListItem]:
     li_list: ResultSet[Tag] = ul.find_all('li')
     for li in li_list:
         items = _parse_element(li)
-        for item in items:
-            element = SummaryParagraph(paragraph_element=item)
-            list_items.append(ListItem(element))
-
+        element = SummaryParagraph(paragraph_elements=items)
+        list_items.append(ListItem(element))
     return list_items
 
 
