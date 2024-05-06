@@ -1,4 +1,5 @@
 import os
+import math
 from reportlab.lib.pagesizes import inch, letter
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
@@ -11,10 +12,11 @@ from reportlab.platypus import (
 )
 
 from src import _ROOT
-from src.etrm import API_URL
+from src.etrm import ETRM_URL
 from src.etrm.models import Measure
 from src.summarygen.parser import CharacterizationParser
 from src.summarygen.styling import PSTYLES, TSTYLES
+from src.summarygen.rlobjects import BetterTableStyle, BetterParagraphStyle
 
 
 NEWLINE = Spacer(letter[0], 17.5)
@@ -37,8 +39,29 @@ def _link(display_text: str, link: str) -> Paragraph:
                      PSTYLES['Link'])
 
 
-def _theader(text: str) -> Paragraph:
-    return Paragraph(text, PSTYLES['TableHeader']) 
+def calc_row_heights(data: list[tuple[str | Paragraph, ...]],
+                     table_style: BetterTableStyle,
+                     para_styles: tuple[BetterParagraphStyle, ...],
+                     base_height: float,
+                     base_widths: tuple[float, ...]
+                    ) -> list[float]:
+    padding = table_style.top_padding + table_style.bottom_padding
+    base_height = 0.24*inch + padding
+    row_heights: list[float] = []
+    for i, row in enumerate(data):
+        try:
+            pstyle = para_styles[i]
+        except IndexError:
+            pstyle = para_styles[0]
+        
+        
+    for _, value in data:
+        width = stringWidth(value.text,
+                            table_style.font_name,
+                            table_style.font_size)
+        scale = width // base_widths[1]
+        row_heights.append(base_height + scale * para_style.leading)
+    return row_heights
 
 
 class MeasureSummary:
@@ -59,17 +82,30 @@ class MeasureSummary:
         self.summary = SimpleDocTemplate(self.file_path, pagesize=letter)
 
     def add_measure_details_table(self, measure: Measure):
-        data = [
-            ['Statewide Measure Id', measure.full_version_id],
-            ['Measure Name', measure.name],
-            ['Effective Date', measure.effective_start_date],
-            ['End Date', measure.sunset_date or ''],
-            ['PA Lead', measure.pa_lead]
+        pstyle = PSTYLES['SmallParagraph']
+        data: list[tuple[str, Paragraph]] = [
+            ['Statewide Measure Id', Paragraph(measure.full_version_id,
+                                               pstyle)],
+            ['Measure Name', Paragraph(measure.name,
+                                       pstyle)],
+            ['Effective Date', Paragraph(measure.effective_start_date,
+                                         pstyle)],
+            ['End Date', Paragraph(measure.sunset_date or '',
+                                   pstyle)],
+            ['PA Lead', Paragraph(measure.pa_lead, pstyle)]
         ]
+        style = TSTYLES['DetailsTable']
+        col_widths = (2.25*inch, 3.03*inch)
+        base_height = 0.24*inch + style.top_padding + style.bottom_padding
+        row_heights = calc_row_heights(data,
+                                       style,
+                                       pstyle,
+                                       base_height,
+                                       col_widths)
         table = Table(data,
-                      colWidths=(2.25*inch, 3.03*inch),
-                      rowHeights=(0.24*inch),
-                      style=TSTYLES['DetailsTable'],
+                      colWidths=col_widths,
+                      rowHeights=row_heights,
+                      style=style,
                       hAlign='LEFT')
         self.flowables.append(table)
 
@@ -92,16 +128,13 @@ class MeasureSummary:
             _params_table_row(measure, 'Delivery Type', 'DelivType')
         ]
         style = TSTYLES['ParametersTable']
-        col_widths: list[float] = (2.26*inch, 3.98*inch)
-        base_height = 0.24*inch
-        row_heights: list[float] = []
-        for _, value in data:
-            width = stringWidth(value.text, style.font_name, style.font_size)
-            scale = width / col_widths[1]
-            if scale > 1:
-                row_heights.append(base_height * scale)
-            else:
-                row_heights.append(base_height)
+        col_widths = (2.26*inch, 3.98*inch)
+        base_height = 0.24*inch + style.top_padding + style.bottom_padding
+        row_heights = calc_row_heights(data,
+                                       style,
+                                       PSTYLES['SmallParagraph'],
+                                       base_height,
+                                       col_widths)
         table = Table(data,
                       colWidths=col_widths,
                       rowHeights=row_heights,
@@ -112,10 +145,11 @@ class MeasureSummary:
     def add_sections_table(self, measure: Measure):
         self.flowables.append(Paragraph('Sections:',
                                         PSTYLES['h2']))
+        hstyle = PSTYLES['TableHeader']
         id_path = '/'.join(measure.full_version_id.split('-'))
-        link = f'{API_URL}/measure/{id_path}'
+        link = f'{ETRM_URL}/measure/{id_path}'
         data = [
-            [_theader('Descriptions'),
+            [Paragraph('Descriptions', hstyle),
                 _link('Technology Summary', f'{link}#technology-summary')],
             ['', 
                 _link('Measure Case Description',
@@ -123,7 +157,7 @@ class MeasureSummary:
             ['',
                 _link('Base Case Description',
                       f'{link}#base-case-description')],
-            [_theader('Requirements'),
+            [Paragraph('Requirements', hstyle),
                 _link('Code Requirements', f'{link}#code-requirements')],
             ['',
                 _link('Program Requirements',
@@ -133,7 +167,7 @@ class MeasureSummary:
             ['',
                 _link('Data Collection Requirements',
                       f'{link}#data-collection-requirements')],
-            [_theader('Savings'),
+            [Paragraph('Savings', hstyle),
                 _link('Electric Savings (kWh)',
                       f'{link}#electric-savings-kwh')],
             ['',
@@ -141,7 +175,7 @@ class MeasureSummary:
                       f'{link}#peak-electric-demand-reduction-kw')],
             ['',
                 _link('Gas Savings (Therms)', f'{link}#gas-savings-therms')],
-            [_theader('Cost'),
+            [Paragraph('Cost', hstyle),
                 _link('Base Case Material Cost ($/Unit)',
                       f'{link}#base-case-material-cost-unit')],
             ['',
@@ -153,7 +187,7 @@ class MeasureSummary:
             ['',
                 _link('Measure Case Labor Cost ($/Unit)',
                       f'{link}#measure-case-labor-cost-unit')],
-            [_theader('Other'),
+            [Paragraph('Other', hstyle),
                 _link('Life Cycle', f'{link}#life-cycle')],
             ['',
                 _link('Net-to-gross', f'{link}#net-to-gross')],
@@ -162,15 +196,22 @@ class MeasureSummary:
                       f'{link}#gross-savings-installation-adjustment-gsia')],
             ['',
                 _link('Non-Energy Impacts', f'{link}#non-energy-impacts')],
-            [_theader('Cover Sheet'),
+            [Paragraph('Cover Sheet', hstyle),
                 _link('Cover Sheet', f'{link}#cover-sheet')],
-            [_theader('Measure Property Data'),
+            [Paragraph('Measure Property Data', hstyle),
                 _link('Property Data', f'{link}#property-data')],
-            [_theader('Subscribe'),
+            [Paragraph('Subscribe', hstyle),
                 _link('Subscriptions', f'{link}/subscriptions')],
-            [_theader('Permutations'),
+            [Paragraph('Permutations', hstyle),
                 _link('Permutations', f'{link}/permutations')]]
         row_heights = (*(19*[0.24*inch]), 0.48*inch, *(2*[0.24*inch]))
+        tstyle = TSTYLES['SectionsTable']
+        col_widths = (1.42*inch, 4.81*inch)
+        base_height = 0.24*inch
+        row_heights = calc_row_heights(data,
+                                       tstyle,
+                                       PSTYLES['Link'],
+                                       )
         table = Table(data,
                       colWidths=(1.42*inch, 4.81*inch),
                       rowHeights=row_heights,

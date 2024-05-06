@@ -15,7 +15,7 @@ from reportlab.platypus import (
     Spacer
 )
 
-from src.etrm import API_URL
+from src.etrm import ETRM_URL
 from src.etrm.models import Measure
 from src.summarygen.models import (
     ParagraphElement,
@@ -28,9 +28,11 @@ from src.summarygen.styling import (
 )
 from src.summarygen.flowables import (
     SummaryParagraph,
+    StaticValueTable,
     Reference,
     EmbeddedValueTable,
-    ValueTableHeader
+    ValueTableHeader,
+    SummaryList
 )
 
 
@@ -72,7 +74,7 @@ class CharacterizationParser:
             table_obj = self.measure.get_value_table(api_name)
             id_path = '/'.join(self.measure.full_version_id.split('-'))
             change_id = vt_tag.obj_info.change_url.split('/')[4]
-            table_link = f'{API_URL}/{id_path}/value-table/{change_id}/'
+            table_link = f'{ETRM_URL}/measure/{id_path}/value-table/{change_id}/'
             header = ValueTableHeader(table_obj.name, table_link)
             table = EmbeddedValueTable(self.measure, vt_tag)
             return [header, table]
@@ -80,64 +82,14 @@ class CharacterizationParser:
         return []
 
     def _parse_header(self, header: Tag) -> Paragraph:
-        if len(header.children) != 1:
+        if len(header.contents) != 1:
             raise Exception('temp exception')
 
-        child = header.children[0]
+        child = header.contents[0]
         if not isinstance(child, NavigableString):
             raise Exception('temp exception')
 
         return Paragraph(child.get_text(), PSTYLES[header.name])
-
-    def _parse_table(self, table_element: Tag) -> Table:
-        thead = table_element.find('thead')
-        raw_headers: ResultSet[Tag]
-        if thead == None:
-            raw_headers = table_element.find_all('th')
-        elif isinstance(thead, Tag):
-            raw_headers = thead.find_all('th')
-        else:
-            raise Exception('missing table headers')
-
-        headers: list[Flowable] = []
-        for raw_header in raw_headers:
-            header = self._parse_element(raw_header)
-            if len(header) > 0:
-                headers.append(header[0])
-            else:
-                headers.append(Paragraph(''))
-
-        tbody = table_element.find('tbody')
-        if not isinstance(tbody, Tag):
-            return Exception('missing table body')
-
-        raw_rows: ResultSet[Tag] = tbody.find_all('tr')
-        rows: list[list[Flowable]] = []
-        for raw_row in raw_rows:
-            raw_cells: ResultSet[Tag] = raw_row.find_all('td')
-            row: list[Flowable] = []
-            for raw_cell in raw_cells:
-                cells = self._parse_element(raw_cell)
-                if len(cells) > 0:
-                    row.append(cells[0])
-                else:
-                    row.append(Paragraph(''))
-            rows.append(row)
-
-        table_content: list[list[Flowable]] = []
-        table_content.append(headers)
-        table_content.extend(rows)
-        return Table(table_content, style=value_table_style(table_content))
-
-    def _parse_list(self, ul: Tag) -> ListFlowable:
-        list_items: list[ListItem] = []
-        li_list: ResultSet[Tag] = ul.find_all('li')
-        for li in li_list:
-            items = self._parse_element(li)
-            for item in items:
-                list_items.append(ListItem(item))
-
-        return ListFlowable(list_items, bulletType=1, start='square')
 
     def _parse_element(self, element: PageElement) -> list[Flowable]:
         if isinstance(element, NavigableString):
@@ -154,17 +106,19 @@ class CharacterizationParser:
 
         match element.name:
             case 'div' | 'span':
-                return list(
-                    map(lambda child: self._parse_element(child),
-                        element.contents))
+                _flowables: list[Flowable] = []
+                for child in element.contents:
+                    _flowables.extend(self._parse_element(child))
+                return _flowables
             case 'p':
                 return [SummaryParagraph(element=element)]
             case 'h3' | 'h6':
                 return [self._parse_header(element)]
             case 'table':
-                return [self._parse_table(element)]
+                # return [StaticValueTable(element=element)]
+                return [Table([['Table Placeholder']])]
             case 'ul':
-                return [self._parse_list(element)]
+                return [SummaryList(element=element)]
             case tag:
                 raise Exception(f'unsupported HTML tag: {tag}')
 
@@ -174,4 +128,6 @@ class CharacterizationParser:
         top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
         for element in top_level:
             self.flowables.extend(self._parse_element(element))
+            if element.next_sibling == '\n':
+                self.flowables.append(Spacer(letter[0], 9.2))
         return self.flowables

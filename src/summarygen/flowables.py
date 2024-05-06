@@ -1,11 +1,18 @@
-from bs4 import BeautifulSoup, PageElement, NavigableString, Tag
+import unicodedata
+from bs4 import BeautifulSoup, PageElement, NavigableString, Tag, ResultSet
 from reportlab.lib import colors
 from reportlab.lib.utils import simpleSplit
 from reportlab.pdfgen.canvas import Canvas, PDFTextObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
-from reportlab.platypus import Flowable, Paragraph, Table
+from reportlab.platypus import (
+    Flowable,
+    Paragraph,
+    Table,
+    ListFlowable,
+    ListItem
+)
 
-from src.etrm import API_URL
+from src.etrm import ETRM_URL
 from src.etrm.models import Measure
 from src.exceptions import SummaryGenError
 from src.summarygen.models import (
@@ -16,6 +23,7 @@ from src.summarygen.models import (
     TextStyle
 )
 from src.summarygen.styling import PSTYLES, COLORS, value_table_style
+from src.summarygen.rlobjects import BetterParagraphStyle, BetterTableStyle
 
 
 def _parse_element(element: PageElement) -> list[ParagraphElement]:
@@ -27,13 +35,17 @@ def _parse_element(element: PageElement) -> list[ParagraphElement]:
 
     match element.name:
         case 'p':
+            # add newline here instead of during flowable addition
+            # this will account for nested paragraphs (ugh)
+            elements = _parse_elements(element.contents)
+            return elements
+        case 'th' | 'td' | 'li':
             return _parse_elements(element.contents)
         case 'div' | 'span':
             json_str = element.attrs.get('data-etrmreference', None)
             if json_str != None:
                 return [ReferenceTag(json_str)]
-            else:
-                return _parse_elements(element.contents)
+            return _parse_elements(element.contents)
         case 'strong' | 'sup' | 'sub':
             elements = _parse_elements(element.contents)
             for item in elements:
@@ -41,6 +53,8 @@ def _parse_element(element: PageElement) -> list[ParagraphElement]:
                 if style not in item.styles:
                     item.styles.append(style)
             return elements
+        case _:
+            raise RuntimeError(f'unsupported tag: {element.name}')
 
 
 def _parse_elements(elements: list[PageElement]) -> list[ParagraphElement]:
@@ -52,32 +66,80 @@ def _parse_elements(elements: list[PageElement]) -> list[ParagraphElement]:
     return contents
 
 
-def _parse_paragraph(source: str | Tag) -> list[ParagraphElement]:
-    if isinstance(source, Tag):
-        contents = _parse_element(source)
-    elif isinstance(source, str):
-        soup = BeautifulSoup(source, 'html.parser')
-        contents = _parse_elements(soup.find_all(recursive=False))
-    else:
-        raise RuntimeError(f'unsupported paragraph source type: {type(source)}')
-    return contents
-
-
 class SummaryParagraph(Flowable):
+    # TODO: add option to set the height and width of the element (for wrapping)
     def __init__(self,
                  x: int=0,
                  y: int=0,
-                 html: str='',
-                 element: Tag | None=None):
+                 text: str='',
+                 html: str | None=None,
+                 element: PageElement | None=None,
+                 elements: list[PageElement] | None=None,
+                 paragraph_element: ParagraphElement | None=None,
+                 paragraph_elements: list[ParagraphElement] | None=None,
+                 style: BetterParagraphStyle | None=None):
         Flowable.__init__(self)
         self.x = x
         self.y = y
-        self._elements = _parse_paragraph(element or html)
-        self.style = PSTYLES['Paragraph']
+        self._elements: list[ParagraphElement] = []
+        if paragraph_elements != None:
+            self._elements = paragraph_elements
+        elif paragraph_element != None:
+            self._elements = [paragraph_element]
+        elif elements != None:
+            for _element in elements:
+                self._elements.extend(_parse_element(_element))
+        elif element != None:
+            self._elements = _parse_element(element)
+        elif html != None:
+            soup = BeautifulSoup(html, 'html.parser')
+            self._elements = _parse_elements(soup.find_all(recursive=False))
+        else:
+            self._elements = [ParagraphElement(text)]
+        if style != None:
+            self.style = style
+        else:
+            self.style = PSTYLES['Paragraph']
+        self._join_elements()
         self.font_name = str(self.style.attrs['fontName'])
         self.font_size = float(self.style.attrs['fontSize'])
         self.leading = float(self.style.attrs.get('leading',
                                                   self.font_size * 1.2))
+
+    def _join_elements(self):
+        sections: list[tuple[int, int]] = []
+        start = -1
+        cur_styles: list[TextStyle] = []
+        cur_type: ElemType | None = None
+        for i, element in enumerate(self._elements):
+            if start == -1:
+                if i == len(self._elements) - 1:
+                    sections.append((i, i))
+                else:
+                    start = i
+                    cur_styles = element.styles
+                    cur_type = element.type
+            elif element.styles != cur_styles or element.type != cur_type:
+                sections.append((start, i - 1))
+                if i == len(self._elements) - 1:
+                    sections.append((i, i))
+                else:
+                    start = i
+                    cur_styles = element.styles
+                    cur_type = element.type
+            elif i == len(self._elements) - 1:
+                sections.append((start, i))
+
+        elements: list[ParagraphElement] = []
+        for start, end in sections:
+            element: ParagraphElement | None = None
+            for i in range(start, end + 1):
+                if element == None:
+                    element = self._elements[i]
+                else:
+                    element.text += self._elements[i].text
+            elements.append(element)
+        self._elements = elements
 
     @property
     def text(self) -> str:
@@ -111,14 +173,14 @@ class SummaryParagraph(Flowable):
                 cur_width = 0
                 if self._string_width(line, font_name) > self.width:
                     _element_lines.append([element.copy(text=line)])
-                    element.text = element.text.replace(line, '').strip()
+                    element.text = element.text.replace(line, '')
             elif j != word_count + 1:
                 line = ' '.join(words[0:(j - 1)])
                 _element_line.append(element.copy(text=line))
                 _element_lines.append(_element_line)
                 _element_line = []
                 cur_width = 0
-                element.text = element.text.replace(line, '').strip()
+                element.text = element.text.replace(line, '')
             else:
                 if _element_line == [] and isinstance(element, ReferenceTag):
                     element.text = element.text.lstrip()
@@ -146,6 +208,7 @@ class SummaryParagraph(Flowable):
     def _set_elem_text(self,
                        text_obj: PDFTextObject,
                        element: ParagraphElement):
+        text_obj.setFillColor(colors.black)
         font_name = self.font_name
         if TextStyle.STRONG in element.styles:
             font_name += 'B'
@@ -190,17 +253,18 @@ class SummaryParagraph(Flowable):
         text_obj.textOut(text)
         text_obj.setFillColor(colors.black)
         text_obj.setFont(self.font_name, self.font_size)
+
         canvas: Canvas = self.canv
+        rect_width = str_width - 4.5 + w_pad
         canvas.setFillColor(COLORS['ReferenceTagBG'])
         canvas.rect(x + x_pad,
                     y - (self.leading - self.font_size) + 0.25,
-                    str_width - 4.5 + w_pad,
+                    rect_width,
                     self.font_size,
                     stroke=0,
                     fill=1)
         canvas.setFillColor(colors.black)
-        x, _ = text_obj.getCursor()
-        text_obj.moveCursor(x + space_width / 2, 0)
+        text_obj.moveCursor(x_pad + rect_width + space_width, 0)
 
     def draw(self):
         canvas: Canvas = self.canv
@@ -226,10 +290,140 @@ class SummaryParagraph(Flowable):
             x, y = text_obj.getCursor()
 
 
+def _parse_table_headers(table: Tag) -> list[SummaryParagraph]:
+    thead = table.find('thead')
+    raw_headers: ResultSet[Tag] = []
+    if thead == None:
+        raw_headers = table.find_all('th')
+    elif isinstance(thead, Tag):
+        raw_headers = thead.find_all('th')
+    else:
+        raise SummaryGenError('missing table headers')
+    headers: list[SummaryParagraph] = []
+    for raw_header in raw_headers:
+        header_elements = _parse_element(raw_header)
+        headers.append(SummaryParagraph(paragraph_elements=header_elements))
+    return headers
+
+
+def _parse_table_body(table: Tag) -> list[list[SummaryParagraph]]:
+    tbody = table.find('tbody')
+    if not isinstance(tbody, Tag):
+        raise SummaryGenError('missing table body')
+    raw_rows: ResultSet[Tag] = tbody.find_all('tr')
+    body_rows: list[list[SummaryParagraph]] = []
+    for raw_row in raw_rows:
+        raw_cells: ResultSet[Tag] = raw_row.find_all('td')
+        cells: list[SummaryParagraph] = []
+        for raw_cell in raw_cells:
+            cell_elements = _parse_element(raw_cell)
+            cells.append(SummaryParagraph(paragraph_elements=cell_elements))
+        body_rows.append(cells)
+    return body_rows
+
+
+def _parse_table(table: Tag) -> list[list[SummaryParagraph]]:
+    headers = _parse_table_headers(table)
+    body = _parse_table_body(table)
+    data: list[list[SummaryParagraph]] = []
+    data.append(headers)
+    data.extend(body)
+    return data
+
+
+class StaticValueTable(Table):
+    def __init__(self,
+                 x: int=0,
+                 y: int=0,
+                 html: str='',
+                 element: Tag | None=None,
+                 data: list[list[str]] | None=None,
+                 style: BetterTableStyle | None=None):
+        Flowable.__init__(self)
+        self.x = x
+        self.y = y
+        self.data: list[list[SummaryParagraph]] = []
+        if data != None:
+            self.data = data
+        elif element != None:
+            self.data = _parse_table(element)
+        else:
+            self.data = _parse_table(Tag(BeautifulSoup(html)))
+        self.style = style or value_table_style(self.data)
+        super().__init__(self.data,
+                         colWidths=self.col_widths(),
+                         rowHeights=self.row_heights(),
+                         style=self.style,
+                         hAlign='LEFT')
+
+    def _col_width(self, element: SummaryParagraph) -> float:
+        padding = self.style.left_padding + self.style.right_padding
+        return element.width + padding
+
+    def col_widths(self) -> list[float]:
+        if self.data == []:
+            return []
+        headers = self.data[0]
+        col_widths: list[float] = list(range(len(headers)))
+        for i in range(len(headers)):
+            max_width = 0
+            for j in range(len(self.data)):
+                col_width = self._col_width(self.data[j][i])
+                if col_width > max_width:
+                    max_width = col_width
+            col_widths[i] = max_width
+        return col_widths
+
+    def _row_height(self, element: SummaryParagraph) -> float:
+        padding = self.style.top_padding + self.style.bottom_padding
+        return element.height + padding
+
+    def row_heights(self) -> list[float]:
+        row_heights: list[float] = list(range(len(self.data)))
+        for i in range(len(self.data)):
+            max_height = 0
+            for cell in self.data[i]:
+                cell_height = self._row_height(cell)
+                if cell_height > max_height:
+                    max_height = cell_height
+            row_heights[i] = max_height
+        return row_heights
+                
+
+
+def _parse_list(ul: Tag) -> list[ListItem]:
+    list_items: list[ListItem] = []
+    li_list: ResultSet[Tag] = ul.find_all('li')
+    for li in li_list:
+        items = _parse_element(li)
+        for item in items:
+            element = SummaryParagraph(paragraph_element=item)
+            list_items.append(ListItem(element))
+
+    return list_items
+
+
+class SummaryList(ListFlowable):
+    def __init__(self,
+                 html: str='',
+                 element: Tag | None=None,
+                 style: BetterParagraphStyle | None=None):
+        self.list_items: list[ListItem] = []
+        if element != None:
+            self.list_items = _parse_list(element)
+        else:
+            list_element = Tag(BeautifulSoup(html, 'html.parser'))
+            self.list_items = _parse_list(list_element)
+        ListFlowable.__init__(self,
+                              self.list_items,
+                              start='square',
+                              style=style)
+
+
 class Reference(Paragraph):
     def __init__(self, measure: Measure, tag: ReferenceTag):
         statewide_id, version_id = measure.full_version_id.split('-', 1)
-        link = '/'.join([API_URL, statewide_id, version_id])
+        link = '/'.join([ETRM_URL, statewide_id, version_id])
         text = f'<link href=\"{link}\">{tag.text}</link>'
         Paragraph.__init__(self, text=text, style=PSTYLES['ReferenceTag'])
 
@@ -239,18 +433,20 @@ class ValueTableHeader(Paragraph):
         header_text = text
         if link != None:
             header_text = f'<link href=\"{link}\">{header_text}</link>'
-        Paragraph.__init__(self, text, style=PSTYLES['h6'])
+            style = PSTYLES['h6Link']
+        else:
+            style = PSTYLES['h6']
+        Paragraph.__init__(self, header_text, style=style)
 
 
 class EmbeddedValueTable(Table):
     def __init__(self, measure: Measure, tag: EmbeddedValueTableTag):
-        self.style = value_table_style(data, embedded=True)
         api_name = tag.obj_info.api_name_unique
         table = measure.get_value_table(api_name)
         if table == None:
             raise SummaryGenError(f'value table {api_name} does not exist'
                                     + f' in {measure.full_version_id}')
-        column_indexes: list[int] = 0
+        column_indexes: list[int] = []
         headers: list[str] = []
         for i, column in enumerate(table.columns):
             if column.api_name in tag.obj_info.vtconf.cids:
@@ -262,8 +458,10 @@ class EmbeddedValueTable(Table):
             for index in column_indexes:
                 row.append(values_row[index])
             body.append(row)
-        data = [headers].extend(body)
-        col_widths: list[float] = []
+        data = [headers]
+        data.extend(body)
+        self.style = value_table_style(data, embedded=True)
+        col_widths: list[float] = list(range(len(headers)))
         for i in range(len(headers)):
             max_width = 0
             for j in range(len(data)):
@@ -275,7 +473,8 @@ class EmbeddedValueTable(Table):
                        data,
                        colWidths=col_widths,
                        rowHeights=self._row_height(),
-                       style=self.style)
+                       style=self.style,
+                       hAlign='LEFT')
 
     def _col_width(self, text: str) -> float:
         text_width = stringWidth(text,

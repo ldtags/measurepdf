@@ -64,12 +64,14 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
         BetterParagraphStyle('h3',
                              fontName='SourceSansProB',
                              leading=15,
-                             fontSize=15))
+                             fontSize=15,
+                             spaceAfter=5))
     style_sheet.add(
         BetterParagraphStyle('h6',
                              fontName='SourceSansPro',
                              leading=15,
-                             fontSize=15))
+                             fontSize=15,
+                             spaceAfter=5))
     style_sheet.add(
         BetterParagraphStyle('Link',
                              fontName='SourceSansPro',
@@ -77,6 +79,15 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              fontSize=13.5,
                              linkUnderline=1,
                              underlineWidth=0.25,
+                             textColor=colors.green))
+    style_sheet.add(
+        BetterParagraphStyle('h6Link',
+                             fontName='SourceSansPro',
+                             leading=15,
+                             fontSize=15,
+                             spaceAfter=5,
+                             linkUnderline=1,
+                             underlineWidth=0.75,
                              textColor=colors.green))
 
     return style_sheet
@@ -112,18 +123,20 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('SPAN', (0, 7), (0, 9)),
             ('SPAN', (0, 10), (0, 13)),
             ('SPAN', (0, 14), (0, 17)),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 3),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 3),
             ('VALIGN', (0, 0), (0, -1), 'TOP'),
             ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
     style_sheet.add(
         BetterTableStyle('ValueTable', [
             ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 1),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 1),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 1)]))
+            ('LEFTPADDING', (0, 0), (-1, -1), 9),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 9),
+            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
+            ('BACKGROUND', (0, 0), (-1, 0), COLORS['ValueTableHeader']),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)]))
 
     return style_sheet
 
@@ -148,7 +161,7 @@ def value_table_style(data: list[list | tuple],
             ('FONTNAME', (0, 0), (0, -1), 'ArialB'),
             ('FONTNAME', (1, 0), (-1, -1), 'Arial')])
 
-    for i, _ in enumerate(data):
+    for i in range(1, len(data)):
         if i % 2 == switch:
             table_styles.append(('BACKGROUND',
                                 (0, i),

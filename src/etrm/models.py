@@ -1,3 +1,4 @@
+import unicodedata
 from typing import Any
 
 from src.exceptions import ETRMResponseError
@@ -205,7 +206,8 @@ class Measure:
         char_list: dict[str, str] = {}
         for char_name in self.__characterization_names:
             try:
-                char_list[char_name] = self._json[char_name]
+                uchar = self._json[char_name]
+                char_list[char_name] = unicodedata.normalize('NFKD', uchar)
             except KeyError:
                 raise ETRMResponseError()
 
@@ -219,6 +221,6 @@ class Measure:
 
     def get_value_table(self, name: str) -> ValueTable | None:
         for table in self.value_tables:
-            if table.name == name or table.api_name == name:
+            if table.name == name or table.api_name.lower() == name.lower():
                 return table
         return None

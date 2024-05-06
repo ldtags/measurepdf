@@ -65,6 +65,12 @@ class BetterParagraphStyle(ParagraphStyle):
         self.rml: str = f'<paraStyle name=\"{name}\"'
         for key, value in kwargs.items():
             self.rml += f' {key}=\"{value}\"'
+            if key == 'leading':
+                self.leading = value
+            elif key == 'fontSize':
+                self.font_size = value
+            elif key == 'fontName':
+                self.font_name = value
         self.rml += ' />'
         self.attrs = kwargs
 
