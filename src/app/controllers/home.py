@@ -9,7 +9,9 @@ class HomeController:
         self.model = model
         self.view = view
         self.page = view.home
-        self.__bind()
+        self.__bind_id_list()
+        self.__bind_version_list()
+        self.__bind_selected_list()
 
     def show(self):
         self.page.tkraise()
@@ -19,11 +21,11 @@ class HomeController:
         limit = self.model.home.limit
         return self.model.connection.get_measure_ids(offset, limit)
 
-    def get_measure_versions(self) -> list[str]:
-        measure_id = self.model.home.selected_measure
-        if measure_id == '':
+    def get_measure_versions(self, measure_id: str | None=None) -> list[str]:
+        id = measure_id or self.model.home.selected_measure
+        if id == '':
             return []
-        return self.model.connection.get_measure_versions(measure_id)
+        return self.model.connection.get_measure_versions(id)
 
     def update_measure_ids(self):
         measure_ids = self.get_measure_ids()
@@ -66,27 +68,68 @@ class HomeController:
         self.model.home.decrement_offset()
         self.update_measure_ids()
 
-    def reset(self):
+    def reset_ids(self):
         self.model.home.selected_measure = None
         self.page.measure_id_list.selected_measure = None
         self.page.measure_version_list.versions = []
+        self.page.measure_id_list.search_bar.clear()
         self.update_measure_ids()
 
     def __sanitize(self, input: str) -> str:
         sanitized = input.upper()
         return sanitized
 
-    def search(self, *args):
+    def unfocus(self, *args):
+        self.page.focus()
+
+    def search_measure_ids(self, *args):
         measure_id = self.__sanitize(self.page.measure_id_list.search_bar.get())
         if measure_id == '':
-            self.reset()
+            self.reset_ids()
             self.page.measure_id_list.search_bar.clear()
             return
 
         self.page.measure_id_list.measure_ids = [measure_id]
-        self.model.home.selected_measure = measure_id
         self.page.measure_id_list.selected_measure = measure_id
+        self.model.home.selected_measure = measure_id
         self.update_measure_versions()
+        self.unfocus()
+
+    def __bind_id_list(self):
+        self.page.measure_id_list.measure_frame.set_command(self.select_measure_id)
+        self.page.measure_id_list.next_btn.configure(command=self.next_page)
+        self.page.measure_id_list.back_btn.configure(command=self.prev_page)
+        self.page.measure_id_list.search_bar.search_btn.configure(command=self.search_measure_ids)
+        self.page.measure_id_list.search_bar.search_bar.bind('<Return>', self.search_measure_ids)
+        self.page.measure_id_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
+        self.page.measure_id_list.search_bar.reset_btn.configure(command=self.reset_ids)
+
+    def reset_versions(self):
+        self.page.measure_version_list.search_bar.clear()
+        self.update_measure_versions()
+
+    def search_measure_versions(self, *args):
+        version_id = self.__sanitize(self.page.measure_version_list.search_bar.get())
+        if version_id == '':
+            self.reset_versions()
+            self.page.measure_version_list.search_bar.clear()
+            return
+
+        if version_id not in self.model.home.measure_versions:
+            self.page.measure_version_list.versions = []
+            return
+
+        self.page.measure_version_list.versions = [version_id]
+        if version_id in self.model.home.selected_versions:
+            self.page.measure_version_list.selected_versions = [version_id]
+        self.unfocus()
+
+    def __bind_version_list(self):
+        self.page.measure_version_list.version_frame.set_command(self.select_measure_version)
+        self.page.measure_version_list.search_bar.search_btn.configure(command=self.search_measure_versions)
+        self.page.measure_version_list.search_bar.search_bar.bind('<Return>', self.search_measure_versions)
+        self.page.measure_version_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
+        self.page.measure_version_list.search_bar.reset_btn.configure(command=self.reset_versions)
 
     def create_summary(self):
         summary = MeasureSummary(relative_dir='..\\summaries', override=True)
@@ -95,12 +138,5 @@ class HomeController:
             summary.add_measure(measure)
         summary.build()
 
-    def __bind(self):
-        self.page.measure_id_list.measure_frame.set_command(self.select_measure_id)
-        self.page.measure_id_list.next_btn.configure(command=self.next_page)
-        self.page.measure_id_list.back_btn.configure(command=self.prev_page)
-        self.page.measure_id_list.search_bar.search_bar.bind('<Return>', self.search)
-        self.page.measure_id_list.search_bar.search_btn.configure(command=self.search)
-        self.page.measure_id_list.search_bar.reset_btn.configure(command=self.reset)
-        self.page.measure_version_list.version_frame.set_command(self.select_measure_version)
+    def __bind_selected_list(self):
         self.page.measures_selection_list.add_btn.configure(command=self.create_summary)

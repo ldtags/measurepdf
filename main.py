@@ -25,7 +25,8 @@ def app_controller(mode: str) -> Controller:
     if mode == 'dev':
         config = configparser.ConfigParser()
         config.read(resources.get_path('config.ini'))
-        controller.connect(f'{config["etrm"]["type"]} {config["etrm"]["token"]}')
+        auth_token = config['etrm-admin']['type'] + ' ' + config['etrm-admin']['token']
+        controller.connect(auth_token)
     return controller
 
 

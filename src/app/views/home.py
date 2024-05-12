@@ -1,10 +1,10 @@
 import customtkinter as ctk
 
-from src import utils
 from src.app.ctkobjects import (
     ScrollableFrame,
     ScrollableCheckBoxFrame,
-    ScrollableRadioButtonFrame
+    ScrollableRadioButtonFrame,
+    SearchBar
 )
 
 
@@ -35,7 +35,8 @@ class HomePage(ctk.CTkFrame):
                                        padx=(20, 20),
                                        pady=(20, 20))
 
-        self.measures_selection_list = SelectedMeasuresFrame(self)
+        self.measures_selection_list = SelectedMeasuresFrame(self,
+                                                             fg_color=self._fg_color)
         self.measures_selection_list.grid(row=0,
                                           rowspan=3,
                                           column=2,
@@ -53,7 +54,9 @@ class MeasureListFrame(ctk.CTkFrame):
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.search_bar = SearchBar(self,
-                                    fg_color=self._fg_color)
+                                    placeholder='Search for a measure...',
+                                    include_search_btn=True,
+                                    include_reset_btn=True)
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
@@ -101,61 +104,30 @@ class MeasureListFrame(ctk.CTkFrame):
         self.measure_frame.selected_item = item
 
 
-class SearchBar(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkFrame, **kwargs):
-        super().__init__(parent, **kwargs)
-
-        self.grid_rowconfigure((1), weight=1)
-        self.grid_columnconfigure((0, 1), weight=1)
-        self.grid_columnconfigure((2), weight=1)
-
-        self.search_bar = ctk.CTkEntry(self,
-                                       placeholder_text='Search for a measure...')
-        self.search_bar.grid(row=0,
-                             column=0,
-                             columnspan=7,
-                             sticky=ctk.NSEW,
-                             padx=(5, 5))
-
-        self.search_btn = ctk.CTkButton(self,
-                                        text='',
-                                        image=utils.get_tkimage(
-                                            'search.png',
-                                            size=(25, 25)),
-                                        width=parent.winfo_width() / 8)
-        self.search_btn.grid(row=0,
-                             column=7,
-                             padx=(5, 5))
-
-        self.reset_btn = ctk.CTkButton(self,
-                                       text='',
-                                       image=utils.get_tkimage(
-                                           'reset.png',
-                                           size=(25, 25)),
-                                       width=parent.winfo_width() / 8)
-        self.reset_btn.grid(row=0,
-                            column=8,
-                            padx=(5, 5))
-
-    def get(self) -> str:
-        return self.search_bar.get()
-
-    def clear(self):
-        self.search_bar.delete(0, ctk.END)
-        self.search_bar.configure(placeholder_text='Search for a measure...')
-
-
 class MeasureVersionsFrame(ctk.CTkFrame):
     def __init__(self, parent: HomePage, **kwargs):
         super().__init__(parent, **kwargs)
 
-        self.grid_rowconfigure((0), weight=1)
+        self.grid_rowconfigure((0), weight=0)
+        self.grid_rowconfigure((1), weight=1)
         self.grid_columnconfigure((0), weight=1)
 
+        self.search_bar = SearchBar(self,
+                                    placeholder='Search for a version...',
+                                    include_search_btn=True,
+                                    include_reset_btn=True)
+        self.search_bar.grid(row=0,
+                             column=0,
+                             sticky=ctk.NSEW,
+                             padx=(10, 10),
+                             pady=(10, 10))
+
         self.version_frame = ScrollableCheckBoxFrame(self)
-        self.version_frame.grid(row=0,
+        self.version_frame.grid(row=1,
                                 column=0,
-                                sticky=ctk.NSEW)
+                                sticky=ctk.NSEW,
+                                padx=(10, 10),
+                                pady=(0, 10))
 
     @property
     def versions(self) -> list[str]:
