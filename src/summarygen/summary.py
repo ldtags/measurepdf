@@ -65,7 +65,7 @@ class MeasureSummary:
                  relative_dir: str='',
                  override: bool=False):
         self.measures: list[Measure] = []
-        self.flowables: list[Flowable] = []
+        self.story: list[Flowable] = []
         if not os.path.exists(os.path.join(_ROOT, '..', relative_dir)):
             raise FileNotFoundError(f'no {relative_dir} folder exists')
         self.relative_dir = relative_dir
@@ -74,7 +74,14 @@ class MeasureSummary:
         if not override and os.path.exists(self.file_path):
             raise FileExistsError(f'a file named {file_name} already exists'
                                   f' in {relative_dir}')
-        self.summary = SimpleDocTemplate(self.file_path, pagesize=letter)
+        self.page_width = letter[0]
+        self.page_height = letter[1]
+        self.summary = SimpleDocTemplate(self.file_path,
+                                         pagesize=letter,
+                                         leftMargin=1*inch,
+                                         rightMargin=1*inch,
+                                         topMargin=1*inch,
+                                         bottomMargin=1*inch)
 
     def add_measure_details_table(self, measure: Measure):
         pstyle = PSTYLES['SmallParagraph']
@@ -102,17 +109,14 @@ class MeasureSummary:
                       rowHeights=row_heights,
                       style=style,
                       hAlign='LEFT')
-        self.flowables.append(table)
+        self.story.append(table)
 
     def add_tech_summary(self, measure: Measure):
         header = Paragraph('Technology Summary', PSTYLES['h2'])
         parser = CharacterizationParser(measure, 'technology_summary')
         sections = parser.parse()
-        # initial_section = sections.pop(0)
-        # headed_section = KeepTogether(header, initial_section)
-        # self.flowables.append(headed_section)
-        self.flowables.append(header)
-        self.flowables.extend(sections)
+        self.story.append(header)
+        self.story.extend(sections)
 
     def add_parameters_table(self, measure: Measure):
         table_header = Paragraph('Parameters:', PSTYLES['h2'])
@@ -140,7 +144,7 @@ class MeasureSummary:
                       style=TSTYLES['ParametersTable'],
                       hAlign='LEFT')
         headed_table = KeepTogether([table_header, table])
-        self.flowables.append(headed_table)
+        self.story.append(headed_table)
 
     def add_sections_table(self, measure: Measure):
         table_header = Paragraph('Sections:', PSTYLES['h2'])
@@ -218,24 +222,24 @@ class MeasureSummary:
                       style=TSTYLES['SectionsTable'],
                       hAlign='LEFT')
         headed_table = KeepTogether([table_header, table])
-        self.flowables.append(headed_table)
+        self.story.append(headed_table)
 
     def add_measure(self, measure: Measure):
         self.measures.append(measure)
         self.add_measure_details_table(measure)
-        self.flowables.append(NEWLINE)
+        self.story.append(NEWLINE)
         self.add_tech_summary(measure)
-        self.flowables.append(NEWLINE)
+        self.story.append(NEWLINE)
         self.add_parameters_table(measure)
-        self.flowables.append(NEWLINE)
+        self.story.append(NEWLINE)
         self.add_sections_table(measure)
-        self.flowables.append(NEWLINE)
-        self.flowables.append(PageBreak())
+        self.story.append(NEWLINE)
+        self.story.append(PageBreak())
 
     def reset(self):
-        self.flowables = []
+        self.story = []
 
     def build(self):
         # if multiple measures, maybe add a table of contents
-        self.summary.build(self.flowables)
+        self.summary.build(self.story)
     

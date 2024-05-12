@@ -1,4 +1,5 @@
 from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
 
 from src.summarygen.rlobjects import (
     Font,
@@ -29,66 +30,73 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet = StyleSheet[BetterParagraphStyle]()
     style_sheet.add(
         BetterParagraphStyle('Paragraph',
-                             fontName='SourceSansPro',
-                             fontSize=13.5,
+                             font_name='SourceSansPro',
+                             font_size=13.5,
+                             sub_size=8,
+                             sup_size=8,
                              leading=16.2))
     style_sheet.add(
         BetterParagraphStyle('SmallParagraph',
-                             fontName='SourceSansPro',
-                             fontSize=12,
-                             leading=12))
+                             font_size=12,
+                             parent=style_sheet['Paragraph']))
     style_sheet.add(
         BetterParagraphStyle('ParagraphBold',
-                             fontName='SourceSansProB',
-                             fontSize=13.5,
-                             leading=13.5))
+                             font_name='SourceSansProB',
+                             parent=style_sheet['Paragraph']))
+    style_sheet.add(
+        BetterParagraphStyle('ParagraphItalic',
+                             font_name='SourceSansProI',
+                             parent=style_sheet['Paragraph']))
+    style_sheet.add(
+        BetterParagraphStyle('ParagraphBoldItalic',
+                             font_name='SourceSansProBI',
+                             parent=style_sheet['Paragraph']))
     style_sheet.add(
         BetterParagraphStyle('ReferenceTag',
-                             fontName='SourceSansPro',
-                             fontSize=13.5,
-                             leading=13.5,
+                             parent=style_sheet['Paragraph'],
                              textColor=colors.white,
                              backColor=COLORS['ReferenceTagBG']))
     style_sheet.add(
+        BetterParagraphStyle('ValueTableHeader',
+                             font_name='SourceSansProB',
+                             parent=style_sheet['SmallParagraph'],
+                             textColor=colors.white))
+    style_sheet.add(
         BetterParagraphStyle('TableHeader',
-                             fontName='SourceSansProB',
+                             font_name='SourceSansProB',
                              leading=16.625,
-                             fontSize=13.5))
+                             font_size=13.5))
     style_sheet.add(
         BetterParagraphStyle('h2',
-                             fontName='Merriweather',
+                             font_name='Merriweather',
                              leading=20.7,
-                             fontSize=18,
+                             font_size=18,
                              spaceAfter=5))
     style_sheet.add(
         BetterParagraphStyle('h3',
-                             fontName='SourceSansProB',
-                             leading=15,
-                             fontSize=15,
+                             font_name='SourceSansProB',
+                             font_size=18,
                              spaceAfter=5))
     style_sheet.add(
         BetterParagraphStyle('h6',
-                             fontName='SourceSansPro',
+                             font_name='Merriweather',
                              leading=15,
-                             fontSize=15,
+                             font_size=15,
                              spaceAfter=5))
     style_sheet.add(
         BetterParagraphStyle('Link',
-                             fontName='SourceSansPro',
+                             font_name='SourceSansPro',
                              leading=18.5,
-                             fontSize=13.5,
+                             font_size=13.5,
                              linkUnderline=1,
                              underlineWidth=0.25,
                              textColor=colors.green))
     style_sheet.add(
         BetterParagraphStyle('h6Link',
-                             fontName='SourceSansPro',
-                             leading=15,
-                             fontSize=15,
-                             spaceAfter=5,
                              linkUnderline=1,
                              underlineWidth=0.75,
-                             textColor=colors.green))
+                             textColor=colors.green,
+                             parent=style_sheet['h6']))
 
     return style_sheet
 
@@ -137,10 +145,18 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
             ('BACKGROUND', (0, 0), (-1, 0), COLORS['ValueTableHeader']),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)]))
+    style_sheet.add(
+        BetterTableStyle('ElementLine', [
+          ('LEFTPADDING', (0, 0), (-1, -1), 0),
+          ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+          ('TOPPADDING', (0, 0), (-1, -1), 0),
+          ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+          ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
 
     return style_sheet
 
 
+STYLES = getSampleStyleSheet()
 PSTYLES = __gen_pstyles()
 TSTYLES = __gen_tstyles()
 
@@ -153,8 +169,7 @@ def value_table_style(data: list[list | tuple],
     if embedded:
         switch = 1
         table_styles.extend([
-            ('FONTNAME', (0, 0), (-1, -1), 'ArialB')
-        ])
+            ('FONTNAME', (0, 0), (-1, -1), 'ArialB')])
     else:
         switch = 0
         table_styles.extend([

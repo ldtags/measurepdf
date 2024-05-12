@@ -13,6 +13,7 @@ class ElemType(Enum):
 class TextStyle(Enum):
     NORMAL = 'normal'
     STRONG = 'strong'
+    ITALIC = 'em'
     SUP = 'sup'
     SUB = 'sub'
 

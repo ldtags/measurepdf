@@ -1,3 +1,4 @@
+from __future__ import annotations
 import os
 from typing import Any, TypeVar, Generic
 from reportlab.lib import colors
@@ -59,20 +60,66 @@ def _rml_range(start: tuple[int, int], stop: tuple[int, int]) -> str:
     return f'start=\"{start[0]},{start[1]}\" stop=\"{stop[0]},{stop[1]}\"'
 
 
+_U = TypeVar('_U')
+
+def get_style_param(name: str,
+                    param: _U | None,
+                    parent: BetterParagraphStyle | None,
+                    default: _U | None
+                   ) -> _U:
+    if param == None:
+        try:
+            return getattr(parent, name)
+        except AttributeError:
+            return default
+    else:
+        return param
+
+
 class BetterParagraphStyle(ParagraphStyle):
-    def __init__(self, name: str, parent: Any | None=None, **kwargs):
-        super().__init__(name, parent, **kwargs)
-        self.rml: str = f'<paraStyle name=\"{name}\"'
-        for key, value in kwargs.items():
-            self.rml += f' {key}=\"{value}\"'
-            if key == 'leading':
-                self.leading = value
-            elif key == 'fontSize':
-                self.font_size = value
-            elif key == 'fontName':
-                self.font_name = value
-        self.rml += ' />'
+    def __init__(self,
+                 name: str,
+                 font_name: str | None=None,
+                 font_size: float | None=None,
+                 leading: float | None=None,
+                 sub_size: float | None=None,
+                 sup_size: float | None=None,
+                 parent: BetterParagraphStyle | None=None,
+                 **kwargs):
+        self.font_name = get_style_param('font_name',
+                                         font_name,
+                                         parent,
+                                         'Helvetica')
+        kwargs['fontName'] = self.font_name
+
+        self.font_size = get_style_param('font_size',
+                                         font_size,
+                                         parent,
+                                         12)
+        kwargs['fontSize'] = self.font_size
+
+        self.leading = get_style_param('leading',
+                                       leading,
+                                       parent,
+                                       self.font_size * 1.2)
+        kwargs['leading'] = self.leading
+
+        self.sub_size = get_style_param('sub_size',
+                                        sub_size,
+                                        parent,
+                                        self.font_size * (2 / 3))
+        self.sup_size = get_style_param('sup_size',
+                                        sup_size,
+                                        parent,
+                                        self.font_size * (2 / 3))
         self.attrs = kwargs
+        self.parent = parent
+        super().__init__(name, parent, **kwargs)
+
+    def set_attr(self, name: str, value):
+        self.attrs[name] = value
+        self.parent._setKwds(**self.attrs)
+        self.refresh()
 
 
 class BetterTableStyle(TableStyle):

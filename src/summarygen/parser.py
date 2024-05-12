@@ -5,35 +5,44 @@ from bs4 import (
     ResultSet,
     PageElement
 )
-from reportlab.lib.pagesizes import letter
+from reportlab.lib import colors
+from reportlab.lib.pagesizes import letter, inch
 from reportlab.platypus import (
     Flowable,
     Paragraph,
     Table,
     ListFlowable,
     ListItem,
-    Spacer
+    Spacer,
+    KeepTogether
 )
 
 from src.etrm import ETRM_URL
 from src.etrm.models import Measure
+from src.exceptions import SummaryGenError
 from src.summarygen.models import (
     ParagraphElement,
     ReferenceTag,
-    EmbeddedValueTableTag
+    EmbeddedValueTableTag,
+    TextStyle
 )
 from src.summarygen.styling import (
     PSTYLES,
     value_table_style
 )
+from src.summarygen.rlobjects import (
+    BetterTableStyle
+)
 from src.summarygen.flowables import (
     SummaryParagraph,
-    StaticValueTable,
+    ElementLine,
     Reference,
     EmbeddedValueTable,
-    ValueTableHeader,
-    SummaryList
+    ValueTableHeader
 )
+
+
+DEF_PSTYLE = PSTYLES['Paragraph']
 
 
 def is_embedded(tag: Tag) -> bool:
@@ -52,13 +61,152 @@ def is_embedded(tag: Tag) -> bool:
     return False
 
 
+def _parse_element(element: PageElement) -> list[ParagraphElement]:
+    if isinstance(element, NavigableString):
+        return [ParagraphElement(element.get_text())]
+
+    if not isinstance(element, Tag):
+        raise RuntimeError(f'unsupported page element: {element}')
+
+    match element.name:
+        case 'p':
+            elements = _parse_elements(element.contents)
+            return elements
+        case 'th' | 'td' | 'li':
+            return _parse_elements(element.contents)
+        case 'div' | 'span':
+            json_str = element.attrs.get('data-etrmreference', None)
+            if json_str != None:
+                return [ReferenceTag(json_str)]
+            return _parse_elements(element.contents)
+        case 'strong' | 'sup' | 'sub' | 'em':
+            elements = _parse_elements(element.contents)
+            for item in elements:
+                style = TextStyle(element.name)
+                if style not in item.styles:
+                    item.styles.append(style)
+            return elements
+        case _:
+            raise RuntimeError(f'unsupported tag: {element.name}')
+
+
+def _parse_elements(elements: list[PageElement]) -> list[ParagraphElement]:
+    contents: list[ParagraphElement] = []
+    for element in elements:
+        parsed_elements = _parse_element(element)
+        if parsed_elements != None:
+            contents.extend(parsed_elements)
+    return contents
+
+
+def _parse_table_headers(table: Tag) -> list[ElementLine]:
+    thead = table.find('thead')
+    raw_headers: ResultSet[Tag] = []
+    if thead == None:
+        raw_headers = table.find_all('th')
+    elif isinstance(thead, Tag):
+        raw_headers = thead.find_all('th')
+    else:
+        raise SummaryGenError('missing table headers')
+    max_width = (letter[0] - 3.25 * inch) / len(raw_headers)
+    headers: list[ElementLine] = []
+    for raw_header in raw_headers:
+        header_elements = _parse_element(raw_header)
+        headers.append(ElementLine(header_elements,
+                                   max_width,
+                                   style=PSTYLES['ValueTableHeader']))
+    return headers
+
+
+def _parse_table_body(table: Tag) -> list[list[ElementLine]]:
+    tbody = table.find('tbody')
+    if not isinstance(tbody, Tag):
+        raise SummaryGenError('missing table body')
+    raw_rows: ResultSet[Tag] = tbody.find_all('tr')
+    body_rows: list[list[ElementLine]] = []
+    for raw_row in raw_rows:
+        raw_cells: ResultSet[Tag] = raw_row.find_all('td')
+        max_width = (letter[0] - 3.25 * inch) / len(raw_cells)
+        cells: list[ElementLine] = []
+        for raw_cell in raw_cells:
+            cell_elements = _parse_element(raw_cell)
+            cells.append(ElementLine(cell_elements, max_width))
+        body_rows.append(cells)
+    return body_rows
+
+
+def _parse_table(table: Tag) -> list[list[ElementLine]]:
+    headers = _parse_table_headers(table)
+    body = _parse_table_body(table)
+    data: list[list[ElementLine]] = []
+    data.append(headers)
+    data.extend(body)
+    return data
+
+
+def _col_width(element: ElementLine,
+               style: BetterTableStyle
+              ) -> float:
+    padding = style.left_padding + style.right_padding
+    return element.width + padding
+
+
+def _col_widths(data: list[list[ElementLine]],
+                style: BetterTableStyle
+               ) -> list[float]:
+    headers = data[0]
+    col_widths: list[float] = list(range(len(headers)))
+    for i in range(len(headers)):
+        max_width = 0
+        for j in range(len(data)):
+            col_width = _col_width(data[j][i], style)
+            if col_width > max_width:
+                max_width = col_width
+        col_widths[i] = max_width
+    return col_widths
+
+
+def _row_height(element: ElementLine,
+                style: BetterTableStyle) -> float:
+    padding = style.top_padding + style.bottom_padding
+    return element.height + padding
+
+
+def _row_heights(data: list[list[ElementLine]],
+                 style: BetterTableStyle
+                ) -> list[float]:
+    row_heights: list[float] = list(range(len(data)))
+    for i in range(len(data)):
+        max_height = 0
+        for cell in data[i]:
+            cell_height = _row_height(cell, style)
+            if cell_height > max_height:
+                max_height = cell_height
+        row_heights[i] = max_height
+    return row_heights
+
+
+def _parse_list(ul: Tag) -> list[ListItem]:
+    list_items: list[ListItem] = []
+    li_list: ResultSet[Tag] = ul.find_all('li')
+    for li in li_list:
+        items = _parse_element(li)
+        element = SummaryParagraph(paragraph_elements=items)
+        list_items.append(ListItem(element,
+                                   bulletColor=colors.black,
+                                   value='square'))
+    return list_items
+
+
 class CharacterizationParser:
     def __init__(self, measure: Measure, name: str):
         self.measure = measure
         self.html = measure.characterizations[name]
         self.flowables: list[Flowable] = []
 
-    def _parse_text(self, text: str) -> Paragraph:
+    def _parse_text(self, text: str) -> Flowable:
+        if text == '\n':
+            return Spacer(letter[0], 9.2)
         return Paragraph(text, PSTYLES['Paragraph'])
 
     def _parse_embedded_tag(self, tag: Tag) -> list[Flowable]:
@@ -77,7 +225,8 @@ class CharacterizationParser:
             table_link = f'{ETRM_URL}/measure/{id_path}/value-table/{change_id}/'
             header = ValueTableHeader(table_obj.name, table_link)
             table = EmbeddedValueTable(self.measure, vt_tag)
-            return [header, table]
+            headed_table = KeepTogether([header, table])
+            return [headed_table]
 
         return []
 
@@ -106,19 +255,29 @@ class CharacterizationParser:
 
         match element.name:
             case 'div' | 'span':
-                _flowables: list[Flowable] = []
+                flowables: list[Flowable] = []
                 for child in element.contents:
-                    _flowables.extend(self._parse_element(child))
-                return _flowables
+                    flowables.extend(self._parse_element(child))
+                return flowables
             case 'p':
-                return [SummaryParagraph(element=element)]
+                elements: list[ParagraphElement] = []
+                for child in element.contents:
+                    elements.extend(_parse_element(child))
+                return [SummaryParagraph(paragraph_elements=elements)]
             case 'h3' | 'h6':
                 return [self._parse_header(element)]
             case 'table':
-                # return [StaticValueTable(element=element)]
-                return [Table([['Table Placeholder']])]
+                data = _parse_table(element)
+                style = value_table_style(data, embedded=True)
+                table = Table(data,
+                              colWidths=_col_widths(data, style),
+                              rowHeights=_row_heights(data, style),
+                              style=style,
+                              hAlign='LEFT')
+                return [KeepTogether(table)]
             case 'ul':
-                return [SummaryList(element=element)]
+                elements = _parse_list(element)
+                return [ListFlowable(elements, bulletType='bullet')]
             case tag:
                 raise Exception(f'unsupported HTML tag: {tag}')
 
@@ -126,8 +285,26 @@ class CharacterizationParser:
         self.flowables = []
         soup = BeautifulSoup(self.html, 'html.parser')
         top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
-        for element in top_level:
-            self.flowables.extend(self._parse_element(element))
+        i = 0
+        while i < len(top_level):
+            element = top_level[i]
+            parsed_elements = self._parse_element(element)
+            if (isinstance(element, Tag)
+                    and element.name in ['h3', 'h6']
+                    and i < len(top_level) - 1):
+                parsed_elements.append(Spacer(letter[0], 5))
+                next_elements = self._parse_element(top_level[i + 1])
+                extra_elements: list[Flowable] = []
+                if len(next_elements) > 1:
+                    parsed_elements.append(next_elements.pop(0))
+                    extra_elements = next_elements
+                else:
+                    parsed_elements.extend(next_elements)
+                parsed_elements = [KeepTogether(parsed_elements)]
+                parsed_elements.extend(extra_elements)
+                i += 1
+            self.flowables.extend(parsed_elements)
             if element.next_sibling == '\n':
                 self.flowables.append(Spacer(letter[0], 9.2))
+            i += 1
         return self.flowables
