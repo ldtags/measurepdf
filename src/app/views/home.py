@@ -152,8 +152,8 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
 
         self.grid_rowconfigure((0, 2), weight=0)
         self.grid_rowconfigure((1), weight=1)
-        self.grid_columnconfigure((0, 2), weight=1)
-        self.grid_columnconfigure((1), weight=0)
+        self.grid_columnconfigure((0), weight=0)
+        self.grid_columnconfigure((1, 2), weight=0)
 
         self.search_bar = SearchBar(self,
                                     placeholder='Add a measure...',
@@ -173,10 +173,22 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
                                  padx=(10, 10),
                                  pady=(0, 10))
 
+        self.clear_btn = ctk.CTkButton(self,
+                                       text='Clear Selections',
+                                       fg_color='#FF0000',
+                                       hover_color='#D50000',
+                                       cursor='hand2')
+        self.clear_btn.grid(row=2,
+                            column=0,
+                            sticky=ctk.NSEW,
+                            padx=(10, 10),
+                            pady=(0, 10))
+
         self.add_btn = ctk.CTkButton(self,
                                      text='Create PDF')
         self.add_btn.grid(row=2,
                           column=1,
+                          columnspan=2,
                           sticky=ctk.NSEW,
                           padx=(10, 10),
                           pady=(0, 10))

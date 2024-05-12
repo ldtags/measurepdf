@@ -162,8 +162,14 @@ class HomeController:
         self.page.measures_selection_list.search_bar.clear()
         self.unfocus()
 
+    def clear_selected_measures(self):
+        self.model.home.selected_versions = []
+        self.page.measures_selection_list.measures = []
+        self.page.measure_version_list.selected_versions = []
+
     def __bind_selected_list(self):
         self.page.measures_selection_list.add_btn.configure(command=self.create_summary)
+        self.page.measures_selection_list.clear_btn.configure(command=self.clear_selected_measures)
         self.page.measures_selection_list.search_bar.add_btn.configure(command=self.add_measure_version)
         self.page.measures_selection_list.search_bar.search_bar.bind('<Return>', self.add_measure_version)
         self.page.measures_selection_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
