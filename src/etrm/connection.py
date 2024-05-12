@@ -6,7 +6,11 @@ from src.etrm.models import (
     MeasureVersionsResponse,
     Measure
 )
-from src.exceptions import UnauthorizedError
+from src.exceptions import (
+    ETRMResponseError,
+    UnauthorizedError,
+    NotFoundError
+)
 
 
 API_URL = 'https://www.caetrm.com/api/v1'
@@ -39,6 +43,13 @@ class ETRMConnection:
         response = requests.get(url,
                                 headers=headers,
                                 stream=True)
+
+        if response.status_code == 404:
+            raise NotFoundError(f'Measure {measure_id} could not be found')
+
+        if response.status_code == 500:
+            raise ETRMResponseError('Server error occurred when retrieving'
+                                    f' measure {measure_id}')
 
         if response.status_code != 200:
             raise UnauthorizedError()

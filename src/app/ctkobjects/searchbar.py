@@ -41,7 +41,7 @@ class SearchBar(ctk.CTkFrame):
                                             text='',
                                             image=utils.get_tkimage(
                                                 'search.png',
-                                                size=(25, 25)),
+                                                size=(24, 24)),
                                             width=parent.winfo_width() / 8)
             self.search_btn.grid(row=0,
                                  column=entry_width,
@@ -52,8 +52,8 @@ class SearchBar(ctk.CTkFrame):
             self.reset_btn = ctk.CTkButton(self,
                                            text='',
                                            image=utils.get_tkimage(
-                                               'reset.png',
-                                               size=(25, 25)),
+                                                'reset.png',
+                                                size=(24, 24)),
                                            width=parent.winfo_width() / 8)
             self.reset_btn.grid(row=0,
                                 column=entry_width,
@@ -62,7 +62,10 @@ class SearchBar(ctk.CTkFrame):
 
         if include_add_btn:
             self.add_btn = ctk.CTkButton(self,
-                                         text='+',
+                                         text='',
+                                         image=utils.get_tkimage(
+                                                'plus.png',
+                                                size=(24, 24)),
                                          width=parent.winfo_width() / 8)
             self.add_btn.grid(row=0,
                               column=entry_width,

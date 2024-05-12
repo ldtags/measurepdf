@@ -18,6 +18,12 @@ class UnauthorizedError(ETRMRequestError):
         super().__init__(self.message)
 
 
+class NotFoundError(ETRMRequestError):
+    def __init__(self, message: str | None=None):
+        self.message = message or 'Resource not found'
+        super().__init__(self.message)
+
+
 class GUIError(Exception):
     def __init__(self, message: str | None=None):
         self.message = message or 'Unepected GUI error occurred'

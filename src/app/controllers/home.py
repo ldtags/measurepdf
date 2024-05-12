@@ -2,6 +2,11 @@ from src.app.models import Model
 from src.app.views import View
 
 from src.summarygen import MeasureSummary
+from src.exceptions import (
+    ETRMResponseError,
+    UnauthorizedError,
+    NotFoundError
+)
 
 
 class HomeController:
@@ -12,6 +17,13 @@ class HomeController:
         self.__bind_id_list()
         self.__bind_version_list()
         self.__bind_selected_list()
+
+    def __sanitize(self, input: str) -> str:
+        sanitized = input.upper()
+        return sanitized
+
+    def unfocus(self, *args):
+        self.page.focus()
 
     def show(self):
         self.page.tkraise()
@@ -44,22 +56,6 @@ class HomeController:
         self.model.home.selected_measure = self.page.measure_id_list.selected_measure
         self.update_measure_versions()
 
-    def select_measure_version(self):
-        selected_versions = self.page.measure_version_list.selected_versions
-        all_versions = self.page.measure_version_list.versions
-        unselected_versions = list(
-            filter(lambda item: item not in selected_versions, all_versions))
-
-        for version in unselected_versions:
-            if version in self.model.home.selected_versions:
-                self.model.home.selected_versions.remove(version)
-
-        for version in selected_versions:
-            if version not in self.model.home.selected_versions:
-                self.model.home.selected_versions.append(version)
-
-        self.page.measures_selection_list.measures = self.model.home.selected_versions
-
     def next_page(self):
         self.model.home.increment_offset()
         self.update_measure_ids()
@@ -74,13 +70,6 @@ class HomeController:
         self.page.measure_version_list.versions = []
         self.page.measure_id_list.search_bar.clear()
         self.update_measure_ids()
-
-    def __sanitize(self, input: str) -> str:
-        sanitized = input.upper()
-        return sanitized
-
-    def unfocus(self, *args):
-        self.page.focus()
 
     def search_measure_ids(self, *args):
         measure_id = self.__sanitize(self.page.measure_id_list.search_bar.get())
@@ -103,6 +92,22 @@ class HomeController:
         self.page.measure_id_list.search_bar.search_bar.bind('<Return>', self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
         self.page.measure_id_list.search_bar.reset_btn.configure(command=self.reset_ids)
+
+    def select_measure_version(self):
+        selected_versions = self.page.measure_version_list.selected_versions
+        all_versions = self.page.measure_version_list.versions
+        unselected_versions = list(
+            filter(lambda item: item not in selected_versions, all_versions))
+
+        for version in unselected_versions:
+            if version in self.model.home.selected_versions:
+                self.model.home.selected_versions.remove(version)
+
+        for version in selected_versions:
+            if version not in self.model.home.selected_versions:
+                self.model.home.selected_versions.append(version)
+
+        self.page.measures_selection_list.measures = self.model.home.selected_versions
 
     def reset_versions(self):
         self.page.measure_version_list.search_bar.clear()
@@ -138,5 +143,27 @@ class HomeController:
             summary.add_measure(measure)
         summary.build()
 
+    def add_measure_version(self, *args):
+        version_id = self.__sanitize(self.page.measures_selection_list.search_bar.get())
+        if version_id == '':
+            self.page.measures_selection_list.search_bar.clear()
+            return
+
+        if version_id in self.model.home.selected_versions:
+            return
+
+        try:
+            self.model.connection.get_measure(version_id)
+        except NotFoundError:
+            return
+
+        self.model.home.selected_versions.append(version_id)
+        self.page.measures_selection_list.measures = self.model.home.selected_versions
+        self.page.measures_selection_list.search_bar.clear()
+        self.unfocus()
+
     def __bind_selected_list(self):
         self.page.measures_selection_list.add_btn.configure(command=self.create_summary)
+        self.page.measures_selection_list.search_bar.add_btn.configure(command=self.add_measure_version)
+        self.page.measures_selection_list.search_bar.search_bar.bind('<Return>', self.add_measure_version)
+        self.page.measures_selection_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
