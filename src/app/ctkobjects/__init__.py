@@ -5,3 +5,4 @@ from src.app.ctkobjects.scrollableframe import (
 )
 
 from src.app.ctkobjects.searchbar import SearchBar
+from src.app.ctkobjects.tooltip import ToolTip
