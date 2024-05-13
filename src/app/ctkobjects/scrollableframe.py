@@ -24,6 +24,7 @@ class ScrollableFrame(ctk.CTkScrollableFrame, Generic[T]):
     def place(self, element: T, row: int):
         element.grid(row=row,
                      column=0,
+                     sticky=ctk.W,
                      pady=self.element_pady,
                      padx=self.element_padx)
 

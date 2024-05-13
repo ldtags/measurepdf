@@ -1,5 +1,6 @@
 import customtkinter as ctk
 
+from src.app import styles
 from src.app.ctkobjects import (
     ScrollableFrame,
     ScrollableCheckBoxFrame,
@@ -135,7 +136,12 @@ class MeasureVersionsFrame(ctk.CTkFrame):
 
     @versions.setter
     def versions(self, items: list[str]):
-        self.version_frame.items = items
+        self.version_frame.clear()
+        for item in items:
+            font = (styles.FONT_NAME, styles.FONT_SIZE)
+            if len(item.split('-')) == 2:
+                font = (*font, 'bold')
+            self.version_frame.add_item(item, font=font)
 
     @property
     def selected_versions(self) -> list[str]:
