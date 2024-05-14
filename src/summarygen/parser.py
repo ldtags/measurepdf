@@ -38,7 +38,6 @@ from src.summarygen.flowables import (
     SummaryParagraph,
     ElementLine,
     Reference,
-    EmbeddedValueTable,
     ValueTableHeader
 )
 

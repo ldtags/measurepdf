@@ -270,54 +270,6 @@ class ValueTableHeader(Paragraph):
         Paragraph.__init__(self, header_text, style=style)
 
 
-class EmbeddedValueTable(Table):
-    def __init__(self, measure: Measure, tag: EmbeddedValueTableTag, **kwargs):
-        api_name = tag.obj_info.api_name_unique
-        table = measure.get_value_table(api_name)
-        if table == None:
-            raise SummaryGenError(f'value table {api_name} does not exist'
-                                    + f' in {measure.full_version_id}')
-        column_indexes: list[int] = []
-        headers: list[str] = []
-        for i, column in enumerate(table.columns):
-            if column.api_name in tag.obj_info.vtconf.cids:
-                column_indexes.append(i)
-                headers.append(column.name)
-        body: list[list[str]] = []
-        for values_row in table.values:
-            row: list[str] = []
-            for index in column_indexes:
-                row.append(values_row[index])
-            body.append(row)
-        data = [headers]
-        data.extend(body)
-        self.style = value_table_style(data, embedded=True)
-        col_widths: list[float] = list(range(len(headers)))
-        for i in range(len(headers)):
-            max_width = 0
-            for j in range(len(data)):
-                col_width = self._col_width(data[j][i])
-                if col_width > max_width:
-                    max_width = col_width
-            col_widths[i] = max_width
-        Table.__init__(self,
-                       data,
-                       colWidths=col_widths,
-                       rowHeights=self._row_height(),
-                       style=self.style,
-                       hAlign='LEFT')
-
-    def _col_width(self, text: str) -> float:
-        text_width = stringWidth(text,
-                                 self.style.font_name,
-                                 self.style.font_size)
-        return self.style.left_padding + text_width + self.style.right_padding
-
-    def _row_height(self) -> float:
-        padding = self.style.top_padding + self.style.bottom_padding
-        return self.style.font_size + padding
-
-
 class ElementLine(Table):
     def __init__(self,
                  elements: list[ParagraphElement],
