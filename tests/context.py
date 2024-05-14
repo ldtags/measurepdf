@@ -7,3 +7,4 @@ import src.summarygen.summary as summary
 import src.app as app
 import main as main
 import src.resources as resources
+from src import _ROOT

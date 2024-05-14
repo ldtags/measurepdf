@@ -1,8 +1,9 @@
+import os
 import sys
 import time
 from configparser import ConfigParser
 
-from context import resources, etrm, summary
+from context import resources, etrm, summary, _ROOT
 
 
 config = ConfigParser()
@@ -11,7 +12,8 @@ connection = etrm.ETRMConnection(config['etrm']['type'] + ' ' + config['etrm']['
 
 
 def build_summary(measure_ids: list[str]):
-    measure_pdf = summary.MeasureSummary(relative_dir='summaries', override=True)
+    dir_path = os.path.join(_ROOT, '..', 'summaries')
+    measure_pdf = summary.MeasureSummary(dir_path)
     print('measure pdf object created', file=sys.stderr)
 
     for measure_id in measure_ids:
