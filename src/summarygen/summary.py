@@ -61,19 +61,20 @@ def calc_row_heights(data: list[tuple[str | Paragraph, ...]],
 
 class MeasureSummary:
     def __init__(self,
+                 dir_path: str,
                  file_name: str='measure_summary',
-                 relative_dir: str='',
-                 override: bool=False):
+                 override: bool=True):
         self.measures: list[Measure] = []
         self.story: list[Flowable] = []
-        if not os.path.exists(os.path.join(_ROOT, '..', relative_dir)):
-            raise FileNotFoundError(f'no {relative_dir} folder exists')
-        self.relative_dir = relative_dir
+        if os.path.exists(dir_path):
+            self.dir_path = dir_path
+        else:
+            raise FileNotFoundError(f'no {dir_path} folder exists')
         self.file_name = file_name + '.pdf'
-        self.file_path = os.path.join(self.relative_dir, self.file_name)
+        self.file_path = os.path.join(self.dir_path, self.file_name)
         if not override and os.path.exists(self.file_path):
             raise FileExistsError(f'a file named {file_name} already exists'
-                                  f' in {relative_dir}')
+                                  f' in {dir_path}')
         self.page_width = letter[0]
         self.page_height = letter[1]
         self.summary = SimpleDocTemplate(self.file_path,

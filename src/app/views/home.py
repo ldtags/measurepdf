@@ -5,7 +5,11 @@ from src.app.ctkobjects import (
     ScrollableFrame,
     ScrollableCheckBoxFrame,
     ScrollableRadioButtonFrame,
-    SearchBar
+    SearchBar,
+    PromptWindow,
+    InfoPromptWindow,
+    InputPromptWindow,
+    FileDialogueWindow
 )
 
 
@@ -18,6 +22,12 @@ class HomePage(ctk.CTkFrame):
         self.grid_rowconfigure((1), weight=1)
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
+        self.parent = parent
+        self.prompt: PromptWindow | None = None
+        self.info_prompt: InfoPromptWindow | None = None
+        self.yn_prompt: InputPromptWindow | None = None
+        self.fd_prompt: FileDialogueWindow | None = None
+
         self.measure_id_list = MeasureListFrame(self,
                                                 fg_color=self._fg_color)
         self.measure_id_list.grid(row=0,
@@ -27,8 +37,8 @@ class HomePage(ctk.CTkFrame):
                                   padx=(20, 20),
                                   pady=(20, 20))
 
-        self.measure_version_list = MeasureVersionsFrame(self,
-                                                         fg_color=self._fg_color)
+        self.measure_version_list \
+            = MeasureVersionsFrame(self, fg_color=self._fg_color)
         self.measure_version_list.grid(row=0,
                                        rowspan=3,
                                        column=1,
@@ -36,14 +46,76 @@ class HomePage(ctk.CTkFrame):
                                        padx=(20, 20),
                                        pady=(20, 20))
 
-        self.measures_selection_list = SelectedMeasuresFrame(self,
-                                                             fg_color=self._fg_color)
+        self.measures_selection_list \
+            = SelectedMeasuresFrame(self, fg_color=self._fg_color)
         self.measures_selection_list.grid(row=0,
                                           rowspan=3,
                                           column=2,
                                           sticky=ctk.NSEW,
                                           padx=(20, 20),
                                           pady=(20, 20))
+
+    def open_prompt(self, text: str):
+        if self.prompt is None or not self.prompt.winfo_exists():
+            self.prompt = PromptWindow(self, text)
+        self.prompt.wm_transient(self.parent)
+        self.prompt.focus()
+
+    def close_prompt(self):
+        if self.prompt is not None and self.prompt.winfo_exists():
+            self.prompt.destroy()
+        self.prompt = None
+
+    def open_yesno_prompt(self,
+                          text: str,
+                          ok_text: str='Ok',
+                          cancel_txt: str='Cancel',
+                          title=''):
+        if self.yn_prompt is None or not self.yn_prompt.winfo_exists():
+            self.yn_prompt = InputPromptWindow(self,
+                                               text=text,
+                                               ok_text=ok_text,
+                                               cancel_text=cancel_txt,
+                                               title=title)
+        self.yn_prompt.wm_transient(self.parent)
+        self.yn_prompt.focus()
+        result = self.yn_prompt.get_result()
+        self.yn_prompt = None
+        return result
+
+    def open_info_prompt(self,
+                         text: str,
+                         ok_text: str='Ok',
+                         title: str='Info'):
+        if self.info_prompt is None or not self.info_prompt.winfo_exists():
+            self.info_prompt = InfoPromptWindow(self,
+                                                text=text,
+                                                ok_text=ok_text,
+                                                title=title)
+        self.info_prompt.wm_transient(self.parent)
+        self.info_prompt.focus()
+        self.info_prompt.wait()
+        self.info_prompt = None
+
+    def open_fd_prompt(self,
+                       default_dest: str,
+                       default_fname: str,
+                       ok_text: str='Ok',
+                       cancel_text: str='Cancel',
+                       title: str=''
+                      ) -> tuple[str, str, bool]:
+        if self.fd_prompt is None or not self.fd_prompt.winfo_exists():
+            self.fd_prompt = FileDialogueWindow(self,
+                                                default_dest=default_dest,
+                                                default_fname=default_fname,
+                                                title=title,
+                                                ok_text=ok_text,
+                                                cancel_text=cancel_text)
+        self.fd_prompt.wm_transient(self.parent)
+        self.fd_prompt.focus()
+        result = self.fd_prompt.get_result()
+        self.fd_prompt = None
+        return result
 
 
 class MeasureListFrame(ctk.CTkFrame):
@@ -183,7 +255,8 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
                                        text='Clear Selections',
                                        fg_color='#FF0000',
                                        hover_color='#D50000',
-                                       cursor='hand2')
+                                       cursor='hand2',
+                                       state='disabled')
         self.clear_btn.grid(row=2,
                             column=0,
                             sticky=ctk.NSEW,
@@ -191,7 +264,8 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
                             pady=(0, 10))
 
         self.add_btn = ctk.CTkButton(self,
-                                     text='Create PDF')
+                                     text='Create PDF',
+                                     state='disabled')
         self.add_btn.grid(row=2,
                           column=1,
                           columnspan=2,

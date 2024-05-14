@@ -271,7 +271,7 @@ class ValueTableHeader(Paragraph):
 
 
 class EmbeddedValueTable(Table):
-    def __init__(self, measure: Measure, tag: EmbeddedValueTableTag):
+    def __init__(self, measure: Measure, tag: EmbeddedValueTableTag, **kwargs):
         api_name = tag.obj_info.api_name_unique
         table = measure.get_value_table(api_name)
         if table == None:

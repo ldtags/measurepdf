@@ -7,6 +7,7 @@ from bs4 import (
 )
 from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter, inch
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
     Paragraph,
@@ -18,7 +19,7 @@ from reportlab.platypus import (
 )
 
 from src.etrm import ETRM_URL
-from src.etrm.models import Measure
+from src.etrm.models import Measure, ValueTable
 from src.exceptions import SummaryGenError
 from src.summarygen.models import (
     ParagraphElement,
@@ -144,14 +145,18 @@ def _parse_table(table: Tag) -> list[list[ElementLine]]:
     return data
 
 
-def _col_width(element: ElementLine,
+def _col_width(element: ElementLine | str,
                style: BetterTableStyle
               ) -> float:
+    if isinstance(element, str):
+        width = stringWidth(element, style.font_name, style.font_size)
+    else:
+        width = element.width
     padding = style.left_padding + style.right_padding
-    return element.width + padding
+    return width + padding
 
 
-def _col_widths(data: list[list[ElementLine]],
+def _col_widths(data: list[list[ElementLine | str]],
                 style: BetterTableStyle
                ) -> list[float]:
     headers = data[0]
@@ -166,13 +171,17 @@ def _col_widths(data: list[list[ElementLine]],
     return col_widths
 
 
-def _row_height(element: ElementLine,
+def _row_height(element: ElementLine | str,
                 style: BetterTableStyle) -> float:
+    if isinstance(element, str):
+        height = style.font_size
+    else:
+        height = element.height
     padding = style.top_padding + style.bottom_padding
-    return element.height + padding
+    return height + padding
 
 
-def _row_heights(data: list[list[ElementLine]],
+def _row_heights(data: list[list[ElementLine | str]],
                  style: BetterTableStyle
                 ) -> list[float]:
     row_heights: list[float] = list(range(len(data)))
@@ -204,6 +213,31 @@ class CharacterizationParser:
         self.html = measure.characterizations[name]
         self.flowables: list[Flowable] = []
 
+    def gen_embedded_value_table(self,
+                                 vt_tag: EmbeddedValueTableTag,
+                                 table: ValueTable
+                                ) -> Table:
+        column_indexes: list[int] = []
+        headers: list[str] = []
+        for i, column in enumerate(table.columns):
+            if column.api_name in vt_tag.obj_info.vtconf.cids:
+                column_indexes.append(i)
+                headers.append(column.name)
+        body: list[list[str]] = []
+        for value_row in table.values:
+            row: list[str] = []
+            for index in column_indexes:
+                row.append(value_row[index])
+            body.append(row)
+        data = [headers]
+        data.extend(body)
+        style = value_table_style(data, embedded=True)
+        return Table(data,
+                     colWidths=_col_widths(data, style),
+                     rowHeights=_row_heights(data, style),
+                     style=style,
+                     hAlign='LEFT')
+
     def _parse_text(self, text: str) -> Flowable:
         if text == '\n':
             return Spacer(letter[0], 9.2)
@@ -218,13 +252,16 @@ class CharacterizationParser:
         json_str = tag.attrs.get('data-etrmvaluetable', None)
         if json_str != None:
             vt_tag = EmbeddedValueTableTag(json_str)
-            api_name = vt_tag.obj_info.api_name_unique
-            table_obj = self.measure.get_value_table(api_name)
             id_path = '/'.join(self.measure.full_version_id.split('-'))
             change_id = vt_tag.obj_info.change_url.split('/')[4]
             table_link = f'{ETRM_URL}/measure/{id_path}/value-table/{change_id}/'
+            api_name = vt_tag.obj_info.api_name_unique
+            table_obj = self.measure.get_value_table(api_name)
+            if table_obj == None:
+                raise SummaryGenError(f'value table {api_name} does not exist'
+                                      f' in {self.measure.full_version_id}')
             header = ValueTableHeader(table_obj.name, table_link)
-            table = EmbeddedValueTable(self.measure, vt_tag)
+            table = self.gen_embedded_value_table(vt_tag, table_obj)
             headed_table = KeepTogether([header, table])
             return [headed_table]
 

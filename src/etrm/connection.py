@@ -52,7 +52,7 @@ class ETRMConnection:
                                     f' measure {measure_id}')
 
         if response.status_code != 200:
-            raise UnauthorizedError()
+            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
         return Measure(response.json())
 
@@ -73,8 +73,15 @@ class ETRMConnection:
                                 params=params,
                                 headers=headers)
 
+        if response.status_code == 404:
+            raise NotFoundError(f'Measures could not be found')
+
+        if response.status_code == 500:
+            raise ETRMResponseError('Server error occurred when retrieving'
+                                    ' measures')
+
         if response.status_code != 200:
-            raise UnauthorizedError(f'invalid auth token: {self.auth_token}')
+            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
         response_body = MeasuresResponse(response.json())
         return list(map(lambda result: extract_id(result.url),
@@ -98,9 +105,18 @@ class ETRMConnection:
                                 params=params,
                                 headers=headers)
 
+        if response.status_code == 404:
+            raise NotFoundError(f'No versions for measure {measure_id}'
+                                ' were found')
+
+        if response.status_code == 500:
+            raise ETRMResponseError('Server error occurred while retrieving'
+                                    f' versions for measure {measure_id}')
+
         if response.status_code != 200:
-            raise UnauthorizedError()
+            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
         response_body = MeasureVersionsResponse(response.json())
-        return sorted(list(map(lambda result: result.version,
-                               response_body.versions)))
+        return list(reversed(sorted(
+            map(lambda result: result.version,
+                response_body.versions))))
