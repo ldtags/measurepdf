@@ -11,15 +11,13 @@ from reportlab.platypus import (
 
 from src.etrm import ETRM_URL
 from src.etrm.models import Measure
-from src.exceptions import SummaryGenError
 from src.summarygen.models import (
     ParagraphElement,
     ReferenceTag,
-    EmbeddedValueTableTag,
     ElemType,
     TextStyle
 )
-from src.summarygen.styling import PSTYLES, TSTYLES, COLORS, value_table_style
+from src.summarygen.styling import PSTYLES, TSTYLES, COLORS
 from src.summarygen.rlobjects import BetterParagraphStyle
 
 
@@ -32,7 +30,8 @@ class SummaryParagraph(Flowable):
                  text: str='',
                  paragraph_element: ParagraphElement | None=None,
                  paragraph_elements: list[ParagraphElement] | None=None,
-                 style: BetterParagraphStyle | None=None):
+                 style: BetterParagraphStyle | None=None,
+                 ref_link: str | None=None):
         Flowable.__init__(self)
         self.x = x
         self.y = y
@@ -54,6 +53,7 @@ class SummaryParagraph(Flowable):
         self.font_size = float(self.style.attrs['fontSize'])
         self.leading = float(self.style.attrs.get('leading',
                                                   self.font_size * 1.2))
+        self.ref_link = ref_link
 
     def _join_elements(self):
         sections: list[tuple[int, int]] = []
@@ -62,7 +62,7 @@ class SummaryParagraph(Flowable):
         cur_type: ElemType | None = None
         for i, element in enumerate(self._elements):
             if start == -1:
-                if i == len(self._elements) - 1:
+                if i == len(self._elements) - 1 or element.type == ElemType.REF:
                     sections.append((i, i))
                 else:
                     start = i
@@ -193,7 +193,8 @@ class SummaryParagraph(Flowable):
         text_obj.textOut(element.text.lstrip())
 
         text_obj.setFont(self.font_name, self.font_size)
-        text_obj.setRise(0)
+        if TextStyle.SUP in element.styles or TextStyle.SUB in element.styles:
+            text_obj.setRise(self.leading - self.font_size)
 
     def _set_ref_text(self, text_obj: PDFTextObject, reference: ReferenceTag):
         font_name = self.font_name + 'B'
@@ -214,16 +215,22 @@ class SummaryParagraph(Flowable):
         text_obj.textOut(text)
         text_obj.setFillColor(colors.black)
         text_obj.setFont(self.font_name, self.font_size)
-
+        
         canvas: Canvas = self.canv
         rect_width = str_width - 4.5 + w_pad
         canvas.setFillColor(COLORS['ReferenceTagBG'])
-        canvas.rect(x + x_pad,
-                    y - (self.leading - self.font_size) + 0.25,
+        x = x + x_pad
+        y = y - (self.leading - self.font_size) + 0.25
+        canvas.rect(x,
+                    y,
                     rect_width,
                     self.font_size,
                     stroke=0,
                     fill=1)
+        if self.ref_link != None:
+            canvas.linkURL(self.ref_link,
+                           (x, y, x + rect_width, y + self.font_size),
+                           relative=1)
         canvas.setFillColor(colors.black)
         text_obj.moveCursor(x_pad + rect_width + space_width, 0)
 
