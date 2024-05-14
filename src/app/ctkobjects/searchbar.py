@@ -1,6 +1,7 @@
 import customtkinter as ctk
 
 from src import utils
+from src.app.ctkobjects.tooltip import ToolTip
 
 
 class SearchBar(ctk.CTkFrame):
@@ -10,6 +11,9 @@ class SearchBar(ctk.CTkFrame):
                  include_search_btn: bool=False,
                  include_reset_btn: bool=False,
                  include_add_btn: bool=False,
+                 search_tooltip: str | None=None,
+                 reset_tooltip: str | None=None,
+                 add_tooltip: str | None=None,
                  **kwargs):
         kwargs['fg_color'] = kwargs.get('fg_color', parent._fg_color)
         super().__init__(parent, **kwargs)
@@ -46,6 +50,9 @@ class SearchBar(ctk.CTkFrame):
             self.search_btn.grid(row=0,
                                  column=entry_width,
                                  padx=(5, 5))
+            if search_tooltip != None:
+                self.search_tooltip = ToolTip(self.search_btn,
+                                              message=search_tooltip)
             entry_width += 1
 
         if include_reset_btn:
@@ -58,6 +65,9 @@ class SearchBar(ctk.CTkFrame):
             self.reset_btn.grid(row=0,
                                 column=entry_width,
                                 padx=(5, 5))
+            if reset_tooltip != None:
+                self.reset_tooltip = ToolTip(self.reset_btn,
+                                             message=reset_tooltip)
             entry_width += 1
 
         if include_add_btn:
@@ -70,6 +80,9 @@ class SearchBar(ctk.CTkFrame):
             self.add_btn.grid(row=0,
                               column=entry_width,
                               padx=(5, 5))
+            if add_tooltip != None:
+                self.add_tooltip = ToolTip(self.add_btn,
+                                           message=add_tooltip)
             entry_width += 1
 
     def get(self) -> str:

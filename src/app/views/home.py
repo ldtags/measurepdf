@@ -9,7 +9,8 @@ from src.app.ctkobjects import (
     PromptWindow,
     InfoPromptWindow,
     InputPromptWindow,
-    FileDialogueWindow
+    FileDialogueWindow,
+    ToolTip
 )
 
 
@@ -129,7 +130,13 @@ class MeasureListFrame(ctk.CTkFrame):
         self.search_bar = SearchBar(self,
                                     placeholder='Search for a measure...',
                                     include_search_btn=True,
-                                    include_reset_btn=True)
+                                    include_reset_btn=True,
+                                    search_tooltip='Search for a'
+                                                   ' measure by entering that'
+                                                   ' measure\'s statewide id'
+                                                   ' (i.e., SWAP001)',
+                                    reset_tooltip='Reset the currently shown'
+                                                  ' measures')
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
@@ -188,7 +195,16 @@ class MeasureVersionsFrame(ctk.CTkFrame):
         self.search_bar = SearchBar(self,
                                     placeholder='Search for a version...',
                                     include_search_btn=True,
-                                    include_reset_btn=True)
+                                    include_reset_btn=True,
+                                    search_tooltip='Search for one of the'
+                                                   ' currently selected'
+                                                   ' measure\'s versions by'
+                                                   ' entering the full version'
+                                                   ' id (i.e., SWAP001-03)',
+                                    reset_tooltip='Reset the measure versions'
+                                                  ' shown below to all of the'
+                                                  ' selected measure\'s'
+                                                  ' versions')
         self.search_bar.grid(row=0,
                              column=0,
                              sticky=ctk.NSEW,
@@ -235,7 +251,10 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
 
         self.search_bar = SearchBar(self,
                                     placeholder='Add a measure...',
-                                    include_add_btn=True)
+                                    include_add_btn=True,
+                                    add_tooltip='Select a measure version'
+                                                ' by entering a full measure'
+                                                ' id (i.e., SWAP001-03)')
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
@@ -262,6 +281,9 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
                             sticky=ctk.NSEW,
                             padx=(10, 10),
                             pady=(0, 10))
+        self.clear_tooltip = ToolTip(self.clear_btn,
+                                     message='Unselects all selected'
+                                             ' measure versions')
 
         self.add_btn = ctk.CTkButton(self,
                                      text='Create PDF',
@@ -272,6 +294,9 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
                           sticky=ctk.NSEW,
                           padx=(10, 10),
                           pady=(0, 10))
+        self.add_tooltip = ToolTip(self.add_btn,
+                                   message='Creates a summary PDF'
+                                           ' with all selected measures')
 
     @property
     def measures(self) -> list[str]:

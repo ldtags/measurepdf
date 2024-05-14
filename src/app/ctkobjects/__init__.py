@@ -10,3 +10,4 @@ from src.app.ctkobjects.prompt import (
     InputPromptWindow,
     FileDialogueWindow
 )
+from src.app.ctkobjects.tooltip import ToolTip
