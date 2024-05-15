@@ -1,5 +1,6 @@
 import os
 import threading
+import customtkinter as ctk
 
 from src import _ROOT
 from src.app.views import View
@@ -38,7 +39,7 @@ class HomeController:
 
     def get_measure_versions(self, measure_id: str | None=None) -> list[str]:
         id = measure_id or self.model.home.selected_measure
-        if id == '':
+        if id == '' or id == None:
             return []
         return self.model.connection.get_measure_versions(id)
 
@@ -57,9 +58,15 @@ class HomeController:
 
     def select_measure_id(self):
         prev_selection = self.model.home.selected_measure
-        self.model.home.selected_measure = self.page.measure_id_list.selected_measure
+        selected_measure = self.page.measure_id_list.selected_measure
+        if prev_selection == selected_measure:
+            return
+        self.model.home.selected_measure = selected_measure
+        if selected_measure != None:
+            self.page.measure_id_list.measure_frame.disable(selected_measure)
         try:
             self.update_measure_versions()
+            self.page.measure_id_list.measure_frame.enable(selected_measure)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -70,6 +77,7 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
+        self.page.measure_id_list.measure_frame.enable(selected_measure)
         self.model.home.selected_measure = prev_selection
         self.page.measure_id_list.selected_measure = prev_selection
 
@@ -77,6 +85,8 @@ class HomeController:
         try:
             self.model.home.increment_offset()
             self.update_measure_ids()
+            if self.model.home.offset != 0:
+                self.page.measure_id_list.back_btn.configure(state=ctk.NORMAL)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -93,6 +103,8 @@ class HomeController:
         try:
             self.model.home.decrement_offset()
             self.update_measure_ids()
+            if self.model.home.offset == 0:
+                self.page.measure_id_list.back_btn.configure(state=ctk.DISABLED)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -151,6 +163,7 @@ class HomeController:
         self.model.home.selected_measure = prev_selection
 
     def __bind_id_list(self):
+        self.page.measure_id_list.back_btn.configure(state=ctk.DISABLED)
         self.page.measure_id_list.measure_frame.set_command(self.select_measure_id)
         self.page.measure_id_list.next_btn.configure(command=self.next_page)
         self.page.measure_id_list.back_btn.configure(command=self.prev_page)
@@ -162,11 +175,11 @@ class HomeController:
     def update_measure_selections(self):
         self.page.measures_selection_list.measures = self.model.home.selected_versions
         if self.model.home.selected_versions != []:
-            self.page.measures_selection_list.clear_btn.configure(state='normal')
-            self.page.measures_selection_list.add_btn.configure(state='normal')
+            self.page.measures_selection_list.clear_btn.configure(state=ctk.NORMAL)
+            self.page.measures_selection_list.add_btn.configure(state=ctk.NORMAL)
         else:
-            self.page.measures_selection_list.clear_btn.configure(state='disabled')
-            self.page.measures_selection_list.add_btn.configure(state='disabled')
+            self.page.measures_selection_list.clear_btn.configure(state=ctk.DISABLED)
+            self.page.measures_selection_list.add_btn.configure(state=ctk.DISABLED)
 
     def select_measure_version(self):
         selected_versions = self.page.measure_version_list.selected_versions
@@ -252,8 +265,6 @@ class HomeController:
                 return
             summary.add_measure(measure)
         summary.build()
-        model.results.summary_path = summary.file_path
-        model.results.file_name = summary.file_name
         view.home.close_prompt()
         view.home.open_info_prompt('Success!')
         view.home.measure_version_list.selected_versions = []
@@ -344,8 +355,8 @@ class HomeController:
         self.model.home.selected_versions = []
         self.page.measures_selection_list.measures = []
         self.page.measure_version_list.selected_versions = []
-        self.page.measures_selection_list.clear_btn.configure(state='disabled')
-        self.page.measures_selection_list.add_btn.configure(state='disabled')
+        self.page.measures_selection_list.clear_btn.configure(state=ctk.DISABLED)
+        self.page.measures_selection_list.add_btn.configure(state=ctk.DISABLED)
 
     def __bind_selected_list(self):
         self.page.measures_selection_list.add_btn.configure(command=self.create_summary)
