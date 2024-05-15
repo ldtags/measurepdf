@@ -1,5 +1,5 @@
 import os
-import math
+import re
 from reportlab.lib.pagesizes import inch, letter
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
@@ -59,16 +59,21 @@ def calc_row_heights(data: list[list[str | Paragraph]],
             row_styles = para_styles * len(row)
         elif len(para_styles) != len(row):
             raise RuntimeError(f'Invalid number of paragraph styles')
+        else:
+            row_styles = para_styles
 
         for i, cell in enumerate(row):
             if isinstance(cell, str):
                 text = cell
             else:
                 text = cell.text
+            re_match = re.search(r'<link .+>(.+)</link>', text)
+            if re_match != None:
+                text = str(re_match.group(1))
             width = stringWidth(text,
-                                table_style.font_name,
-                                table_style.font_size)
-            scale = width // (base_widths[1] - hpadding)
+                                row_styles[i].font_name,
+                                row_styles[i].font_size)
+            scale = width // (base_widths[i] - hpadding)
             leading = row_styles[i].leading
             cell_height = height + scale * leading
             if cell_height > row_height:
@@ -226,7 +231,6 @@ class MeasureSummary:
                 _link('Subscriptions', f'{link}/subscriptions')],
             [Paragraph('Permutations', hstyle),
                 _link('Permutations', f'{link}/permutation-reports')]]
-        row_heights = (*(19*[0.24*inch]), 0.48*inch, *(2*[0.24*inch]))
         tstyle = TSTYLES['SectionsTable']
         para_styles = (PSTYLES['TableHeader'], PSTYLES['Link'])
         col_widths = (1.42*inch, 4.81*inch)
@@ -237,9 +241,9 @@ class MeasureSummary:
                                        base_height,
                                        col_widths)
         table = Table(data,
-                      colWidths=(1.42*inch, 4.81*inch),
+                      colWidths=col_widths,
                       rowHeights=row_heights,
-                      style=TSTYLES['SectionsTable'],
+                      style=tstyle,
                       hAlign='LEFT')
         headed_table = KeepTogether([table_header, table])
         self.story.append(headed_table)
