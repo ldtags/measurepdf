@@ -158,6 +158,8 @@ class MeasureListFrame(ctk.CTkFrame):
                            sticky=ctk.SW,
                            padx=(10, 10),
                            pady=(10, 10))
+        self.back_btn_tooltip = ToolTip(self.back_btn,
+                                        'View the previous 25 measures')
 
         self.next_btn = ctk.CTkButton(self,
                                       text='>>')
@@ -166,6 +168,8 @@ class MeasureListFrame(ctk.CTkFrame):
                            sticky=ctk.SE,
                            padx=(10, 10),
                            pady=(10, 10))
+        self.next_btn_tooltip = ToolTip(self.next_btn,
+                                        'View the next 25 measures')
 
     @property
     def measure_ids(self) -> list[str]:
