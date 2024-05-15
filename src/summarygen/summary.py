@@ -40,9 +40,9 @@ def _link(display_text: str, link: str) -> Paragraph:
                      PSTYLES['Link'])
 
 
-def calc_row_heights(data: list[tuple[str | Paragraph, ...]],
+def calc_row_heights(data: list[list[str | Paragraph]],
                      table_style: BetterTableStyle,
-                     para_styles: BetterParagraphStyle,
+                     para_styles: tuple[BetterParagraphStyle, ...],
                      base_height: float,
                      base_widths: tuple[float, ...]
                     ) -> list[float]:
@@ -50,12 +50,30 @@ def calc_row_heights(data: list[tuple[str | Paragraph, ...]],
     hpadding = table_style.left_padding + table_style.right_padding
     height = base_height + vpadding
     row_heights: list[float] = []
-    for _, value in data:
-        width = stringWidth(value.text,
-                            table_style.font_name,
-                            table_style.font_size)
-        scale = width // (base_widths[1] - hpadding)
-        row_heights.append(height + scale * para_styles.leading)
+    row_styles: tuple[BetterParagraphStyle, ...] = []
+    for row in data:
+        row_height = height
+        if isinstance(para_styles, BetterParagraphStyle):
+            row_styles = [para_styles] * len(row)
+        elif len(para_styles) == 1:
+            row_styles = para_styles * len(row)
+        elif len(para_styles) != len(row):
+            raise RuntimeError(f'Invalid number of paragraph styles')
+
+        for i, cell in enumerate(row):
+            if isinstance(cell, str):
+                text = cell
+            else:
+                text = cell.text
+            width = stringWidth(text,
+                                table_style.font_name,
+                                table_style.font_size)
+            scale = width // (base_widths[1] - hpadding)
+            leading = row_styles[i].leading
+            cell_height = height + scale * leading
+            if cell_height > row_height:
+                row_height = cell_height
+        row_heights.append(row_height)
     return row_heights
 
 
@@ -210,11 +228,12 @@ class MeasureSummary:
                 _link('Permutations', f'{link}/permutation-reports')]]
         row_heights = (*(19*[0.24*inch]), 0.48*inch, *(2*[0.24*inch]))
         tstyle = TSTYLES['SectionsTable']
+        para_styles = (PSTYLES['TableHeader'], PSTYLES['Link'])
         col_widths = (1.42*inch, 4.81*inch)
-        base_height = 0.24*inch
+        base_height = PSTYLES['TableHeader'].leading
         row_heights = calc_row_heights(data,
                                        tstyle,
-                                       PSTYLES['Link'],
+                                       para_styles,
                                        base_height,
                                        col_widths)
         table = Table(data,

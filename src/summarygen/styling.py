@@ -64,7 +64,6 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet.add(
         BetterParagraphStyle('TableHeader',
                              font_name='SourceSansProB',
-                             leading=16.625,
                              font_size=13.5))
     style_sheet.add(
         BetterParagraphStyle('h2',
