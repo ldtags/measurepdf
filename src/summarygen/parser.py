@@ -195,18 +195,6 @@ def _row_heights(data: list[list[ElementLine | str]],
     return row_heights
 
 
-def _parse_list(ul: Tag) -> list[ListItem]:
-    list_items: list[ListItem] = []
-    li_list: ResultSet[Tag] = ul.find_all('li')
-    for li in li_list:
-        items = _parse_element(li)
-        element = SummaryParagraph(paragraph_elements=items)
-        list_items.append(ListItem(element,
-                                   bulletColor=colors.black,
-                                   value='square'))
-    return list_items
-
-
 class CharacterizationParser:
     def __init__(self, measure: Measure, name: str):
         self.measure = measure
@@ -237,6 +225,20 @@ class CharacterizationParser:
                      rowHeights=_row_heights(data, style),
                      style=style,
                      hAlign='LEFT')
+
+    def _parse_list(self, ul: Tag) -> list[ListItem]:
+        id_path = '/'.join(self.measure.full_version_id.split('-', 1))
+        ref_link = f'{ETRM_URL}/measure/{id_path}/#references_list'
+        list_items: list[ListItem] = []
+        li_list: ResultSet[Tag] = ul.find_all('li')
+        for li in li_list:
+            items = _parse_element(li)
+            element = SummaryParagraph(paragraph_elements=items,
+                                       ref_link=ref_link)
+            list_items.append(ListItem(element,
+                                       bulletColor=colors.black,
+                                       value='square'))
+        return list_items
 
     def _parse_text(self, text: str) -> Flowable:
         if text == '\n':
@@ -316,7 +318,7 @@ class CharacterizationParser:
                               hAlign='LEFT')
                 return [KeepTogether(table)]
             case 'ul':
-                elements = _parse_list(element)
+                elements = self._parse_list(element)
                 return [ListFlowable(elements, bulletType='bullet')]
             case tag:
                 raise Exception(f'unsupported HTML tag: {tag}')
