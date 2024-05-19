@@ -61,58 +61,6 @@ def is_embedded(tag: Tag) -> bool:
 
     return False
 
-def wrap_lines(elements: list[ParagraphElement],
-               style: BetterParagraphStyle,
-               width: float
-              ) -> list[list[ParagraphElement]]:
-    _element_lines: list[list[ParagraphElement]] = []
-    _element_line: list[ParagraphElement] = []
-    i = 0
-    cur_width = 0
-    while i < len(elements):
-        element = elements[i]
-        font_name = style.font_name
-        if TextStyle.STRONG in element.styles:
-            font_name += 'B'
-        if TextStyle.ITALIC in element.styles:
-            font_name += 'I'
-        words = element.text.strip().split(' ')
-        word_count = len(words)
-        line = ''
-        j = 1
-        while j < word_count + 1:
-            line = ' '.join(words[0:j])
-            line_width = cur_width + stringWidth(line,
-                                                 font_name,
-                                                 style.font_size)
-            if line_width > width:
-                break
-            j += 1
-        if j == 1:
-            if _element_line != []:
-                _element_lines.append(_element_line)
-                _element_line = []
-            cur_width = 0
-            if stringWidth(line, font_name, style.font_size) > width:
-                _element_lines.append([element.copy(text=line)])
-                element.text = element.text.replace(line, '')
-        elif j != word_count + 1:
-            line = ' '.join(words[0:(j - 1)])
-            _element_line.append(element.copy(text=line))
-            _element_lines.append(_element_line)
-            _element_line = []
-            cur_width = 0
-            element.text = element.text.replace(line, '')
-        else:
-            if _element_line == [] and isinstance(element, ReferenceTag):
-                element.text = element.text.rstrip()
-            _element_line.append(element)
-            cur_width += stringWidth(element.text, font_name, style.font_size)
-            i += 1
-    if _element_line != []:
-        _element_lines.append(_element_line)
-    return _element_lines
-
 
 def _parse_element(element: PageElement) -> list[ParagraphElement]:
     if isinstance(element, NavigableString):
