@@ -19,10 +19,8 @@ class PromptWindow(ctk.CTkToplevel):
         self.geometry(f'+{x}+{y}')
 
         self.label = ctk.CTkLabel(self, text=text)
-        self.label.pack(padx=20, pady=20)
-
-        if self.winfo_exists():
-            self.grab_set()
+        self.label.pack(padx=20,
+                        pady=20)
 
     def set_text(self, text: str):
         self.label.configure(text=text)
@@ -44,7 +42,7 @@ class InfoPromptWindow(ctk.CTkToplevel):
         self.resizable(width=False, height=False)
         self.grid_rowconfigure((0, 1), weight=1)
         self.grid_columnconfigure((0, 1, 2), weight=1)
-        
+
         self.label = ctk.CTkLabel(self, text=text)
         self.label.grid(row=0,
                         column=0,

@@ -1,4 +1,5 @@
 import os
+import sys
 import threading
 import customtkinter as ctk
 
@@ -238,48 +239,43 @@ class HomeController:
         self.page.measure_version_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
         self.page.measure_version_list.search_bar.reset_btn.configure(command=self.reset_versions)
 
-    @staticmethod
-    def __create_summary(dir_path: str,
-                         file_name: str,
-                         selected_versions: list[str],
-                         model: Model,
-                         view: View):
+    def _create_summary(self, dir_path, file_name):
         summary = MeasureSummary(dir_path=dir_path, file_name=file_name)
-        for measure_id in selected_versions:
+        for measure_id in self.model.home.selected_versions:
             try:
-                measure = model.connection.get_measure(measure_id)
+                measure = self.model.connection.get_measure(measure_id)
             except NotFoundError as err:
-                view.home.close_prompt()
-                view.home.open_info_prompt(err.message,
+                self.page.close_prompt()
+                self.page.open_info_prompt(err.message,
                                            title=' Measure Not Found')
                 return
             except ETRMResponseError as err:
-                view.home.close_prompt()
-                view.home.open_info_prompt(err.message,
+                self.page.close_prompt()
+                self.page.open_info_prompt(err.message,
                                            title=' Server Error')
                 return
             except UnauthorizedError as err:
-                view.home.close_prompt()
-                view.home.open_info_prompt(err.message,
+                self.page.close_prompt()
+                self.page.open_info_prompt(err.message,
                                            title=' Unauthorized Access')
                 return
             summary.add_measure(measure)
         summary.build()
-        view.home.close_prompt()
-        view.home.open_info_prompt('Success!')
-        view.home.measure_version_list.selected_versions = []
-        view.home.measures_selection_list.measures = []
-        model.home.selected_versions = []
+        self.page.close_prompt()
+        self.page.measure_version_list.selected_versions = []
+        self.page.measures_selection_list.measures = []
+        self.model.home.selected_versions = []
+        self.page.open_info_prompt('Success!')
 
     def create_summary(self):
         if self.model.home.selected_versions != []:
             def_path = os.path.join(_ROOT, '..', 'summaries')
+            def_path = os.path.normpath(def_path)
             if not os.path.exists(def_path):
-                def_path = os.path.join(_ROOT, 'summaries')
-                if not os.path.exists(def_path):
-                    raise FileNotFoundError(f'no {def_path} folder exists')
+                self.page.open_info_prompt(f'no {def_path} folder exists')
+                return
             def_fname = 'measure_summary'
-            result = self.page.open_fd_prompt(os.path.normpath(def_path),
+            result = self.page.open_fd_prompt(def_path,
                                               def_fname,
                                               title=' Summary PDF Details')
             if result[2] == False:
@@ -307,13 +303,7 @@ class HomeController:
                     return
 
             self.page.open_prompt('Generating summary, please be patient...')
-            process = threading.Thread(target=self.__create_summary,
-                                       args=[dir_path,
-                                             file_name,
-                                             self.model.home.selected_versions,
-                                             self.model,
-                                             self.view])
-            process.start()
+            self.page.after(1000, self._create_summary, dir_path, file_name)
         else:
             self.page.open_info_prompt(text='At least one measure version is'
                                             ' required to create a summary')
