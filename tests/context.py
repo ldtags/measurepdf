@@ -5,6 +5,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 import src.etrm as etrm
 import src.summarygen.summary as summary
 import src.app as app
-import main as main
+import src.main as main
 import src.resources as resources
 from src import _ROOT

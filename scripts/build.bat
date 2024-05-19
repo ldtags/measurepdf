@@ -21,7 +21,7 @@ for /f "tokens=* delims=" %%x in ('dir /b %ASSETS%\fonts\*') do (
 )
 
 cd %~dp0\..
-call %BUILD_CMD% main.py
+call %BUILD_CMD% cli.py
 
 
 endlocal

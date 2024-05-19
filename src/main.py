@@ -30,8 +30,12 @@ def app_controller(mode: str) -> Controller:
     return controller
 
 
-if __name__ == '__main__':
+def main():
     args = parse_args()
     mode: str = getattr(args, 'mode', 'client')
     controller = app_controller(mode)
-    controller.start()
+    controller.start()    
+
+
+if __name__ == '__main__':
+    main()
