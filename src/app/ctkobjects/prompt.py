@@ -71,6 +71,7 @@ class InfoPromptWindow(ctk.CTkToplevel):
     def wait(self):
         if self.winfo_exists():
             self.parent.wait_window(self)
+            self.grab_release()
 
 
 class InputPromptWindow(ctk.CTkToplevel):
