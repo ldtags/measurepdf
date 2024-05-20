@@ -107,7 +107,7 @@ class HelpWindow(ctk.CTkToplevel):
                               padx=x_margin)
 
         item6_text = ('6) Generate your API key by selecting the'
-                     '\"Generate key\" button')
+                     ' \"Generate key\" button')
         self.item6_label = ctk.CTkLabel(self,
                                         text=item6_text,
                                         font=styles.FXD_FONT)

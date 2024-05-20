@@ -1,6 +1,4 @@
 import os
-import sys
-import threading
 import customtkinter as ctk
 
 from src import _ROOT

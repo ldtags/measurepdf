@@ -230,7 +230,7 @@ class MeasureVersionsFrame(ctk.CTkFrame):
     def versions(self, items: list[str]):
         self.version_frame.clear()
         for item in items:
-            font = (styles.FONT_NAME, styles.FONT_SIZE)
+            font = styles.DEF_FONT
             if len(item.split('-')) == 2:
                 font = (*font, 'bold')
             self.version_frame.add_item(item, font=font)
