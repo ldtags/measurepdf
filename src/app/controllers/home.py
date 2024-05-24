@@ -55,8 +55,8 @@ class HomeController:
             `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
-        offset = self.model.home.offset
-        limit = self.model.home.limit
+        offset = self.model.home.id_offset
+        limit = self.model.home.id_limit
         return self.model.connection.get_measure_ids(offset, limit)
 
     def get_measure_versions(self, measure_id: str | None=None) -> list[str]:
@@ -177,9 +177,9 @@ class HomeController:
         """
 
         try:
-            self.model.home.increment_offset()
+            self.model.home.increment_id_offset()
             self.update_measure_ids()
-            if self.model.home.offset != 0:
+            if self.model.home.id_offset != 0:
                 self.page.measure_id_list.back_btn.configure(state=ctk.NORMAL)
             return
         except NotFoundError as err:
@@ -191,7 +191,7 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
-        self.model.home.decrement_offset()
+        self.model.home.decrement_id_offset()
 
     def prev_page(self):
         """Decrements the current set of measure IDs shown in the Home view.
@@ -207,9 +207,9 @@ class HomeController:
         """
 
         try:
-            self.model.home.decrement_offset()
+            self.model.home.decrement_id_offset()
             self.update_measure_ids()
-            if self.model.home.offset == 0:
+            if self.model.home.id_offset == 0:
                 self.page.measure_id_list.back_btn.configure(state=ctk.DISABLED)
             return
         except NotFoundError as err:
@@ -221,7 +221,7 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
-        self.model.home.increment_offset()
+        self.model.home.increment_id_offset()
 
     def reset_ids(self):
         """Resets the measure IDs frame and selected measure in the
