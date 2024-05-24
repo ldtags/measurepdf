@@ -34,6 +34,16 @@ class ETRMConnection:
         self.auth_token = auth_token
 
     def get_measure(self, measure_id: str) -> Measure:
+        """Returns a detailed measure object.
+
+        Errors:
+            `NotFoundError` - (404) measure not found
+
+            `ETRMResponseError` - (500) server error
+
+            `UnauthorizedError` - (!200) any other error
+        """
+
         statewide_id, version_id = measure_id.split('-', 1)
         headers = {
             'Authorization': self.auth_token
@@ -60,6 +70,16 @@ class ETRMConnection:
                         offset: int = 0,
                         limit: int = 25
                        ) -> list[str]:
+        """Returns a list of measure ids.
+
+        Errors:
+            `NotFoundError` - (404) measure not found
+
+            `ETRMResponseError` - (500) server error
+
+            `UnauthorizedError` - (!200) any other error
+        """
+
         params = {
             'offset': str(offset),
             'limit': str(limit)
@@ -92,6 +112,17 @@ class ETRMConnection:
                              offset: int = 0,
                              limit: int = 25
                             ) -> list[str]:
+        """Returns a list of versions of the measure with the ID
+        `measure_id`.
+
+        Errors:
+            `NotFoundError` - (404) measure not found
+
+            `ETRMResponseError` - (500) server error
+
+            `UnauthorizedError` - (!200) any other error
+        """
+
         params = {
             'offset': str(offset),
             'limit': str(limit)
