@@ -42,7 +42,7 @@ class ETRMCache:
 
     def get_ids(self, offset: int, limit: int) -> list[str] | None:
         try:
-            cached_ids = self.id_cache[offset:limit]
+            cached_ids = self.id_cache[offset:offset + limit]
             if cached_ids != [] and all(cached_ids):
                 return cached_ids
         except IndexError:
@@ -138,6 +138,7 @@ class ETRMConnection:
 
         cached_ids = self.cache.get_ids(offset, limit)
         if cached_ids != None:
+            print('cache hit')
             return cached_ids
 
         params = {
