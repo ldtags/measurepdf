@@ -55,11 +55,11 @@ class HomeController:
             `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
-        offset = self.model.home.id_offset
-        limit = self.model.home.id_limit
+        offset = self.model.home.offset
+        limit = self.model.home.limit
         return self.model.connection.get_measure_ids(offset, limit)
 
-    def get_measure_versions(self, measure_id: str | None=None) -> list[str]:
+    def get_measure_versions(self) -> list[str]:
         """Returns a list of all versions of the measure with
         the ID `measure_id`.
 
@@ -73,10 +73,11 @@ class HomeController:
             `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
-        id = measure_id or self.model.home.selected_measure
+        id = self.model.home.selected_measure
         if id == '' or id == None:
             return []
-        return self.model.connection.get_measure_versions(id)
+
+        return  self.model.connection.get_measure_versions(id)
 
     def update_measure_ids(self):
         """Sets the measure IDs in the Home view to the correct set of
@@ -166,10 +167,8 @@ class HomeController:
         self.model.home.selected_measure = prev_selection
         self.page.measure_id_list.selected_measure = prev_selection
 
-    def next_page(self):
+    def next_id_page(self):
         """Increments the current set of measure IDs shown in the Home view.
-
-        Increments `offset` in the Home model by `limit` from the Home model.
 
         Updates the current set of measure IDs in the Home view accordingly.
 
@@ -177,9 +176,9 @@ class HomeController:
         """
 
         try:
-            self.model.home.increment_id_offset()
+            self.model.home.increment_offset()
             self.update_measure_ids()
-            if self.model.home.id_offset != 0:
+            if self.model.home.offset != 0:
                 self.page.measure_id_list.back_btn.configure(state=ctk.NORMAL)
             return
         except NotFoundError as err:
@@ -191,12 +190,10 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
-        self.model.home.decrement_id_offset()
+        self.model.home.decrement_offset()
 
-    def prev_page(self):
+    def prev_id_page(self):
         """Decrements the current set of measure IDs shown in the Home view.
-
-        Decrements `offset` in the Home model by `limit` from the Home model.
 
         Updates the current set of measure IDs in the Home view accordingly.
 
@@ -207,9 +204,9 @@ class HomeController:
         """
 
         try:
-            self.model.home.decrement_id_offset()
+            self.model.home.decrement_offset()
             self.update_measure_ids()
-            if self.model.home.id_offset == 0:
+            if self.model.home.offset == 0:
                 self.page.measure_id_list.back_btn.configure(state=ctk.DISABLED)
             return
         except NotFoundError as err:
@@ -221,7 +218,7 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
-        self.model.home.increment_id_offset()
+        self.model.home.increment_offset()
 
     def reset_ids(self):
         """Resets the measure IDs frame and selected measure in the
@@ -286,10 +283,9 @@ class HomeController:
         the Home view.
         """
 
-        self.page.measure_id_list.back_btn.configure(state=ctk.DISABLED)
         self.page.measure_id_list.measure_frame.set_command(self.select_measure_id)
-        self.page.measure_id_list.next_btn.configure(command=self.next_page)
-        self.page.measure_id_list.back_btn.configure(command=self.prev_page)
+        self.page.measure_id_list.next_btn.configure(command=self.next_id_page)
+        self.page.measure_id_list.back_btn.configure(command=self.prev_id_page)
         self.page.measure_id_list.search_bar.search_btn.configure(command=self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Return>', self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Escape>', self.unfocus)

@@ -7,6 +7,7 @@ summaries/*
 
 # security
 config.ini
+eTRM_API_Documentation.pdf
 
 # pyinstaller
 build

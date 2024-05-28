@@ -152,7 +152,8 @@ class MeasureListFrame(ctk.CTkFrame):
                                 padx=(10, 10))
 
         self.back_btn = ctk.CTkButton(self,
-                                      text='<<')
+                                      text='<<',
+                                      state=ctk.DISABLED)
         self.back_btn.grid(row=2,
                            column=0,
                            sticky=ctk.SW,
@@ -194,7 +195,7 @@ class MeasureVersionsFrame(ctk.CTkFrame):
 
         self.grid_rowconfigure((0), weight=0)
         self.grid_rowconfigure((1), weight=1)
-        self.grid_columnconfigure((0), weight=1)
+        self.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.search_bar = SearchBar(self,
                                     placeholder='Search for a version...',
@@ -211,6 +212,7 @@ class MeasureVersionsFrame(ctk.CTkFrame):
                                                   ' versions')
         self.search_bar.grid(row=0,
                              column=0,
+                             columnspan=3,
                              sticky=ctk.NSEW,
                              padx=(10, 10),
                              pady=(10, 10))
@@ -218,9 +220,10 @@ class MeasureVersionsFrame(ctk.CTkFrame):
         self.version_frame = ScrollableCheckBoxFrame(self)
         self.version_frame.grid(row=1,
                                 column=0,
+                                columnspan=3,
                                 sticky=ctk.NSEW,
                                 padx=(10, 10),
-                                pady=(0, 10))
+                                pady=(0, 0))
 
     @property
     def versions(self) -> list[str]:
