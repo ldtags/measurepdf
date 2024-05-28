@@ -33,7 +33,7 @@ def getc(o: dict,
          _type: Type[_T] | None,
          default: _U | Type[_NotDefined]=_NotDefined
         ) -> _T | _U | None:
-    """Alternative for `dict.get()` that casts the attribute to `cast_type`."""
+    """Alternative for `dict.get()` that casts the attribute to `_type`."""
 
     try:
         attr = o.get(name)
