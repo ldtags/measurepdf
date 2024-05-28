@@ -138,7 +138,6 @@ class ETRMConnection:
 
         cached_ids = self.cache.get_ids(offset, limit)
         if cached_ids != None:
-            print('cache hit')
             return cached_ids
 
         params = {
