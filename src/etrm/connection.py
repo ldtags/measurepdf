@@ -29,11 +29,61 @@ def extract_id(_url: str) -> str | None:
     return id_group
 
 
+class ETRMCache:
+    """Cache for eTRM API response data.
+
+    Decreases time required for repeat API calls for the same data.
+    """
+
+    def __init__(self):
+        self.id_cache: list[str] = []
+        self.version_cache: dict[str, list[str]] = {}
+        self.measure_cache: dict[str, Measure] = {}
+
+    def get_ids(self, offset: int, limit: int) -> list[str] | None:
+        try:
+            cached_ids = self.id_cache[offset:limit]
+            if cached_ids != [] and all(cached_ids):
+                return cached_ids
+        except IndexError:
+            pass
+        return None
+
+    def add_ids(self, measure_ids: list[str], offset: int, limit: int):
+        cache_len = len(self.id_cache)
+        if offset == cache_len:
+            self.id_cache.extend(measure_ids)
+        elif offset > cache_len:
+            self.id_cache.extend([''] * (offset - cache_len))
+            self.id_cache.extend(measure_ids)
+        elif offset + limit > cache_len:
+            new_ids = measure_ids[cache_len - offset:limit]
+            for i in range(offset, cache_len):
+                if self.id_cache[i] == '':
+                    self.id_cache[i] = measure_ids[i - offset]
+            self.id_cache.extend(new_ids)
+
+    def get_versions(self, measure_id: str) -> list[str] | None:
+        return self.version_cache.get(measure_id, None)
+
+    def add_versions(self, measure_id: str, versions: list[str]):
+        self.version_cache[measure_id] = versions
+
+    def get_measure(self, version_id: str) -> Measure | None:
+        return self.measure_cache.get(version_id, None)
+
+    def add_measure(self, measure: Measure):
+        self.measure_cache[measure.full_version_id] = measure
+
+
 class ETRMConnection:
+    """eTRM API connection layer."""
+
     def __init__(self, auth_token: str):
         self.auth_token = auth_token
+        self.cache = ETRMCache()
 
-    def get_measure(self, measure_id: str) -> Measure:
+    def get_measure(self, version_id: str) -> Measure:
         """Returns a detailed measure object.
 
         Errors:
@@ -44,7 +94,11 @@ class ETRMConnection:
             `UnauthorizedError` - (!200) any other error
         """
 
-        statewide_id, version_id = measure_id.split('-', 1)
+        cached_measure = self.cache.get_measure(version_id)
+        if cached_measure != None:
+            return cached_measure
+
+        statewide_id, version_id = version_id.split('-', 1)
         headers = {
             'Authorization': self.auth_token
         }
@@ -55,16 +109,18 @@ class ETRMConnection:
                                 stream=True)
 
         if response.status_code == 404:
-            raise NotFoundError(f'Measure {measure_id} could not be found')
+            raise NotFoundError(f'Measure {version_id} could not be found')
 
         if response.status_code == 500:
             raise ETRMResponseError('Server error occurred when retrieving'
-                                    f' measure {measure_id}')
+                                    f' measure {version_id}')
 
         if response.status_code != 200:
             raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
-        return Measure(response.json())
+        measure = Measure(response.json())
+        self.cache.add_measure(measure)
+        return measure
 
     def get_measure_ids(self,
                         offset: int = 0,
@@ -79,6 +135,10 @@ class ETRMConnection:
 
             `UnauthorizedError` - (!200) any other error
         """
+
+        cached_ids = self.cache.get_ids(offset, limit)
+        if cached_ids != None:
+            return cached_ids
 
         params = {
             'offset': str(offset),
@@ -104,14 +164,12 @@ class ETRMConnection:
             raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
         response_body = MeasuresResponse(response.json())
-        return list(map(lambda result: extract_id(result.url),
-                        response_body.results))
+        measure_ids = list(map(lambda result: extract_id(result.url),
+                               response_body.results))
+        self.cache.add_ids(measure_ids, offset, limit)
+        return measure_ids
 
-    def get_measure_versions(self,
-                             measure_id: str,
-                             offset: int = 0,
-                             limit: int = 25
-                            ) -> list[str]:
+    def get_measure_versions(self, measure_id: str) -> list[str]:
         """Returns a list of versions of the measure with the ID
         `measure_id`.
 
@@ -123,17 +181,15 @@ class ETRMConnection:
             `UnauthorizedError` - (!200) any other error
         """
 
-        params = {
-            'offset': str(offset),
-            'limit': str(limit)
-        }
+        cached_versions = self.cache.get_versions(measure_id)
+        if cached_versions != None:
+            return list(reversed(cached_versions))
 
         headers = {
             'Authorization': self.auth_token
         }
 
         response = requests.get(f'{API_URL}/measures/{measure_id}/',
-                                params=params,
                                 headers=headers)
 
         if response.status_code == 404:
@@ -148,6 +204,7 @@ class ETRMConnection:
             raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
         response_body = MeasureVersionsResponse(response.json())
-        return list(reversed(sorted(
-            map(lambda result: result.version,
-                response_body.versions))))
+        measure_versions = sorted(map(lambda result: result.version,
+                                      response_body.versions))
+        self.cache.add_versions(measure_id, measure_versions)
+        return list(reversed(measure_versions))
