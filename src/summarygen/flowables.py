@@ -180,9 +180,9 @@ class SummaryParagraph(Flowable):
         if TextStyle.SUP in element.styles or TextStyle.SUB in element.styles:
             font_size = 8
             if TextStyle.SUP in element.styles:
-                rise += 4
+                rise = 4
             if TextStyle.SUB in element.styles:
-                rise -= 4
+                rise = -4
         text_obj.setFont(font_name, font_size)
         text_obj.setRise(rise)
 
@@ -193,8 +193,7 @@ class SummaryParagraph(Flowable):
         text_obj.textOut(element.text.lstrip())
 
         text_obj.setFont(self.font_name, self.font_size)
-        if TextStyle.SUP in element.styles or TextStyle.SUB in element.styles:
-            text_obj.setRise(self.leading - self.font_size)
+        text_obj.setRise(0)
 
     def _set_ref_text(self, text_obj: PDFTextObject, reference: ReferenceTag):
         font_name = self.font_name + 'B'
