@@ -66,16 +66,24 @@ class ScrollableFrame(ctk.CTkScrollableFrame, Generic[T]):
         for element in self.elements:
             element.configure(command=command)
 
-    def disable(self, item: str):
-        for element in self.elements:
-            if element.cget('text') == item:
+    def disable(self, item: str | None=None):
+        if item == None:
+            for element in self.elements:
                 element.configure(state=ctk.DISABLED)
-                return
+        else:
+            for element in self.elements:
+                if element.cget('text') == item:
+                    element.configure(state=ctk.DISABLED)
+                    return
 
-    def enable(self, item: str):
-        for element in self.elements:
-            if element.cget('text') == item:
+    def enable(self, item: str | None=None):
+        if item == None:
+            for element in self.elements:
                 element.configure(state=ctk.NORMAL)
+        else:
+            for element in self.elements:
+                if element.cget('text') == item:
+                    element.configure(state=ctk.NORMAL)
 
     @property
     def items(self) -> list[str]:
