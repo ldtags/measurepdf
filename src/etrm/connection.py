@@ -122,11 +122,11 @@ class ETRMConnection:
         self.cache.add_measure(measure)
         return measure
 
-    def get_measure_ids(self,
-                        offset: int = 0,
-                        limit: int = 25
-                       ) -> list[str]:
-        """Returns a list of measure ids.
+    def __get_measure_ids(self,
+                          offset: int=0,
+                          limit: int=25
+                         ) -> MeasuresResponse:
+        """Returns the response of an eTRM API call for measure ids.
 
         Errors:
             `NotFoundError` - (404) measure not found
@@ -135,11 +135,6 @@ class ETRMConnection:
 
             `UnauthorizedError` - (!200) any other error
         """
-
-        cached_ids = self.cache.get_ids(offset, limit)
-        if cached_ids != None:
-            return cached_ids
-
         params = {
             'offset': str(offset),
             'limit': str(limit)
@@ -163,11 +158,46 @@ class ETRMConnection:
         if response.status_code != 200:
             raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
-        response_body = MeasuresResponse(response.json())
+        return MeasuresResponse(response.json())
+
+    def get_measure_ids(self, offset: int=0, limit: int=25) -> list[str]:
+        """Returns a list of measure ids.
+
+        Errors:
+            `NotFoundError` - (404) measure not found
+
+            `ETRMResponseError` - (500) server error
+
+            `UnauthorizedError` - (!200) any other error
+        """
+
+        cached_ids = self.cache.get_ids(offset, limit)
+        if cached_ids != None:
+            return cached_ids
+
+        response_body = self.__get_measure_ids(offset, limit)
         measure_ids = list(map(lambda result: extract_id(result.url),
                                response_body.results))
         self.cache.add_ids(measure_ids, offset, limit)
         return measure_ids
+
+    def get_init_measure_ids(self, limit: int=25) -> tuple[list[str], int]:
+        """Returns a tuple containing the first `limit` measure ids and
+        the total number of measure ids.
+
+        Errors:
+            `NotFoundError` - (404) measure not found
+
+            `ETRMResponseError` - (500) server error
+
+            `UnauthorizedError` - (!200) any other error
+        """
+
+        response_body = self.__get_measure_ids(0, limit)
+        measure_ids = list(map(lambda result: extract_id(result.url),
+                               response_body.results))
+        self.cache.add_ids(measure_ids, 0, limit)
+        return (measure_ids, response_body.count)
 
     def get_measure_versions(self, measure_id: str) -> list[str]:
         """Returns a list of versions of the measure with the ID
