@@ -1,7 +1,9 @@
 import os
+import re
+import time
 import customtkinter as ctk
 
-from src import _ROOT
+from src import _ROOT, patterns
 from src.app.views import View
 from src.app.models import Model
 from src.summarygen import MeasureSummary
@@ -23,10 +25,28 @@ class HomeController:
         self.__bind_version_list()
         self.__bind_selected_list()
 
-    def __sanitize(self, input: str) -> str:
-        """Sanitizes measure IDs and measure version IDs."""
+    def sanitize_stwd_id(self, statewide_id: str) -> str | None:
+        """Ensures that `statewide_id` is a valid measure
+        statewide id.
+        """
 
-        sanitized = input.upper()
+        re_match = re.search(patterns.STWD_ID, statewide_id)
+        if re_match == None:
+            return None
+
+        sanitized = statewide_id.upper()
+        return sanitized
+
+    def sanitize_vrsn_id(self, version_id: str) -> str | None:
+        """Ensures that `version_id` is a valid measure
+        version id.
+        """
+
+        re_match = re.search(patterns.VRSN_ID, version_id)
+        if re_match == None:
+            return None
+
+        sanitized = re_match.group(2).upper() + '-' + re_match.group(3)
         return sanitized
 
     def unfocus(self, *args):
@@ -37,7 +57,28 @@ class HomeController:
     def show(self):
         """Shows the home view."""
 
+        if self.model.home.measure_ids == [] or self.model.home.count == 0:
+            measure_ids, count = self.model.connection.get_init_measure_ids()
+            self.model.home.measure_ids = measure_ids
+            self.model.home.count = count
+            self.page.measure_id_list.measure_ids = measure_ids
+
         self.page.tkraise()
+
+    def is_selected_measure(self, measure_id: str) -> bool:
+        """Determines if `measure_id` is already selected."""
+
+        return measure_id in self.model.home.selected_measures
+
+    def is_current_measure(self, measure_id: str) -> bool:
+        """Determines if `measure_id` exists on the current page."""
+
+        return measure_id in self.page.measure_id_list.measure_ids
+
+    def is_selected_version(self, version_id: str) -> bool:
+        """Determines if `version_id` is already selected."""
+
+        return version_id in self.model.home.selected_versions
 
     def get_measure_ids(self) -> list[str]:
         """Returns a list of measure IDs.
@@ -60,8 +101,7 @@ class HomeController:
         return self.model.connection.get_measure_ids(offset, limit)
 
     def get_measure_versions(self) -> list[str]:
-        """Returns a list of all versions of the measure with
-        the ID `measure_id`.
+        """Returns a list of all versions of all selected measures.
 
         Does not handle eTRM connection errors.
 
@@ -73,13 +113,14 @@ class HomeController:
             `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
-        id = self.model.home.selected_measure
-        if id == '' or id == None:
-            return []
+        versions = []
+        for id in self.model.home.selected_measures:
+            id_versions = self.model.connection.get_measure_versions(id)
+            versions.extend(id_versions)
 
-        return  self.model.connection.get_measure_versions(id)
+        return versions
 
-    def update_measure_ids(self):
+    def update_measure_ids(self, measures: list[str] | None=None):
         """Sets the measure IDs in the Home view to the correct set of
         measure IDs using the `offset` and `limit` in the Home model.
 
@@ -93,19 +134,16 @@ class HomeController:
             `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
-        measure_ids = self.get_measure_ids()
+        measure_ids = measures or self.get_measure_ids()
         self.model.home.measure_ids = measure_ids
         self.page.measure_id_list.measure_ids = measure_ids
+        self.page.measure_id_list.selected_measures = list(
+            filter(lambda measure: self.is_selected_measure(measure),
+                   measure_ids))
 
-    def update_measure_versions(self):
+    def update_measure_versions(self, versions: list[str] | None=None):
         """Sets the measure version IDs in the Home view to the versions
-        of the currently selected measure.
-        
-        Uses the `selected_measure` from the Home model to determine the
-        currently selected measure.
-
-        If a version of the currently selected measure is already selected,
-        the associated checkbox is set to selected.
+        of the currently selected measures.
 
         Does not handle eTRM connection errors.
 
@@ -117,41 +155,40 @@ class HomeController:
             `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
-        measure_versions = self.get_measure_versions()
+        measure_versions = versions or self.get_measure_versions()
         self.model.home.measure_versions = measure_versions
         self.page.measure_version_list.versions = measure_versions
         self.page.measure_version_list.selected_versions = list(
-            filter(lambda version: version in self.model.home.selected_versions,
+            filter(lambda version: self.is_selected_version(version),
                    measure_versions))
 
-    def select_measure_id(self):
+    def select_measure_id(self, measure_ids: list[str] | None=None):
         """Event that occurs when a measure ID is selected.
 
-        Sets `selected_measure` in the Home model to the currently selected
-        measure ID and updates the version IDs in the Home view accordingly.
-
         If any error occurs while retrieving version IDs of the currently
-        selected measure, the user selection is reset and the version IDs
+        selected measures, the user selection is reset and the version IDs
         in the Home view do not change.
-
-        Debounces the measure ID radiobuttons until the version IDs are
-        updated or an error occurs.
 
         Opens an info popup on error defining which error occurred.
         """
 
-        prev_selection = self.model.home.selected_measure
-        selected_measure = self.page.measure_id_list.selected_measure
-        if prev_selection == selected_measure:
-            return
-
-        if selected_measure != None:
-            self.page.measure_id_list.measure_frame.disable(selected_measure)
-
+        self.page.measure_id_list.measure_frame.disable()
         try:
-            self.model.home.selected_measure = selected_measure
+            prev_selections = self.model.home.selected_measures.copy()
+            cur_selections = self.page.measure_id_list.selected_measures
+            if measure_ids != None:
+                cur_selections.extend(measure_ids)
+
+            selected = list(set(cur_selections).difference(prev_selections))
+            self.model.home.selected_measures.extend(selected)
+
+            unselected = list(
+                filter(lambda measure: self.is_current_measure(measure),
+                       set(prev_selections).difference(cur_selections)))
+            for measure_id in unselected:
+                self.model.home.selected_measures.remove(measure_id)
+
             self.update_measure_versions()
-            self.page.measure_id_list.measure_frame.enable(selected_measure)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -162,10 +199,11 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
+        finally:
+            self.page.measure_id_list.measure_frame.enable()
 
-        self.page.measure_id_list.measure_frame.enable(selected_measure)
-        self.model.home.selected_measure = prev_selection
-        self.page.measure_id_list.selected_measure = prev_selection
+        self.model.home.selected_measures = prev_selections
+        self.page.measure_id_list.selected_measures = prev_selections
 
     def next_id_page(self):
         """Increments the current set of measure IDs shown in the Home view.
@@ -180,6 +218,9 @@ class HomeController:
             self.update_measure_ids()
             if self.model.home.offset != 0:
                 self.page.measure_id_list.back_btn.configure(state=ctk.NORMAL)
+            next_offset = self.model.home.offset + self.model.home.limit
+            if next_offset >= self.model.home.count:
+                self.page.measure_id_list.next_btn.configure(state=ctk.DISABLED)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -208,6 +249,9 @@ class HomeController:
             self.update_measure_ids()
             if self.model.home.offset == 0:
                 self.page.measure_id_list.back_btn.configure(state=ctk.DISABLED)
+            next_offset = self.model.home.offset + self.model.home.limit
+            if next_offset < self.model.home.count:
+                self.page.measure_id_list.next_btn.configure(state=ctk.NORMAL)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -227,8 +271,8 @@ class HomeController:
         Opens an info popup on error defining which error occurred.
         """
 
-        self.model.home.selected_measure = None
-        self.page.measure_id_list.selected_measure = None
+        self.model.home.selected_measures = []
+        self.page.measure_id_list.selected_measures = []
         self.page.measure_version_list.versions = []
         self.page.measure_id_list.search_bar.clear()
         try:
@@ -252,31 +296,26 @@ class HomeController:
         Opens an info popup on error defining which error occurred.
         """
 
-        measure_id = self.__sanitize(self.page.measure_id_list.search_bar.get())
-        if measure_id == '':
-            self.reset_ids()
-            self.page.measure_id_list.search_bar.clear()
-            return
-
-        prev_selection = self.page.measure_id_list.selected_measure
+        search_val = self.page.measure_id_list.search_bar.get()
         try:
-            self.model.home.selected_measure = measure_id
-            self.update_measure_versions()
+            if search_val == '':
+                self.page.open_info_prompt('Please enter the statewide id'
+                                           ' of the measure being searched'
+                                           ' for.',
+                                           title=' Missing Statewide ID')
+                return
+
+            re_match = re.search(patterns.STWD_ID, search_val)
+            if re_match == None:
+                self.page.open_info_prompt(f'{search_val} is not a valid'
+                                           ' statewide ID (i.e., SWAP001).',
+                                           title=' Invalid Statewide ID')
+                return
+
+            self.select_measure_id([search_val])
+        finally:
+            self.page.measure_id_list.search_bar.clear()
             self.unfocus()
-            self.page.measure_id_list.measure_ids = [measure_id]
-            self.page.measure_id_list.selected_measure = measure_id
-            return
-        except NotFoundError as err:
-            self.page.open_info_prompt(f'No measure with the ID {measure_id}'
-                                       ' was found',
-                                       title=' Measure Not Found')
-        except ETRMResponseError as err:
-            self.page.open_info_prompt(err.message,
-                                       title=' Server Error')
-        except UnauthorizedError as err:
-            self.page.open_info_prompt(err.message,
-                                       title=' Unauthorized Access')
-        self.model.home.selected_measure = prev_selection
 
     def __bind_id_list(self):
         """Binds events to the widgets in the measure ID frame in
@@ -346,7 +385,7 @@ class HomeController:
 
         self.page.measure_version_list.search_bar.clear()
         try:
-            if self.model.home.selected_measure != None:
+            if self.model.home.selected_measures != []:
                 self.update_measure_versions()
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -366,22 +405,30 @@ class HomeController:
         Displays an empty set of versions if none are found.
         """
 
-        version_id = self.__sanitize(self.page.measure_version_list.search_bar.get())
-        if version_id == '':
-            self.reset_versions()
+        search_val = self.page.measure_version_list.search_bar.get()
+        try:
+            re_match = re.search(patterns.STWD_ID, search_val)
+            if re_match != None:
+                stwd_id = search_val.upper()
+                versions = self.model.home.measure_versions.get(stwd_id, [])
+                self.update_measure_versions(versions)
+                return
+
+            re_match = re.search(patterns.VRSN_ID, search_val)
+            if re_match != None:
+                stwd_id = re_match.group(2).upper()
+                versions = self.model.home.measure_versions.get(stwd_id, [])
+                if versions != []:
+                    vrsn_id = stwd_id + '-' + re_match.group(3)
+                    if vrsn_id in versions:
+                        versions = [vrsn_id]
+                self.update_measure_versions(versions)
+                return
+
+            self.update_measure_versions([])
+        finally:
             self.page.measure_version_list.search_bar.clear()
             self.unfocus()
-            return
-
-        if version_id not in self.model.home.measure_versions:
-            self.page.measure_version_list.versions = []
-            self.unfocus()
-            return
-
-        self.page.measure_version_list.versions = [version_id]
-        if version_id in self.model.home.selected_versions:
-            self.page.measure_version_list.selected_versions = [version_id]
-        self.unfocus()
 
     def __bind_version_list(self):
         """Binds events to the widgets in the measure version ID frame in
@@ -393,6 +440,55 @@ class HomeController:
         self.page.measure_version_list.search_bar.search_bar.bind('<Return>', self.search_measure_versions)
         self.page.measure_version_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
         self.page.measure_version_list.search_bar.reset_btn.configure(command=self.reset_versions)
+
+    def __add_measure_version(self, version_id: str):
+        try:
+            self.model.connection.get_measure(version_id)
+            self.model.home.selected_versions.append(version_id)
+            self.page.measures_selection_list.measures.append(version_id)
+            self.page.close_prompt()
+        except NotFoundError as err:
+            self.page.close_prompt()
+            self.page.open_info_prompt(err.message,
+                                       title=' Measure Not Found')
+        except ETRMResponseError as err:
+            self.page.close_prompt()
+            self.page.open_info_prompt(err.message,
+                                       title=' Server Error')
+        except UnauthorizedError as err:
+            self.page.close_prompt()
+            self.page.open_info_prompt(err.message,
+                                       title=' Unauthorized Access')
+
+    def add_measure_version(self, *args):
+        """Directly adds a measure version to the selected measure versions.
+
+        Opens an info popup on error defining which error occurred.
+        """
+
+        search_val = self.page.measures_selection_list.search_bar.get()
+        if search_val == '':
+            self.page.open_info_prompt('Please enter the full statewide ID'
+                                       ' for the desired measure.',
+                                       title=' Missing Statewide ID')
+            return
+
+        version_id = self.sanitize_vrsn_id(search_val)
+        if version_id == None:
+            self.page.open_info_prompt('Cannot find a measure with the full'
+                                       f' statewide ID: {search_val}',
+                                       title=' Invalid Statewide ID')
+            return
+
+        if version_id in self.model.home.selected_versions:
+            self.page.open_info_prompt(f'{version_id} is already selected.',
+                                       title=' Redundant Selection')
+            return
+
+        self.page.open_prompt(f'Searching for measure {version_id}...')
+        self.page.after(1000, self.__add_measure_version, version_id)
+        self.page.measures_selection_list.search_bar.clear()
+        self.unfocus()
 
     def __create_summary(self, dir_path, file_name):
         """Generates the measure summary PDF from the selected measure
@@ -474,44 +570,6 @@ class HomeController:
         else:
             self.page.open_info_prompt(text='At least one measure version is'
                                             ' required to create a summary')
-
-    def add_measure_version(self, *args):
-        """Directly adds a measure version to the selected measure versions.
-
-        Opens an info popup on error defining which error occurred.
-        """
-
-        version_id = self.__sanitize(self.page.measures_selection_list.search_bar.get())
-        if version_id == '':
-            self.page.measures_selection_list.search_bar.clear()
-            return
-
-        if version_id in self.model.home.selected_versions:
-            return
-
-        try:
-            self.model.connection.get_measure(version_id)
-        except NotFoundError as err:
-            self.unfocus()
-            self.page.open_info_prompt(err.message,
-                                       title=' Measures Not Found')
-            return
-        except ETRMResponseError as err:
-            self.unfocus()
-            self.page.open_info_prompt(err.message,
-                                       title=' Server Error')
-            return
-        except UnauthorizedError as err:
-            self.unfocus()
-            self.page.open_info_prompt(err.message,
-                                       title=' Unauthorized Access')
-            return
-
-        self.model.home.selected_versions.append(version_id)
-        self.page.measures_selection_list.measures = self.model.home.selected_versions
-
-        self.page.measures_selection_list.search_bar.clear()
-        self.unfocus()
 
     def clear_selected_measures(self):
         """Clears all selected measures from the Home view and Home model."""

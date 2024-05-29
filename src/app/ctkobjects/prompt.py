@@ -1,4 +1,5 @@
 import customtkinter as ctk
+from typing import Callable
 
 from src import utils
 
@@ -7,23 +8,32 @@ class PromptWindow(ctk.CTkToplevel):
     def __init__(self,
                  parent: ctk.CTkFrame,
                  text: str,
-                 title: str='Processing',
+                 title: str=' Processing',
                  *args,
                  **kwargs):
         super().__init__(parent, *args, **kwargs)
         self.deiconify()
         self.title(title)
         self.resizable(width=False, height=False)
-        x = parent.winfo_x() + parent.winfo_width() // 2 - self.winfo_width() // 2
-        y = parent.winfo_y() + parent.winfo_height() // 2 - self.winfo_height() // 2
-        self.geometry(f'+{x}+{y}')
 
         self.label = ctk.CTkLabel(self, text=text)
         self.label.pack(padx=20,
                         pady=20)
 
-    def set_text(self, text: str):
-        self.label.configure(text=text)
+        x_offset = parent.winfo_width() // 2 - self.winfo_width() // 2
+        y_offset = parent.winfo_height() // 2 - self.winfo_height() // 2
+        x = parent.winfo_x() + x_offset
+        y = parent.winfo_y() + y_offset
+        self.geometry(f'+{x}+{y}')
+        self.lift()
+
+        if self.winfo_exists():
+            self.grab_set()
+
+    def run(self, func: Callable[..., None], *args):
+        func(*args)
+        self.grab_release()
+        self.destroy()
 
 
 class InfoPromptWindow(ctk.CTkToplevel):

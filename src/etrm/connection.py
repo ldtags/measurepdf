@@ -83,7 +83,7 @@ class ETRMConnection:
         self.auth_token = auth_token
         self.cache = ETRMCache()
 
-    def get_measure(self, version_id: str) -> Measure:
+    def get_measure(self, full_version_id: str) -> Measure:
         """Returns a detailed measure object.
 
         Errors:
@@ -94,11 +94,11 @@ class ETRMConnection:
             `UnauthorizedError` - (!200) any other error
         """
 
-        cached_measure = self.cache.get_measure(version_id)
+        cached_measure = self.cache.get_measure(full_version_id)
         if cached_measure != None:
             return cached_measure
 
-        statewide_id, version_id = version_id.split('-', 1)
+        statewide_id, version_id = full_version_id.split('-', 1)
         headers = {
             'Authorization': self.auth_token
         }
@@ -109,11 +109,12 @@ class ETRMConnection:
                                 stream=True)
 
         if response.status_code == 404:
-            raise NotFoundError(f'Measure {version_id} could not be found')
+            raise NotFoundError(f'Measure {full_version_id} could not be'
+                                ' found')
 
         if response.status_code == 500:
             raise ETRMResponseError('Server error occurred when retrieving'
-                                    f' measure {version_id}')
+                                    f' measure {full_version_id}')
 
         if response.status_code != 200:
             raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')

@@ -62,6 +62,11 @@ class HomePage(ctk.CTkFrame):
         self.prompt.wm_transient(self.parent)
         self.prompt.focus()
 
+    def run_prompt(self, func, *args):
+        if self.prompt is not None and self.prompt.winfo_exists():
+            self.prompt.run(func, *args)
+        self.prompt = None
+
     def close_prompt(self):
         if self.prompt is not None and self.prompt.winfo_exists():
             self.prompt.destroy()
@@ -144,7 +149,7 @@ class MeasureListFrame(ctk.CTkFrame):
                              padx=(10, 10),
                              pady=(10, 10))
 
-        self.measure_frame = ScrollableRadioButtonFrame(self)
+        self.measure_frame = ScrollableCheckBoxFrame(self)
         self.measure_frame.grid(row=1,
                                 column=0,
                                 columnspan=3,
@@ -181,12 +186,12 @@ class MeasureListFrame(ctk.CTkFrame):
         self.measure_frame.items = items
 
     @property
-    def selected_measure(self) -> str | None:
-        return self.measure_frame.selected_item
+    def selected_measures(self) -> list[str]:
+        return self.measure_frame.selected_items
 
-    @selected_measure.setter
-    def selected_measure(self, item: str | None):
-        self.measure_frame.selected_item = item
+    @selected_measures.setter
+    def selected_measures(self, items: list[str]):
+        self.measure_frame.selected_items = items
 
 
 class MeasureVersionsFrame(ctk.CTkFrame):

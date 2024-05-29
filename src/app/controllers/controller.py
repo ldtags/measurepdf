@@ -16,7 +16,6 @@ class Controller:
 
     def start(self):
         if self.model.connection != None:
-            self.home.update_measure_ids()
             self.home.show()
         else:
             self.auth.show()
