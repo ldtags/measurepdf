@@ -1,10 +1,12 @@
 from __future__ import annotations
 import math
+from reportlab.lib.pagesizes import inch
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
     Paragraph,
-    Table
+    Table,
+    Spacer
 )
 
 from src.etrm.models import Measure
@@ -24,6 +26,9 @@ from src.exceptions import (
     WidthExceededError,
     ElementJoinError
 )
+
+
+NEWLINE = Spacer(1, 0.3 * inch)
 
 
 class Reference(Paragraph):

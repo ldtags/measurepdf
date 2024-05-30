@@ -8,7 +8,6 @@ from reportlab.platypus import (
     Paragraph,
     PageBreak,
     SimpleDocTemplate,
-    Spacer,
     KeepTogether
 )
 
@@ -22,10 +21,11 @@ from src.summarygen.styling import (
     PSTYLES,
     TSTYLES
 )
-from src.summarygen.rlobjects import BetterTableStyle, BetterParagraphStyle
-
-
-NEWLINE = Spacer(PAGESIZE[0], 17.5)
+from src.summarygen.rlobjects import (
+    BetterTableStyle,
+    BetterParagraphStyle
+)
+from src.summarygen.flowables import NEWLINE
 
 
 def _params_table_row(measure: Measure,
@@ -263,7 +263,6 @@ class MeasureSummary:
         self.add_parameters_table(measure)
         self.story.append(NEWLINE)
         self.add_sections_table(measure)
-        self.story.append(NEWLINE)
         self.story.append(PageBreak())
 
     def reset(self):
@@ -272,4 +271,3 @@ class MeasureSummary:
     def build(self):
         # if multiple measures, maybe add a table of contents
         self.summary.build(self.story)
-    
