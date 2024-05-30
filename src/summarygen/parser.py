@@ -1,3 +1,4 @@
+from __future__ import annotations
 from bs4 import (
     BeautifulSoup,
     Tag,
@@ -18,9 +19,11 @@ from reportlab.platypus import (
     KeepTogether
 )
 
-from src.etrm import ETRM_URL
 from src.etrm.models import Measure, ValueTable
-from src.exceptions import SummaryGenError
+from src.exceptions import (
+    SummaryGenError,
+    WidthExceededError
+)
 from src.summarygen.models import (
     ParagraphElement,
     ReferenceTag,
@@ -29,21 +32,23 @@ from src.summarygen.models import (
 )
 from src.summarygen.styling import (
     PSTYLES,
+    DEF_PSTYLE,
+    TSTYLES,
+    INNER_WIDTH,
+    X_MARGIN,
+    PAGESIZE,
     value_table_style
 )
 from src.summarygen.rlobjects import (
-    BetterTableStyle,
-    BetterParagraphStyle
+    BetterTableStyle
 )
 from src.summarygen.flowables import (
-    SummaryParagraph,
-    ElementLine,
+    TableCell,
     Reference,
-    ValueTableHeader
+    ValueTableHeader,
+    ElementLine,
+    ParagraphLine
 )
-
-
-DEF_PSTYLE = PSTYLES['Paragraph']
 
 
 def is_embedded(tag: Tag) -> bool:
@@ -100,7 +105,7 @@ def _parse_elements(elements: list[PageElement]) -> list[ParagraphElement]:
     return contents
 
 
-def _parse_table_headers(table: Tag) -> list[ElementLine]:
+def _parse_table_headers(table: Tag) -> list[TableCell]:
     thead = table.find('thead')
     raw_headers: ResultSet[Tag] = []
     if thead == None:
@@ -110,42 +115,42 @@ def _parse_table_headers(table: Tag) -> list[ElementLine]:
     else:
         raise SummaryGenError('missing table headers')
     max_width = (letter[0] - 3.25 * inch) / len(raw_headers)
-    headers: list[ElementLine] = []
+    headers: list[TableCell] = []
     for raw_header in raw_headers:
         header_elements = _parse_element(raw_header)
-        headers.append(ElementLine(header_elements,
+        headers.append(TableCell(header_elements,
                                    max_width,
                                    style=PSTYLES['ValueTableHeader']))
     return headers
 
 
-def _parse_table_body(table: Tag) -> list[list[ElementLine]]:
+def _parse_table_body(table: Tag) -> list[list[TableCell]]:
     tbody = table.find('tbody')
     if not isinstance(tbody, Tag):
         raise SummaryGenError('missing table body')
     raw_rows: ResultSet[Tag] = tbody.find_all('tr')
-    body_rows: list[list[ElementLine]] = []
+    body_rows: list[list[TableCell]] = []
     for raw_row in raw_rows:
         raw_cells: ResultSet[Tag] = raw_row.find_all('td')
         max_width = (letter[0] - 3.25 * inch) / len(raw_cells)
-        cells: list[ElementLine] = []
+        cells: list[TableCell] = []
         for raw_cell in raw_cells:
             cell_elements = _parse_element(raw_cell)
-            cells.append(ElementLine(cell_elements, max_width))
+            cells.append(TableCell(cell_elements, max_width))
         body_rows.append(cells)
     return body_rows
 
 
-def _parse_table(table: Tag) -> list[list[ElementLine]]:
+def _parse_table(table: Tag) -> list[list[TableCell]]:
     headers = _parse_table_headers(table)
     body = _parse_table_body(table)
-    data: list[list[ElementLine]] = []
+    data: list[list[TableCell]] = []
     data.append(headers)
     data.extend(body)
     return data
 
 
-def _col_width(element: ElementLine | str,
+def _col_width(element: TableCell | str,
                style: BetterTableStyle
               ) -> float:
     if isinstance(element, str):
@@ -156,7 +161,7 @@ def _col_width(element: ElementLine | str,
     return width + padding
 
 
-def _col_widths(data: list[list[ElementLine | str]],
+def _col_widths(data: list[list[TableCell | str]],
                 style: BetterTableStyle
                ) -> list[float]:
     headers = data[0]
@@ -171,7 +176,7 @@ def _col_widths(data: list[list[ElementLine | str]],
     return col_widths
 
 
-def _row_height(element: ElementLine | str,
+def _row_height(element: TableCell | str,
                 style: BetterTableStyle) -> float:
     if isinstance(element, str):
         height = style.font_size
@@ -181,7 +186,7 @@ def _row_height(element: ElementLine | str,
     return height + padding
 
 
-def _row_heights(data: list[list[ElementLine | str]],
+def _row_heights(data: list[list[TableCell | str]],
                  style: BetterTableStyle
                 ) -> list[float]:
     row_heights: list[float] = list(range(len(data)))
@@ -195,11 +200,110 @@ def _row_heights(data: list[list[ElementLine | str]],
     return row_heights
 
 
+def split_word(element: ParagraphElement,
+               avail_width: float=INNER_WIDTH
+              ) -> list[ParagraphElement]:
+    width = avail_width
+    word: str = element.text
+    fractions: list[ParagraphElement] = []
+    while word != '':
+        i = 0
+        while i < len(word):
+            if element.copy(word[0:i]).width > width:
+                break
+            i += 1
+        fractions.append(element.copy(word[0:i]))
+        word[0:i] = ''
+        width = INNER_WIDTH
+    return fractions
+
+
+def split_element(element: ParagraphElement) -> list[ParagraphElement]:
+    elements: list[ParagraphElement] = []
+    words = element.text.split()
+    word_count = len(words)
+    if word_count == 0:
+        return elements
+    elif word_count == 1:
+        elements.append(element)
+        return elements
+
+    if element.text == '':
+        return elements
+
+    if element.text[0] == ' ':
+        words[0] = f' {words[0]}'
+
+    if len(element.text) > 1 and element.text[-1] == ' ':
+        words[-1] = f'{words[-1]} '
+
+    if word_count == 2:
+        elements.append(element.copy(f'{words[0]} '))
+        elements.append(element.copy(words[1]))
+    else:
+        for i, word in enumerate(words):
+            if i == 0:
+                elem_cpy = element.copy(word)
+            else:
+                elem_cpy = element.copy(f' {word}')
+            elements.append(elem_cpy)
+    return list(filter(lambda e: e.text != '', elements))
+
+
+def wrap_elements(elements: list[ParagraphElement]
+                 ) -> list[ElementLine]:
+    element_lines: list[ElementLine] = []
+    current_line = ElementLine()
+    for element in elements:
+        try:
+            current_line.add(element)
+        except WidthExceededError:
+            split_elems = split_element(element)
+            for elem in split_elems:
+                try:
+                    current_line.add(elem)
+                except WidthExceededError:
+                    if elem.width > INNER_WIDTH:
+                        avail_width = INNER_WIDTH - current_line.width
+                        word_frags = split_word(elem.width, avail_width)
+                        current_line.add(word_frags[0])
+                        element_lines.append(current_line)
+                        if len(word_frags) > 1:
+                            for word_frag in word_frags[1:len(word_frags) - 1]:
+                                current_line = ElementLine()
+                                current_line.add(word_frag)
+                        else:
+                            current_line = ElementLine()
+                    else:
+                        element_lines.append(current_line)
+                        current_line = ElementLine()
+                        current_line.add(elem)
+    if len(current_line) != 0:
+        element_lines.append(current_line)
+    return element_lines
+
+
 class CharacterizationParser:
-    def __init__(self, measure: Measure, name: str):
+    def __init__(self,
+                 measure: Measure,
+                 name: str):
         self.measure = measure
         self.html = measure.characterizations[name]
         self.flowables: list[Flowable] = []
+        self.width, self.height = PAGESIZE
+        self.inner_width = self.width - X_MARGIN * 2
+
+    def gen_summary_paragraph(self, elements: list[PageElement]) -> Table:
+        lines = [[ParagraphLine(line, self.measure)]
+                    for line
+                    in wrap_elements(elements)]
+        col_widths = [INNER_WIDTH]
+        row_heights = [DEF_PSTYLE.leading] * len(lines)
+        return Table(lines,
+                     colWidths=col_widths,
+                     rowHeights=row_heights,
+                     style=TSTYLES['ElementLine'],
+                     hAlign='LEFT')
 
     def gen_embedded_value_table(self,
                                  vt_tag: EmbeddedValueTableTag,
@@ -227,14 +331,11 @@ class CharacterizationParser:
                      hAlign='LEFT')
 
     def _parse_list(self, ul: Tag) -> list[ListItem]:
-        id_path = '/'.join(self.measure.full_version_id.split('-', 1))
-        ref_link = f'{ETRM_URL}/measure/{id_path}/#references_list'
         list_items: list[ListItem] = []
         li_list: ResultSet[Tag] = ul.find_all('li')
         for li in li_list:
             items = _parse_element(li)
-            element = SummaryParagraph(paragraph_elements=items,
-                                       ref_link=ref_link)
+            element = self.gen_summary_paragraph(items)
             list_items.append(ListItem(element,
                                        bulletColor=colors.black,
                                        value='square'))
@@ -249,14 +350,14 @@ class CharacterizationParser:
         json_str = tag.attrs.get('data-etrmreference', None)
         if json_str != None:
             ref_tag = ReferenceTag(json_str)
-            return [Reference(self.measure, ref_tag)]
+            ref_link = f'{self.measure.link}/#references_list'
+            return [Reference(ref_tag.text, ref_link)]
 
         json_str = tag.attrs.get('data-etrmvaluetable', None)
         if json_str != None:
             vt_tag = EmbeddedValueTableTag(json_str)
-            id_path = '/'.join(self.measure.full_version_id.split('-'))
             change_id = vt_tag.obj_info.change_url.split('/')[4]
-            table_link = f'{ETRM_URL}/measure/{id_path}/value-table/{change_id}/'
+            table_link = f'{self.measure.link}/value-table/{change_id}/'
             api_name = vt_tag.obj_info.api_name_unique
             table_obj = self.measure.get_value_table(api_name)
             if table_obj == None:
@@ -302,10 +403,8 @@ class CharacterizationParser:
                 elements: list[ParagraphElement] = []
                 for child in element.contents:
                     elements.extend(_parse_element(child))
-                id_path = '/'.join(self.measure.full_version_id.split('-', 1))
-                ref_link = f'{ETRM_URL}/measure/{id_path}/#references_list'
-                return [SummaryParagraph(paragraph_elements=elements,
-                                         ref_link=ref_link)]
+                para = self.gen_summary_paragraph(elements)
+                return [para]
             case 'h3' | 'h6':
                 return [self._parse_header(element)]
             case 'table':

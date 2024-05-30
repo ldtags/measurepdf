@@ -1,6 +1,6 @@
 import os
 import re
-from reportlab.lib.pagesizes import inch, letter
+from reportlab.lib.pagesizes import inch
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
@@ -12,15 +12,20 @@ from reportlab.platypus import (
     KeepTogether
 )
 
-from src import _ROOT
 from src.etrm import ETRM_URL
 from src.etrm.models import Measure
 from src.summarygen.parser import CharacterizationParser
-from src.summarygen.styling import PSTYLES, TSTYLES
+from src.summarygen.styling import (
+    PAGESIZE,
+    X_MARGIN,
+    Y_MARGIN,
+    PSTYLES,
+    TSTYLES
+)
 from src.summarygen.rlobjects import BetterTableStyle, BetterParagraphStyle
 
 
-NEWLINE = Spacer(letter[0], 17.5)
+NEWLINE = Spacer(PAGESIZE[0], 17.5)
 
 
 def _params_table_row(measure: Measure,
@@ -98,14 +103,14 @@ class MeasureSummary:
         if not override and os.path.exists(self.file_path):
             raise FileExistsError(f'a file named {file_name} already exists'
                                   f' in {dir_path}')
-        self.page_width = letter[0]
-        self.page_height = letter[1]
+        self.page_width = PAGESIZE[0]
+        self.page_height = PAGESIZE[1]
         self.summary = SimpleDocTemplate(self.file_path,
-                                         pagesize=letter,
-                                         leftMargin=1*inch,
-                                         rightMargin=1*inch,
-                                         topMargin=1*inch,
-                                         bottomMargin=1*inch)
+                                         pagesize=PAGESIZE,
+                                         leftMargin=X_MARGIN,
+                                         rightMargin=X_MARGIN,
+                                         topMargin=Y_MARGIN,
+                                         bottomMargin=Y_MARGIN)
 
     def add_measure_details_table(self, measure: Measure):
         pstyle = PSTYLES['SmallParagraph']
@@ -137,7 +142,8 @@ class MeasureSummary:
 
     def add_tech_summary(self, measure: Measure):
         header = Paragraph('Technology Summary', PSTYLES['h2'])
-        parser = CharacterizationParser(measure, 'technology_summary')
+        parser = CharacterizationParser(measure,
+                                        'technology_summary')
         sections = parser.parse()
         self.story.append(header)
         self.story.extend(sections)

@@ -1,13 +1,17 @@
 from __future__ import annotations
 import json
 from enum import Enum
+from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from src.utils import getc
+from src.exceptions import ElementJoinError
+from src.summarygen.styling import DEF_PSTYLE
 
 
 class ElemType(Enum):
     TEXT = 'text'
     REF = 'ref'
+    SPACE = 'space'
 
 
 class TextStyle(Enum):
@@ -19,6 +23,8 @@ class TextStyle(Enum):
 
 
 class ParagraphElement:
+    """Defines an element found in an HTML document."""
+
     def __init__(self,
                  text: str,
                  type: ElemType=ElemType.TEXT,
@@ -26,6 +32,36 @@ class ParagraphElement:
         self.text = text
         self.type = type
         self.styles = styles or [TextStyle.NORMAL]
+
+    @property
+    def width(self) -> float:
+        if TextStyle.SUB in self.styles:
+            font_size = DEF_PSTYLE.sub_size
+        elif TextStyle.SUP in self.styles:
+            font_size = DEF_PSTYLE.sup_size
+        else:
+            font_size = DEF_PSTYLE.font_size
+
+        font_name = DEF_PSTYLE.font_name
+        if TextStyle.STRONG in self.styles:
+            font_name += 'B'
+        if TextStyle.ITALIC in self.styles:
+            font_name += 'I'
+
+        return stringWidth(self.text, font_name, font_size)
+
+    def join(self, element: ParagraphElement):
+        if self.type == ElemType.REF:
+            raise ElementJoinError('Cannot join reference tags')
+
+        if self.type != element.type:
+            raise ElementJoinError('Cannot join elements with different types')
+
+        if self.styles != element.styles:
+            raise ElementJoinError('Cannot join elements with different'
+                                   ' styles')
+
+        self.text += element.text
 
     def copy(self,
              text: str | None=None,
@@ -61,7 +97,7 @@ class ReferenceTag(ParagraphElement):
         self.obj_info = getc(json_obj, 'objInfo', RefObjectInfo)
         self.ref_type = getc(json_obj, 'refType', str)
         self.obj_deleted = getc(json_obj, 'objDeleted', bool)
-        super().__init__(f' {self.obj_info.title.upper()} ',
+        super().__init__(self.obj_info.title.upper(),
                          ElemType.REF,
                          [TextStyle.STRONG])
 

@@ -5,6 +5,9 @@ from src.exceptions import ETRMResponseError
 from src.utils import getc
 
 
+ETRM_URL = 'https://www.caetrm.com'
+
+
 class MeasureInfo:
     def __init__(self, res_json: dict[str, Any]):
         try:
@@ -197,6 +200,8 @@ class Measure:
             self.owner = getc(res_json, 'owner', str)
             self.permutations_url = getc(res_json, 'permutations_url', str)
             self.property_data_url = getc(res_json, 'property_data_url', str)
+            id_path = '/'.join(self.full_version_id.split('-'))
+            self.link = f'{ETRM_URL}/measure/{id_path}'
         except IndexError:
             raise ETRMResponseError()
 

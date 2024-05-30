@@ -1,5 +1,6 @@
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.pagesizes import inch, letter
 
 from src.summarygen.rlobjects import (
     Font,
@@ -7,6 +8,13 @@ from src.summarygen.rlobjects import (
     StyleSheet,
     BetterParagraphStyle
 )
+
+
+PAGESIZE = letter
+X_MARGIN = 1 * inch
+Y_MARGIN = 1 * inch
+INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2
+INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
 
 
 Font('SourceSansPro', 'source-sans-pro').register()
@@ -53,9 +61,10 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              parent=style_sheet['Paragraph']))
     style_sheet.add(
         BetterParagraphStyle('ReferenceTag',
-                             parent=style_sheet['Paragraph'],
+                             parent=style_sheet['ParagraphBold'],
                              textColor=colors.white,
-                             backColor=COLORS['ReferenceTagBG']))
+                             backColor=COLORS['ReferenceTagBG'],
+                             leading=13.5 * 1.2))
     style_sheet.add(
         BetterParagraphStyle('ValueTableHeader',
                              font_name='SourceSansProB',
@@ -158,6 +167,9 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
 STYLES = getSampleStyleSheet()
 PSTYLES = __gen_pstyles()
 TSTYLES = __gen_tstyles()
+
+
+DEF_PSTYLE = PSTYLES['Paragraph']
 
 
 def value_table_style(data: list[list | tuple],
