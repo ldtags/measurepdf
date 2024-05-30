@@ -42,13 +42,18 @@ class ParagraphElement:
         else:
             font_size = DEF_PSTYLE.font_size
 
+        if TextStyle.SUB in self.styles and TextStyle.SUP in self.styles:
+            offset = 10
+        else:
+            offset = 0
+
         font_name = DEF_PSTYLE.font_name
         if TextStyle.STRONG in self.styles:
             font_name += 'B'
         if TextStyle.ITALIC in self.styles:
             font_name += 'I'
 
-        return stringWidth(self.text, font_name, font_size)
+        return stringWidth(self.text, font_name, font_size) + offset
 
     def join(self, element: ParagraphElement):
         if self.type == ElemType.REF:

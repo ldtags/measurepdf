@@ -118,9 +118,9 @@ class ParagraphLine(Table):
             else:
                 text = element.text
                 if TextStyle.SUP in element.styles:
-                    text = f'<super rise=\"2\">{text}</super>'
+                    text = f'<super>{text}</super>'
                 if TextStyle.SUB in element.styles:
-                    text = f'<sub rise=\"4\">{text}</sub>'
+                    text = f'<sub>{text}</sub>'
                 if TextStyle.STRONG in element.styles:
                     text = f'<b>{text}</b>'
                 if TextStyle.ITALIC in element.styles:
