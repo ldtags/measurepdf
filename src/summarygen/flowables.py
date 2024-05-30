@@ -103,9 +103,9 @@ class ParagraphLine(Table):
         self.ref_link = f'{self.measure.link}/#references_list'
         col_widths = [element.width for element in element_line]
         row_heights = [DEF_PSTYLE.leading]
-        flowables = self.gen_flowables()
+        self.flowables = self.gen_flowables()
         Table.__init__(self,
-                       [flowables],
+                       [self.flowables],
                        colWidths=col_widths,
                        rowHeights=row_heights,
                        style=TSTYLES['ElementLine'])
