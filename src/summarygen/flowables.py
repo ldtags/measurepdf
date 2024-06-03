@@ -114,7 +114,8 @@ class ParagraphLine(Table):
         flowables: list[Flowable] = []
         for element in self.element_line:
             if element.type == ElemType.REF:
-                flowables.append(Reference(element.text, self.ref_link))
+                text = f'<b>{element.text}</b>'
+                flowables.append(Reference(text, self.ref_link))
             else:
                 text = element.text
                 if TextStyle.SUP in element.styles:
