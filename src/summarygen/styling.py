@@ -155,11 +155,11 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)]))
     style_sheet.add(
         BetterTableStyle('ElementLine', [
-          ('LEFTPADDING', (0, 0), (-1, -1), 0),
-          ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-          ('TOPPADDING', (0, 0), (-1, -1), 0),
-          ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-          ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
+            ('LEFTPADDING', (0, 0), (-1, -1), 0),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+            ('TOPPADDING', (0, 0), (-1, -1), 0),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
 
     return style_sheet
 
