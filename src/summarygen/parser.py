@@ -337,8 +337,7 @@ class CharacterizationParser:
             items = _parse_element(li)
             element = self.gen_summary_paragraph(items)
             list_items.append(ListItem(element,
-                                       bulletColor=colors.black,
-                                       value='square'))
+                                       bulletColor=colors.black))
         return list_items
 
     def _parse_text(self, text: str) -> Flowable:
