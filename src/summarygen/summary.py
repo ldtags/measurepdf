@@ -78,7 +78,7 @@ def calc_row_heights(data: list[list[str | Paragraph]],
             width = stringWidth(text,
                                 row_styles[i].font_name,
                                 row_styles[i].font_size)
-            scale = width // (base_widths[i] - hpadding)
+            scale = width // (base_widths[i])
             leading = row_styles[i].leading
             cell_height = height + scale * leading
             if cell_height > row_height:
