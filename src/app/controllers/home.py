@@ -1,6 +1,5 @@
 import os
 import re
-import time
 import customtkinter as ctk
 
 from src import _ROOT, patterns
@@ -64,6 +63,24 @@ class HomeController:
             self.page.measure_id_list.measure_ids = measure_ids
 
         self.page.tkraise()
+
+    def perror(self, error: Exception):
+        if isinstance(error, NotFoundError):
+            self.page.open_info_prompt(error.message,
+                                       title=' Measure Not Found')
+        elif isinstance(error, ETRMResponseError):
+            self.page.open_info_prompt(error.message,
+                                       title=' Server Error')
+        elif isinstance(error, UnauthorizedError):
+            self.page.open_info_prompt(error.message,
+                                       title=' Unauthorized Access')
+        elif isinstance(error, PermissionError) and error.errno == 13:
+            self.page.open_info_prompt('Cannot overwrite the PDF while it is'
+                                       ' open.',
+                                       title=' Permissions Error')
+        else:
+            self.page.open_info_prompt('An unexpected error occurred',
+                                       title=' Error')
 
     def is_selected_measure(self, measure_id: str) -> bool:
         """Determines if `measure_id` is already selected."""
@@ -442,23 +459,20 @@ class HomeController:
         self.page.measure_version_list.search_bar.reset_btn.configure(command=self.reset_versions)
 
     def __add_measure_version(self, version_id: str):
+        error: Exception | None = None
         try:
             self.model.connection.get_measure(version_id)
             self.model.home.selected_versions.append(version_id)
-            self.page.measures_selection_list.measures.append(version_id)
+            self.update_measure_selections()
+        except Exception as err:
+            error = err
+        finally:
             self.page.close_prompt()
-        except NotFoundError as err:
-            self.page.close_prompt()
-            self.page.open_info_prompt(err.message,
-                                       title=' Measure Not Found')
-        except ETRMResponseError as err:
-            self.page.close_prompt()
-            self.page.open_info_prompt(err.message,
-                                       title=' Server Error')
-        except UnauthorizedError as err:
-            self.page.close_prompt()
-            self.page.open_info_prompt(err.message,
-                                       title=' Unauthorized Access')
+
+        if error == None:
+            return
+
+        self.perror(error)
 
     def add_measure_version(self, *args):
         """Directly adds a measure version to the selected measure versions.
@@ -497,32 +511,31 @@ class HomeController:
         Opens an info popup on error defining which error occurred.
         """
 
-        summary = MeasureSummary(dir_path=dir_path, file_name=file_name)
-        for measure_id in self.model.home.selected_versions:
-            try:
+        error: Exception | None = None
+        try:
+            summary = MeasureSummary(dir_path=dir_path, file_name=file_name)
+            for measure_id in self.model.home.selected_versions:
+                self.page.update_prompt(f'Retrieving measure {measure_id}...')
                 measure = self.model.connection.get_measure(measure_id)
-            except NotFoundError as err:
+                summary.add_measure(measure)
+        except Exception as err:
+            error = err
+
+        if error == None:
+            try:
+                self.page.update_prompt('Generating summary PDF...')
+                summary.build()
+                self.page.measure_version_list.selected_versions = []
+                self.page.measures_selection_list.measures = []
+                self.model.home.selected_versions = []
                 self.page.close_prompt()
-                self.page.open_info_prompt(err.message,
-                                           title=' Measure Not Found')
+                self.page.open_info_prompt('Success!')
                 return
-            except ETRMResponseError as err:
-                self.page.close_prompt()
-                self.page.open_info_prompt(err.message,
-                                           title=' Server Error')
-                return
-            except UnauthorizedError as err:
-                self.page.close_prompt()
-                self.page.open_info_prompt(err.message,
-                                           title=' Unauthorized Access')
-                return
-            summary.add_measure(measure)
-        summary.build()
+            except Exception as err:
+                error = err
+
         self.page.close_prompt()
-        self.page.measure_version_list.selected_versions = []
-        self.page.measures_selection_list.measures = []
-        self.model.home.selected_versions = []
-        self.page.open_info_prompt('Success!')
+        self.perror(error)
 
     def create_summary(self):
         """Opens the user prompts for defining the file name and destination
@@ -565,7 +578,7 @@ class HomeController:
                 if not conf:
                     return
 
-            self.page.open_prompt('Generating summary, please be patient...')
+            self.page.open_prompt('Retrieving measures, please be patient...')
             self.page.after(1000, self.__create_summary, dir_path, file_name)
         else:
             self.page.open_info_prompt(text='At least one measure version is'

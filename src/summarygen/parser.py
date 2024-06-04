@@ -1,4 +1,7 @@
 from __future__ import annotations
+import requests
+import shutil
+import os
 from bs4 import (
     BeautifulSoup,
     Tag,
@@ -16,9 +19,12 @@ from reportlab.platypus import (
     ListFlowable,
     ListItem,
     Spacer,
-    KeepTogether
+    KeepTogether,
+    Image
 )
 
+from src import _ROOT
+from src.etrm import ETRM_URL
 from src.etrm.models import Measure, ValueTable
 from src.exceptions import (
     SummaryGenError,
@@ -28,7 +34,8 @@ from src.summarygen.models import (
     ParagraphElement,
     ReferenceTag,
     EmbeddedValueTableTag,
-    TextStyle
+    TextStyle,
+    EmbeddedImage
 )
 from src.summarygen.styling import (
     PSTYLES,
@@ -47,7 +54,8 @@ from src.summarygen.flowables import (
     Reference,
     ValueTableHeader,
     ElementLine,
-    ParagraphLine
+    ParagraphLine,
+    NEWLINE
 )
 
 
@@ -68,6 +76,10 @@ def is_embedded(tag: Tag) -> bool:
 
 
 def _parse_element(element: PageElement) -> list[ParagraphElement]:
+    """Converts a `PageElement` object into a list of `ParagraphElement`
+    objects.
+    """
+
     if isinstance(element, NavigableString):
         return [ParagraphElement(element.get_text())]
 
@@ -345,6 +357,21 @@ class CharacterizationParser:
             return Spacer(letter[0], 9.2)
         return Paragraph(text, PSTYLES['Paragraph'])
 
+    def gen_image(self, _url: str) -> Image:
+        img_name = _url[_url.rindex('/') + 1:]
+        response = requests.get(_url, stream=True)
+        if response.status_code != 200:
+            return []
+        tmp_dir = f'{_ROOT}/assets/images/tmp'
+        if not os.path.exists(tmp_dir):
+            os.mkdir(tmp_dir)
+        tmp_path = f'{tmp_dir}/{img_name}'
+        with open(tmp_path, 'wb+') as out_file:
+            shutil.copyfileobj(response.raw, out_file)
+        del response
+        img = Image(tmp_path)
+        return img
+
     def _parse_embedded_tag(self, tag: Tag) -> list[Flowable]:
         json_str = tag.attrs.get('data-etrmreference', None)
         if json_str != None:
@@ -367,6 +394,12 @@ class CharacterizationParser:
             headed_table = KeepTogether([header, table])
             return [headed_table]
 
+        json_str = tag.attrs.get('data-ombuimage', None)
+        if json_str != None:
+            img_tag = EmbeddedImage(json_str)
+            img_url = img_tag.obj_info.image_url
+            _url = f'{ETRM_URL}{img_url}'
+            return [self.gen_image(_url)]
         return []
 
     def _parse_header(self, header: Tag) -> Paragraph:
@@ -389,15 +422,19 @@ class CharacterizationParser:
         if is_embedded(element):
             return self._parse_embedded_tag(element)
 
-        if len(element.contents) == 0:
-            return []
-
         match element.name:
             case 'div' | 'span':
                 flowables: list[Flowable] = []
                 for child in element.contents:
                     flowables.extend(self._parse_element(child))
                 return flowables
+            case 'a':
+                _url = element.get('href', None)
+                if _url != None:
+                    return [KeepTogether([NEWLINE,
+                                          self.gen_image(_url),
+                                          NEWLINE])]
+                return []
             case 'p':
                 elements: list[ParagraphElement] = []
                 for child in element.contents:

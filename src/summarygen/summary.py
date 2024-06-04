@@ -1,5 +1,6 @@
 import os
 import re
+import shutil
 from reportlab.lib.pagesizes import inch
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
@@ -11,6 +12,7 @@ from reportlab.platypus import (
     KeepTogether
 )
 
+from src import _ROOT
 from src.etrm import ETRM_URL
 from src.etrm.models import Measure
 from src.summarygen.parser import CharacterizationParser
@@ -271,3 +273,6 @@ class MeasureSummary:
     def build(self):
         # if multiple measures, maybe add a table of contents
         self.summary.build(self.story)
+        tmp_dir = f'{_ROOT}/assets/images/tmp'
+        if os.path.exists(tmp_dir):
+            shutil.rmtree(tmp_dir)

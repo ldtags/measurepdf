@@ -62,13 +62,18 @@ class HomePage(ctk.CTkFrame):
         self.prompt.wm_transient(self.parent)
         self.prompt.focus()
 
+    def update_prompt(self, text: str):
+        if self.prompt is not None and self.prompt.winfo_exists():
+            self.prompt.set_text(text)
+
     def run_prompt(self, func, *args):
         if self.prompt is not None and self.prompt.winfo_exists():
-            self.prompt.run(func, *args)
+            self.after(1000, func, *args)
         self.prompt = None
 
     def close_prompt(self):
         if self.prompt is not None and self.prompt.winfo_exists():
+            self.prompt.grab_release()
             self.prompt.destroy()
         self.prompt = None
 

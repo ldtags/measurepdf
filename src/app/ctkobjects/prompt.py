@@ -35,6 +35,9 @@ class PromptWindow(ctk.CTkToplevel):
         self.grab_release()
         self.destroy()
 
+    def set_text(self, text: str):
+        self.label.configure(text=text)
+
 
 class InfoPromptWindow(ctk.CTkToplevel):
     def __init__(self,

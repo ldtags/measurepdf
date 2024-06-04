@@ -137,3 +137,20 @@ class EmbeddedValueTableTag:
         self._json: dict = json.loads(json_str)
         self.obj_info = getc(self._json, 'objInfo', VTObjectInfo)
         self.obj_deleted = getc(self._json, 'objDeleted', bool)
+
+
+class ImgObjectInfo(ObjectInfo):
+    def __init__(self, json_obj: dict):
+        super().__init__(json_obj)
+        self.preview_url = getc(json_obj, 'preview_url', str)
+        self.width = getc(json_obj, 'width', int)
+        self.image_url = getc(json_obj, 'image_url', str)
+
+
+class EmbeddedImage:
+    def __init__(self, json_str: str):
+        self._json_str = json_str
+        self._json: dict = json.loads(json_str)
+        self.obj_info = getc(self._json, 'objInfo', ImgObjectInfo)
+        self.caption = getc(self._json, 'caption', str)
+        self.align = getc(self._json, 'align', str)
