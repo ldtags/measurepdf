@@ -3,6 +3,7 @@ import re
 import shutil
 import math
 from reportlab.lib.pagesizes import inch
+from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
@@ -10,8 +11,10 @@ from reportlab.platypus import (
     Paragraph,
     PageBreak,
     SimpleDocTemplate,
-    KeepTogether
+    KeepTogether,
+    PageTemplate
 )
+from reportlab.platypus.frames import Frame
 
 from src.etrm import ETRM_URL
 from src.etrm.models import Measure
@@ -30,6 +33,39 @@ from src.summarygen.rlobjects import (
     BetterParagraphStyle
 )
 from src.summarygen.flowables import NEWLINE
+
+
+class FooterCanvas(Canvas):
+    def __init__(self, *args, **kwargs):
+        Canvas.__init__(self, *args, **kwargs)
+        self.pages = []
+
+    def showPage(self):
+        self.pages.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        for page in self.pages:
+            self.__dict__.update(page)
+            self.draw_canvas()
+            Canvas.showPage(self)
+        Canvas.save(self)
+
+    def draw_canvas(self):
+        self.saveState()
+        measure_id = Paragraph(current_measure.full_version_id,
+                               PSTYLES['SmallParagraph'])
+        _, h = measure_id.wrap(X_MARGIN, Y_MARGIN)
+        measure_id.drawOn(canvas=self,
+                          x=h * 1.5,
+                          y=h * 1.5)
+        # page_number = Paragraph(f'{self._pageNumber}',
+        #                         PSTYLES['SmallParagraph'])
+        # _, h = page_number.wrap(X_MARGIN, Y_MARGIN)
+        # page_number.drawOn(canvas=self,
+        #                    x=PAGESIZE[0] / 2,
+        #                    y=h * 1.5)
+        self.restoreState()
 
 
 class Story:
@@ -288,22 +324,26 @@ class MeasureSummary:
                       rowHeights=row_heights,
                       style=tstyle,
                       hAlign='LEFT')
-        init_height =  table_header._fixedHeight + row_heights[0]
-        if self.story.page_height + init_height > INNER_HEIGHT:
-            headed_table = KeepTogether([table_header, table])
-            self.story.add(headed_table)
-        else:
-            self.story.add(table_header)
-            self.story.add(table)
+        headed_table = KeepTogether([table_header, table])
+        self.story.add(headed_table)
 
     def add_measure(self, measure: Measure):
+        global current_measure
+        current_measure = measure
         self.measures.append(measure)
+        frame = Frame(x1=X_MARGIN,
+                      y1=Y_MARGIN,
+                      width=INNER_WIDTH,
+                      height=INNER_HEIGHT,
+                      id='normal')
+        template = PageTemplate(id=measure.full_version_id, frames=frame)
+        self.summary.addPageTemplates([template])
+
         self.add_measure_details_table(measure)
         self.story.add(NEWLINE)
         self.add_tech_summary(measure)
         self.story.add(NEWLINE)
         self.add_parameters_table(measure)
-        self.story.add(NEWLINE)
         self.add_sections_table(measure)
         self.story.add(PageBreak())
 
@@ -312,6 +352,6 @@ class MeasureSummary:
 
     def build(self):
         # if multiple measures, maybe add a table of contents
-        self.summary.build(self.story.contents)
+        self.summary.multiBuild(self.story.contents, canvasmaker=FooterCanvas)
         if os.path.exists(TMP_DIR):
             shutil.rmtree(TMP_DIR)

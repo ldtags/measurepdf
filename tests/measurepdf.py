@@ -26,7 +26,7 @@ def build_summary(measure_ids: list[str]):
 
 def test():
     start = time.time()
-    build_summary(['SWHC045-03'])
+    build_summary(['SWHC020-03'])
     elapsed = time.time() - start
     print(f'took {elapsed}s', file=sys.stderr)
 

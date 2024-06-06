@@ -48,6 +48,11 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              font_size=12,
                              parent=style_sheet['Paragraph']))
     style_sheet.add(
+        BetterParagraphStyle('Test',
+                             parent=style_sheet['Paragraph'],
+                             borderWidth=1,
+                             borderColor=colors.black))
+    style_sheet.add(
         BetterParagraphStyle('ParagraphBold',
                              font_name='SourceSansProB',
                              parent=style_sheet['Paragraph']))
