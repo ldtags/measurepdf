@@ -1,12 +1,10 @@
 import os
 import re
 import shutil
-import math
 from reportlab.lib.pagesizes import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
-    Flowable,
     Table,
     Paragraph,
     PageBreak,
@@ -20,6 +18,8 @@ from src.etrm import ETRM_URL
 from src.etrm.models import Measure
 from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styling import (
+    BetterTableStyle,
+    BetterParagraphStyle,
     PAGESIZE,
     X_MARGIN,
     Y_MARGIN,
@@ -28,11 +28,8 @@ from src.summarygen.styling import (
     INNER_HEIGHT,
     INNER_WIDTH
 )
-from src.summarygen.rlobjects import (
-    BetterTableStyle,
-    BetterParagraphStyle
-)
 from src.summarygen.flowables import NEWLINE
+from src.summarygen.rlobjects import Story
 
 
 class FooterCanvas(Canvas):
@@ -66,39 +63,6 @@ class FooterCanvas(Canvas):
         #                    x=PAGESIZE[0] / 2,
         #                    y=h * 1.5)
         self.restoreState()
-
-
-class Story:
-    def __init__(self):
-        self.contents: list[Flowable] = []
-        self.height: float = 0
-        self.page_height: float = 0
-
-    def add(self, flowables: Flowable | list[Flowable]):
-        if isinstance(flowables, Flowable):
-            flowables = [flowables]
-        for flowable in flowables:
-            self.contents.append(flowable)
-            if isinstance(flowable, Table):
-                height = math.fsum(flowable._rowHeights)
-            else:
-                height = flowable._fixedHeight
-            self.height += height
-            if isinstance(flowable, KeepTogether):
-                if self.page_height + height > INNER_HEIGHT:
-                    self.page_height = height
-                else:
-                    self.page_height += height
-            elif self.page_height + height > INNER_HEIGHT:
-                margin = INNER_HEIGHT - self.page_height
-                self.page_height = height - margin
-            else:
-                self.page_height += height
-
-    def clear(self):
-        self.contents = []
-        self.height = 0
-        self.page_height = 0
 
 
 def _params_table_row(measure: Measure,

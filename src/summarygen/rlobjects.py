@@ -1,224 +1,113 @@
 from __future__ import annotations
-import os
-from typing import Any, TypeVar, Generic
-from reportlab.lib import colors
-from reportlab.lib.styles import ParagraphStyle
-from reportlab.pdfbase import pdfmetrics
-from reportlab.pdfbase.pdfmetrics import registerFontFamily
-from reportlab.pdfbase.ttfonts import TTFont
-from reportlab.platypus import TableStyle
+import math
+from reportlab.platypus import Flowable, Table, KeepTogether
 
-from src import asset_path
+from src.exceptions import WidthExceededError, ElementJoinError
+from src.summarygen.models import ParagraphElement, ElemType
+from src.summarygen.styling import INNER_WIDTH, INNER_HEIGHT
 
 
-class Font:
-    """Registerable font for the reportlab library
-    
-    Fonts must be stored in the `assets` directory as a directory named
-    `asset_dir` that contains all font files
+class ElementLine:
+    def __init__(self,
+                 elements: list[ParagraphElement] | None=None,
+                 max_width: float | None=INNER_WIDTH):
+        self.elements: list[ParagraphElement] = elements or []
+        self.max_width = max_width
+        self.widths: list[float] = [elem.width for elem in self.elements]
+        self.heights: list[float] = [elem.height for elem in self.elements]
+        if self.max_width != None and self.width > self.max_width:
+            raise WidthExceededError(f'Max width of {self.max_width} exceeded')
+        self.__index: int = 0
 
-    Each font file must follow the name format `name`-`style`.ttf
+    @property
+    def width(self) -> float:
+        return math.fsum(self.widths)
 
-    Supported (and required) font styles: `Regular`, `Bold`, `Italic`,
-    `BoldItalic`
+    @property
+    def height(self) -> float:
+        return max(self.heights)
 
-    Font styles are case specific
-    """
+    def __getitem__(self, i: int) -> ParagraphElement:
+        return self.elements[i]
 
-    def __init__(self, name: str, font_dir: str):
-        self.name = name
-        self.path = asset_path(font_dir, 'fonts')
-        self.regular = TTFont(
-            f'{name}',
-            os.path.join(self.path, f'{name}-Regular.ttf'))
+    def __len__(self) -> int:
+        return len(self.elements)
 
-        self.bold = TTFont(
-            f'{name}B',
-            os.path.join(self.path, f'{name}-Bold.ttf'))
+    def __iter__(self) -> ElementLine:
+        return self
 
-        self.italic = TTFont(
-            f'{name}I',
-            os.path.join(self.path, f'{name}-Italic.ttf'))
-
-        self.bold_italic = TTFont(
-            f'{name}BI',
-            os.path.join(self.path, f'{name}-BoldItalic.ttf'))
-
-    def register(self):
-        pdfmetrics.registerFont(self.regular)
-        pdfmetrics.registerFont(self.bold)
-        pdfmetrics.registerFont(self.italic)
-        pdfmetrics.registerFont(self.bold_italic)
-        registerFontFamily(self.name,
-                           normal=self.name,
-                           bold=f'{self.name}B',
-                           italic=f'{self.name}I',
-                           boldItalic=f'{self.name}BI')
-
-
-def _rml_range(start: tuple[int, int], stop: tuple[int, int]) -> str:
-    return f'start=\"{start[0]},{start[1]}\" stop=\"{stop[0]},{stop[1]}\"'
-
-
-_U = TypeVar('_U')
-
-def get_style_param(name: str,
-                    param: _U | None,
-                    parent: BetterParagraphStyle | None,
-                    default: _U | None
-                   ) -> _U:
-    if param == None:
+    def __next__(self) -> ParagraphElement:
         try:
-            return getattr(parent, name)
-        except AttributeError:
-            return default
-    else:
-        return param
+            result = self.elements[self.__index]
+        except IndexError:
+            self.__index = 0
+            raise StopIteration
+        self.__index += 1
+        return result
+
+    def __add(self, element: ParagraphElement):
+        if (self.max_width != None
+                and element.width + self.width > self.max_width):
+            raise WidthExceededError(f'Max width of {self.max_width} exceeded')
+
+        try:
+            self.elements[-1].join(element)
+        except (IndexError, ElementJoinError):
+            self.elements.append(element)
+
+        self.widths.append(element.width)
+        self.heights.append(element.height)
+
+    def add(self, element: ParagraphElement):
+        if element.text == '':
+            return
+
+        if self.elements == []:
+            new_elem = element.copy(element.text.lstrip())
+        else:
+            new_elem = element
+
+        if new_elem.type == ElemType.REF:
+            self.__add(ParagraphElement(' ', type=ElemType.SPACE))
+            self.__add(new_elem)
+            self.__add(ParagraphElement(' ', type=ElemType.SPACE))
+        else:
+            self.__add(new_elem)
+
+    def pop(self, index: int=-1) -> ParagraphElement:
+        element = self.elements.pop(index)
+        self.widths.pop(index)
+        return element
 
 
-class BetterParagraphStyle(ParagraphStyle):
-    def __init__(self,
-                 name: str,
-                 font_name: str | None=None,
-                 font_size: float | None=None,
-                 leading: float | None=None,
-                 sub_size: float | None=None,
-                 sup_size: float | None=None,
-                 parent: BetterParagraphStyle | None=None,
-                 **kwargs):
-        self.font_name = get_style_param('font_name',
-                                         font_name,
-                                         parent,
-                                         'Helvetica')
-        kwargs['fontName'] = self.font_name
-
-        self.font_size = get_style_param('font_size',
-                                         font_size,
-                                         parent,
-                                         12)
-        kwargs['fontSize'] = self.font_size
-
-        self.leading = get_style_param('leading',
-                                       leading,
-                                       parent,
-                                       self.font_size * 1.2)
-        kwargs['leading'] = self.leading
-
-        self.sub_size = get_style_param('sub_size',
-                                        sub_size,
-                                        parent,
-                                        self.font_size * (2 / 3))
-        self.sup_size = get_style_param('sup_size',
-                                        sup_size,
-                                        parent,
-                                        self.font_size * (2 / 3))
-        self.attrs = kwargs
-        self.parent = parent
-        super().__init__(name, parent, **kwargs)
-
-    def set_attr(self, name: str, value):
-        self.attrs[name] = value
-        self.parent._setKwds(**self.attrs)
-        self.refresh()
-
-
-class BetterTableStyle(TableStyle):
-    def __init__(self,
-                 name: str,
-                 cmds: Any | None=None,
-                 parent: Any | None=None,
-                 **kwargs):
-        super().__init__(cmds, parent, **kwargs)
-
-        self.name = name
-        self._rml_styles: list[str] = []
-        self.font_size: float = 12
-        self.font_name: str = 'Helvetica'
-        self.top_padding: float = 6
-        self.bottom_padding: float = 6
-        self.left_padding: float = 6
-        self.right_padding: float = 6
-        for cmd in cmds:
-            match cmd[0]:
-                case 'FONTSIZE' | 'SIZE':
-                    self.font_size = float(cmd[3])
-                case 'FONTNAME':
-                    self.font_name = str(cmd[3])
-                case 'TOPPADDING':
-                    self.top_padding = float(cmd[3])
-                case 'BOTTOMPADDING':
-                    self.bottom_padding = float(cmd[3])
-                case 'LEFTPADDING':
-                    self.left_padding = float(cmd[3])
-                case 'RIGHTPADDING':
-                    self.right_padding = float(cmd[3])
-
-    def add(self, cmd):
-        self._cmds.append(cmd)
-        match cmd[0]:
-            case 'FONTSIZE' | 'SIZE':
-                self._rml_styles.append(
-                    f'<blockFont size=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'FONTNAME' | 'NAME':
-                self._rml_styles.append(
-                    f'<blockFont name=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'BACKGROUND':
-                color = cmd[3]
-                if not isinstance(color, colors.Color):
-                    raise Exception('color is required')
-                self._rml_styles.append(
-                    f'<blockBackground colorName=\"{color.hexval()}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'VALIGN':
-                self._rml_styles.append(
-                    f'<blockValign value=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'ALIGNMENT' | 'ALIGN':
-                self._rml_styles.append(
-                    f'<blockAlignment value=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'GRID':
-                color = cmd[4]
-                if not isinstance(color, colors.Color):
-                    raise Exception('color is required')
-                self._rml_styles.append(
-                    f'<lineStyle kind=\"GRID\" thickness=\"{cmd[3]}\" '
-                        + f'colorName=\"{color.hexval()}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-
-    @property
-    def rml(self) -> str:
-        return (f'<blockTableStyle id=\"{self.name}>\"'
-                    + ''.join(self._rml_styles)
-                    + '</blockTableStyle>')
-
-
-_T = TypeVar('_T', BetterTableStyle, BetterParagraphStyle)
-
-class StyleSheet(Generic[_T]):
+class Story:
     def __init__(self):
-        self.styles: dict[str, _T] = {}
+        self.contents: list[Flowable] = []
+        self.height: float = 0
+        self.page_height: float = 0
 
-    def __getitem__(self, key: str) -> _T:
-        return self.styles[key]
+    def add(self, flowables: Flowable | list[Flowable]):
+        if isinstance(flowables, Flowable):
+            flowables = [flowables]
+        for flowable in flowables:
+            self.contents.append(flowable)
+            if isinstance(flowable, Table):
+                height = math.fsum(flowable._rowHeights)
+            else:
+                height = flowable._fixedHeight
+            self.height += height
+            if isinstance(flowable, KeepTogether):
+                if self.page_height + height > INNER_HEIGHT:
+                    self.page_height = height
+                else:
+                    self.page_height += height
+            elif self.page_height + height > INNER_HEIGHT:
+                margin = INNER_HEIGHT - self.page_height
+                self.page_height = height - margin
+            else:
+                self.page_height += height
 
-    def __setitem__(self, key: str, value: _T):
-        self.styles[key] = value
-
-    def add(self, style: _T, alias: str | None=None):
-        self.styles[alias or style.name] = style
-
-    @property
-    def rml(self) -> str:
-        rml_styles = ''
-        for _, style in self.styles.items():
-            rml_styles += style.rml
-        return f'<stylesheet>{rml_styles}</stylesheet>'
+    def clear(self):
+        self.contents = []
+        self.height = 0
+        self.page_height = 0

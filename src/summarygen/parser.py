@@ -39,6 +39,7 @@ from src.summarygen.models import (
     EmbeddedImage
 )
 from src.summarygen.styling import (
+    BetterTableStyle,
     PSTYLES,
     DEF_PSTYLE,
     TSTYLES,
@@ -46,9 +47,6 @@ from src.summarygen.styling import (
     X_MARGIN,
     PAGESIZE,
     value_table_style
-)
-from src.summarygen.rlobjects import (
-    BetterTableStyle
 )
 from src.summarygen.flowables import (
     TableCell,
