@@ -1,5 +1,6 @@
 import os
 import re
+import sys
 import customtkinter as ctk
 
 from src import _ROOT, patterns
@@ -77,9 +78,14 @@ class HomeController:
         elif isinstance(error, PermissionError) and error.errno == 13:
             self.page.open_info_prompt('Cannot overwrite the PDF while it is'
                                        ' open.',
-                                       title=' Permissions Error')
+                                       title=' Permission Error')
+        elif isinstance(error, ConnectionError):
+            self.page.open_info_prompt('Please check your network connection'
+                                       ' and try again.',
+                                       title=' Connection Error')
         else:
-            self.page.open_info_prompt('An unexpected error occurred',
+            self.page.open_info_prompt('An unexpected error occurred:'
+                                       f'\n{error}',
                                        title=' Error')
 
     def is_selected_measure(self, measure_id: str) -> bool:
@@ -104,13 +110,6 @@ class HomeController:
         the current set of measure IDs from the eTRM API.
 
         Does not handle eTRM connection errors.
-
-        Errors:
-            `NotFoundError` - eTRM API responded with a 404
-
-            `ETRMResponseError` - eTRM API responded with a 500
-
-            `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
         offset = self.model.home.offset
@@ -121,13 +120,6 @@ class HomeController:
         """Returns a list of all versions of all selected measures.
 
         Does not handle eTRM connection errors.
-
-        Errors:
-            `NotFoundError` - eTRM API responded with a 404
-
-            `ETRMResponseError` - eTRM API responded with a 500
-
-            `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
         versions = []
@@ -142,13 +134,6 @@ class HomeController:
         measure IDs using the `offset` and `limit` in the Home model.
 
         Does not handle eTRM connection errors.
-
-        Errors:
-            `NotFoundError` - eTRM API responded with a 404
-
-            `ETRMResponseError` - eTRM API responded with a 500
-
-            `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
         measure_ids = measures or self.get_measure_ids()
@@ -163,13 +148,6 @@ class HomeController:
         of the currently selected measures.
 
         Does not handle eTRM connection errors.
-
-        Errors:
-            `NotFoundError` - eTRM API responded with a 404
-
-            `ETRMResponseError` - eTRM API responded with a 500
-
-            `UnauthorizedError` - eTRM API did not respond with a 200
         """
 
         measure_versions = versions or self.get_measure_versions()
@@ -216,6 +194,10 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
+        except ConnectionError:
+            self.page.open_info_prompt('Please check your network connection'
+                                       ' and try again.',
+                                       title=' Connection Error')
         finally:
             self.page.measure_id_list.measure_frame.enable()
 
@@ -248,6 +230,10 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
+        except ConnectionError:
+            self.page.open_info_prompt('Please check your network connection'
+                                       ' and try again.',
+                                       title=' Connection Error')
         self.model.home.decrement_offset()
 
     def prev_id_page(self):
@@ -279,6 +265,10 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
+        except ConnectionError:
+            self.page.open_info_prompt('Please check your network connection'
+                                       ' and try again.',
+                                       title=' Connection Error')
         self.model.home.increment_offset()
 
     def reset_ids(self):
@@ -303,6 +293,10 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
+        except ConnectionError:
+            self.page.open_info_prompt('Please check your network connection'
+                                       ' and try again.',
+                                       title=' Connection Error')
         self.unfocus()
 
     def search_measure_ids(self, *args):
@@ -413,6 +407,10 @@ class HomeController:
         except UnauthorizedError as err:
             self.page.open_info_prompt(err.message,
                                        title=' Unauthorized Access')
+        except ConnectionError:
+            self.page.open_info_prompt('Please check your network connection'
+                                       ' and try again.',
+                                       title=' Connection Error')
         self.unfocus()
 
     def search_measure_versions(self, *args):
@@ -457,6 +455,15 @@ class HomeController:
         self.page.measure_version_list.search_bar.search_bar.bind('<Return>', self.search_measure_versions)
         self.page.measure_version_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
         self.page.measure_version_list.search_bar.reset_btn.configure(command=self.reset_versions)
+
+    def clear_selected_measures(self):
+        """Clears all selected measures from the Home view and Home model."""
+
+        self.model.home.selected_versions = []
+        self.page.measures_selection_list.measures = []
+        self.page.measure_version_list.selected_versions = []
+        self.page.measures_selection_list.clear_btn.configure(state=ctk.DISABLED)
+        self.page.measures_selection_list.add_btn.configure(state=ctk.DISABLED)
 
     def __add_measure_version(self, version_id: str):
         error: Exception | None = None
@@ -525,9 +532,8 @@ class HomeController:
             try:
                 self.page.update_prompt('Generating summary PDF...')
                 summary.build()
-                self.page.measure_version_list.selected_versions = []
-                self.page.measures_selection_list.measures = []
-                self.model.home.selected_versions = []
+                self.clear_selected_measures()
+                self.unfocus()
                 self.page.close_prompt()
                 self.page.open_info_prompt('Success!')
                 return
@@ -545,7 +551,10 @@ class HomeController:
         """
 
         if self.model.home.selected_versions != []:
-            def_path = os.path.join(_ROOT, '..', 'summaries')
+            if getattr(sys, 'frozen', False):
+                def_path = os.path.join(_ROOT, '..', '..', 'summaries')
+            else:
+                def_path = os.path.join(_ROOT, '..', 'summaries')
             def_path = os.path.normpath(def_path)
             if not os.path.exists(def_path):
                 self.page.open_info_prompt(f'no {def_path} folder exists')
@@ -583,15 +592,6 @@ class HomeController:
         else:
             self.page.open_info_prompt(text='At least one measure version is'
                                             ' required to create a summary')
-
-    def clear_selected_measures(self):
-        """Clears all selected measures from the Home view and Home model."""
-
-        self.model.home.selected_versions = []
-        self.page.measures_selection_list.measures = []
-        self.page.measure_version_list.selected_versions = []
-        self.page.measures_selection_list.clear_btn.configure(state=ctk.DISABLED)
-        self.page.measures_selection_list.add_btn.configure(state=ctk.DISABLED)
 
     def __bind_selected_list(self):
         """Binds events to the widgets in the selected measure version

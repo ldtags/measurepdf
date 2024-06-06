@@ -7,4 +7,5 @@ import src.summarygen.summary as summary
 import src.app as app
 import src.main as main
 import src.resources as resources
-from src import _ROOT
+import src.utils as utils
+from src import _ROOT, asset_path

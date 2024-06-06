@@ -1,6 +1,7 @@
 import os
 import re
 import shutil
+import math
 from reportlab.lib.pagesizes import inch
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
@@ -12,22 +13,56 @@ from reportlab.platypus import (
     KeepTogether
 )
 
-from src import _ROOT
 from src.etrm import ETRM_URL
 from src.etrm.models import Measure
-from src.summarygen.parser import CharacterizationParser
+from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styling import (
     PAGESIZE,
     X_MARGIN,
     Y_MARGIN,
     PSTYLES,
-    TSTYLES
+    TSTYLES,
+    INNER_HEIGHT,
+    INNER_WIDTH
 )
 from src.summarygen.rlobjects import (
     BetterTableStyle,
     BetterParagraphStyle
 )
 from src.summarygen.flowables import NEWLINE
+
+
+class Story:
+    def __init__(self):
+        self.contents: list[Flowable] = []
+        self.height: float = 0
+        self.page_height: float = 0
+
+    def add(self, flowables: Flowable | list[Flowable]):
+        if isinstance(flowables, Flowable):
+            flowables = [flowables]
+        for flowable in flowables:
+            self.contents.append(flowable)
+            if isinstance(flowable, Table):
+                height = math.fsum(flowable._rowHeights)
+            else:
+                height = flowable._fixedHeight
+            self.height += height
+            if isinstance(flowable, KeepTogether):
+                if self.page_height + height > INNER_HEIGHT:
+                    self.page_height = height
+                else:
+                    self.page_height += height
+            elif self.page_height + height > INNER_HEIGHT:
+                margin = INNER_HEIGHT - self.page_height
+                self.page_height = height - margin
+            else:
+                self.page_height += height
+
+    def clear(self):
+        self.contents = []
+        self.height = 0
+        self.page_height = 0
 
 
 def _params_table_row(measure: Measure,
@@ -95,7 +130,7 @@ class MeasureSummary:
                  file_name: str='measure_summary',
                  override: bool=True):
         self.measures: list[Measure] = []
-        self.story: list[Flowable] = []
+        self.story = Story()
         if os.path.exists(dir_path):
             self.dir_path = dir_path
         else:
@@ -140,15 +175,15 @@ class MeasureSummary:
                       rowHeights=row_heights,
                       style=style,
                       hAlign='LEFT')
-        self.story.append(table)
+        self.story.add(table)
 
     def add_tech_summary(self, measure: Measure):
         header = Paragraph('Technology Summary', PSTYLES['h2'])
         parser = CharacterizationParser(measure,
                                         'technology_summary')
         sections = parser.parse()
-        self.story.append(header)
-        self.story.extend(sections)
+        self.story.add(header)
+        self.story.add(sections)
 
     def add_parameters_table(self, measure: Measure):
         table_header = Paragraph('Parameters:', PSTYLES['h2'])
@@ -176,7 +211,7 @@ class MeasureSummary:
                       style=TSTYLES['ParametersTable'],
                       hAlign='LEFT')
         headed_table = KeepTogether([table_header, table])
-        self.story.append(headed_table)
+        self.story.add(headed_table)
 
     def add_sections_table(self, measure: Measure):
         table_header = Paragraph('Sections:', PSTYLES['h2'])
@@ -253,26 +288,30 @@ class MeasureSummary:
                       rowHeights=row_heights,
                       style=tstyle,
                       hAlign='LEFT')
-        headed_table = KeepTogether([table_header, table])
-        self.story.append(headed_table)
+        init_height =  table_header._fixedHeight + row_heights[0]
+        if self.story.page_height + init_height > INNER_HEIGHT:
+            headed_table = KeepTogether([table_header, table])
+            self.story.add(headed_table)
+        else:
+            self.story.add(table_header)
+            self.story.add(table)
 
     def add_measure(self, measure: Measure):
         self.measures.append(measure)
         self.add_measure_details_table(measure)
-        self.story.append(NEWLINE)
+        self.story.add(NEWLINE)
         self.add_tech_summary(measure)
-        self.story.append(NEWLINE)
+        self.story.add(NEWLINE)
         self.add_parameters_table(measure)
-        self.story.append(NEWLINE)
+        self.story.add(NEWLINE)
         self.add_sections_table(measure)
-        self.story.append(PageBreak())
+        self.story.add(PageBreak())
 
     def reset(self):
-        self.story = []
+        self.story.clear()
 
     def build(self):
         # if multiple measures, maybe add a table of contents
-        self.summary.build(self.story)
-        tmp_dir = f'{_ROOT}/assets/images/tmp'
-        if os.path.exists(tmp_dir):
-            shutil.rmtree(tmp_dir)
+        self.summary.build(self.story.contents)
+        if os.path.exists(TMP_DIR):
+            shutil.rmtree(TMP_DIR)

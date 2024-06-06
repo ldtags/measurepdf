@@ -2,6 +2,7 @@ from __future__ import annotations
 import requests
 import shutil
 import os
+import math
 from bs4 import (
     BeautifulSoup,
     Tag,
@@ -59,20 +60,24 @@ from src.summarygen.flowables import (
 )
 
 
+TMP_DIR = os.path.join(_ROOT, 'assets', 'images', 'tmp')
+
+HDR_TAGS = ['h3', 'h6']
+
+EMB_ATTRS = ['data-etrmreference',
+             'data-etrmvaluetable',
+             'data-etrmcalculation',
+             'data-omboimage']
+
+
 def is_embedded(tag: Tag) -> bool:
-    if tag.attrs.get('data-etrmreference'):
-        return True
+    return set(EMB_ATTRS).intersection(set(tag.attrs.keys())) != set()
 
-    if tag.attrs.get('data-etrmvaluetable'):
-        return True
 
-    if tag.attrs.get('data-etrmcalculation'):
-        return True
-
-    if tag.attrs.get('data-ombuimage'):
-        return True
-
-    return False
+def is_header(element: PageElement) -> bool:
+    return (isinstance(element, Tag)
+        and element.name in HDR_TAGS
+        and element.next_sibling != None)
 
 
 def _parse_element(element: PageElement) -> list[ParagraphElement]:
@@ -117,7 +122,7 @@ def _parse_elements(elements: list[PageElement]) -> list[ParagraphElement]:
     return contents
 
 
-def _parse_table_headers(table: Tag) -> list[TableCell]:
+def parse_table_headers(table: Tag) -> list[TableCell]:
     thead = table.find('thead')
     raw_headers: ResultSet[Tag] = []
     if thead == None:
@@ -131,12 +136,12 @@ def _parse_table_headers(table: Tag) -> list[TableCell]:
     for raw_header in raw_headers:
         header_elements = _parse_element(raw_header)
         headers.append(TableCell(header_elements,
-                                   max_width,
-                                   style=PSTYLES['ValueTableHeader']))
+                                 max_width,
+                                 style=PSTYLES['ValueTableHeader']))
     return headers
 
 
-def _parse_table_body(table: Tag) -> list[list[TableCell]]:
+def parse_table_body(table: Tag) -> list[list[TableCell]]:
     tbody = table.find('tbody')
     if not isinstance(tbody, Tag):
         raise SummaryGenError('missing table body')
@@ -153,18 +158,18 @@ def _parse_table_body(table: Tag) -> list[list[TableCell]]:
     return body_rows
 
 
-def _parse_table(table: Tag) -> list[list[TableCell]]:
-    headers = _parse_table_headers(table)
-    body = _parse_table_body(table)
+def parse_table(table: Tag) -> list[list[TableCell]]:
+    headers = parse_table_headers(table)
+    body = parse_table_body(table)
     data: list[list[TableCell]] = []
     data.append(headers)
     data.extend(body)
     return data
 
 
-def _col_width(element: TableCell | str,
-               style: BetterTableStyle
-              ) -> float:
+def calc_col_width(element: TableCell | str,
+                   style: BetterTableStyle
+                  ) -> float:
     if isinstance(element, str):
         width = stringWidth(element, style.font_name, style.font_size)
     else:
@@ -173,23 +178,24 @@ def _col_width(element: TableCell | str,
     return width + padding
 
 
-def _col_widths(data: list[list[TableCell | str]],
-                style: BetterTableStyle
-               ) -> list[float]:
+def calc_col_widths(data: list[list[TableCell | str]],
+                    style: BetterTableStyle
+                   ) -> list[float]:
     headers = data[0]
     col_widths: list[float] = list(range(len(headers)))
     for i in range(len(headers)):
         max_width = 0
         for j in range(len(data)):
-            col_width = _col_width(data[j][i], style)
+            col_width = calc_col_width(data[j][i], style)
             if col_width > max_width:
                 max_width = col_width
         col_widths[i] = max_width
     return col_widths
 
 
-def _row_height(element: TableCell | str,
-                style: BetterTableStyle) -> float:
+def calc_row_height(element: TableCell | str,
+                    style: BetterTableStyle
+                   ) -> float:
     if isinstance(element, str):
         height = style.font_size
     else:
@@ -198,14 +204,14 @@ def _row_height(element: TableCell | str,
     return height + padding
 
 
-def _row_heights(data: list[list[TableCell | str]],
-                 style: BetterTableStyle
-                ) -> list[float]:
+def calc_row_heights(data: list[list[TableCell | str]],
+                     style: BetterTableStyle
+                    ) -> list[float]:
     row_heights: list[float] = list(range(len(data)))
     for i in range(len(data)):
         max_height = 0
         for cell in data[i]:
-            cell_height = _row_height(cell, style)
+            cell_height = calc_row_height(cell, style)
             if cell_height > max_height:
                 max_height = cell_height
         row_heights[i] = max_height
@@ -262,10 +268,11 @@ def split_element(element: ParagraphElement) -> list[ParagraphElement]:
     return list(filter(lambda e: e.text != '', elements))
 
 
-def wrap_elements(elements: list[ParagraphElement]
+def wrap_elements(elements: list[ParagraphElement],
+                  max_width: float=INNER_WIDTH
                  ) -> list[ElementLine]:
     element_lines: list[ElementLine] = []
-    current_line = ElementLine()
+    current_line = ElementLine(max_width=max_width)
     for element in elements:
         try:
             current_line.add(element)
@@ -275,24 +282,40 @@ def wrap_elements(elements: list[ParagraphElement]
                 try:
                     current_line.add(elem)
                 except WidthExceededError:
-                    if elem.width > INNER_WIDTH:
-                        avail_width = INNER_WIDTH - current_line.width
+                    if elem.width > max_width:
+                        avail_width = max_width - current_line.width
                         word_frags = split_word(elem.width, avail_width)
                         current_line.add(word_frags[0])
                         element_lines.append(current_line)
                         if len(word_frags) > 1:
                             for word_frag in word_frags[1:len(word_frags) - 1]:
-                                current_line = ElementLine()
+                                current_line = ElementLine(max_width=max_width)
                                 current_line.add(word_frag)
                         else:
-                            current_line = ElementLine()
+                            current_line = ElementLine(max_width=max_width)
                     else:
                         element_lines.append(current_line)
-                        current_line = ElementLine()
+                        current_line = ElementLine(max_width=max_width)
                         current_line.add(elem)
     if len(current_line) != 0:
         element_lines.append(current_line)
     return element_lines
+
+
+def gen_image(_url: str) -> Image:
+    img_name = _url[_url.rindex('/') + 1:]
+    response = requests.get(_url, stream=True)
+    if response.status_code != 200:
+        return []
+    tmp_dir = os.path.join(_ROOT, 'assets', 'images', 'tmp')
+    if not os.path.exists(tmp_dir):
+        os.mkdir(tmp_dir)
+    tmp_path = f'{tmp_dir}/{img_name}'
+    with open(tmp_path, 'wb+') as out_file:
+        shutil.copyfileobj(response.raw, out_file)
+    del response
+    img = Image(tmp_path)
+    return img
 
 
 class CharacterizationParser:
@@ -305,10 +328,15 @@ class CharacterizationParser:
         self.width, self.height = PAGESIZE
         self.inner_width = self.width - X_MARGIN * 2
 
-    def gen_summary_paragraph(self, elements: list[PageElement]) -> Table:
+    def gen_summary_paragraph(self,
+                              elements: list[PageElement]
+                             ) -> Table | None:
         lines = [[ParagraphLine(line, self.measure)]
                     for line
                     in wrap_elements(elements)]
+        if lines == []:
+            return None
+
         col_widths = [INNER_WIDTH]
         row_heights = [DEF_PSTYLE.leading] * len(lines)
         return Table(lines,
@@ -320,7 +348,7 @@ class CharacterizationParser:
     def gen_embedded_value_table(self,
                                  vt_tag: EmbeddedValueTableTag,
                                  table: ValueTable
-                                ) -> Table:
+                                ) -> Table | None:
         column_indexes: list[int] = []
         headers: list[str] = []
         for i, column in enumerate(table.columns):
@@ -335,10 +363,15 @@ class CharacterizationParser:
             body.append(row)
         data = [headers]
         data.extend(body)
+        if data == [[]]:
+            return None
+
         style = value_table_style(data, embedded=True)
+        col_widths = calc_col_widths(data, style)
+        row_heights = calc_row_heights(data, col_widths, style)
         return Table(data,
-                     colWidths=_col_widths(data, style),
-                     rowHeights=_row_heights(data, style),
+                     colWidths=col_widths,
+                     rowHeights=row_heights,
                      style=style,
                      hAlign='LEFT')
 
@@ -348,8 +381,9 @@ class CharacterizationParser:
         for li in li_list:
             items = _parse_element(li)
             element = self.gen_summary_paragraph(items)
-            list_items.append(ListItem(element,
-                                       bulletColor=colors.black))
+            if element != None:
+                list_item = ListItem(element, bulletColor=colors.black)
+                list_items.append(list_item)
         return list_items
 
     def _parse_text(self, text: str) -> Flowable:
@@ -357,27 +391,12 @@ class CharacterizationParser:
             return Spacer(letter[0], 9.2)
         return Paragraph(text, PSTYLES['Paragraph'])
 
-    def gen_image(self, _url: str) -> Image:
-        img_name = _url[_url.rindex('/') + 1:]
-        response = requests.get(_url, stream=True)
-        if response.status_code != 200:
-            return []
-        tmp_dir = f'{_ROOT}/assets/images/tmp'
-        if not os.path.exists(tmp_dir):
-            os.mkdir(tmp_dir)
-        tmp_path = f'{tmp_dir}/{img_name}'
-        with open(tmp_path, 'wb+') as out_file:
-            shutil.copyfileobj(response.raw, out_file)
-        del response
-        img = Image(tmp_path)
-        return img
-
-    def _parse_embedded_tag(self, tag: Tag) -> list[Flowable]:
+    def _parse_embedded_tag(self, tag: Tag) -> Flowable | None:
         json_str = tag.attrs.get('data-etrmreference', None)
         if json_str != None:
             ref_tag = ReferenceTag(json_str)
             ref_link = f'{self.measure.link}/#references_list'
-            return [Reference(ref_tag.text, ref_link)]
+            return Reference(ref_tag.text, ref_link)
 
         json_str = tag.attrs.get('data-etrmvaluetable', None)
         if json_str != None:
@@ -391,16 +410,18 @@ class CharacterizationParser:
                                       f' in {self.measure.full_version_id}')
             header = ValueTableHeader(table_obj.name, table_link)
             table = self.gen_embedded_value_table(vt_tag, table_obj)
-            headed_table = KeepTogether([header, table])
-            return [headed_table]
+            if table == None:
+                return None
+
+            return KeepTogether([header, table])
 
         json_str = tag.attrs.get('data-ombuimage', None)
         if json_str != None:
             img_tag = EmbeddedImage(json_str)
             img_url = img_tag.obj_info.image_url
             _url = f'{ETRM_URL}{img_url}'
-            return [self.gen_image(_url)]
-        return []
+            return gen_image(_url)
+        return None
 
     def _parse_header(self, header: Tag) -> Paragraph:
         if len(header.contents) != 1:
@@ -420,7 +441,10 @@ class CharacterizationParser:
             return []
 
         if is_embedded(element):
-            return self._parse_embedded_tag(element)
+            flowable = self._parse_embedded_tag(element)
+            if flowable == None:
+                return []
+            return [flowable]
 
         match element.name:
             case 'div' | 'span':
@@ -432,7 +456,7 @@ class CharacterizationParser:
                 _url = element.get('href', None)
                 if _url != None:
                     return [KeepTogether([NEWLINE,
-                                          self.gen_image(_url),
+                                          gen_image(_url),
                                           NEWLINE])]
                 return []
             case 'p':
@@ -440,18 +464,24 @@ class CharacterizationParser:
                 for child in element.contents:
                     elements.extend(_parse_element(child))
                 para = self.gen_summary_paragraph(elements)
+                if para == None:
+                    return []
                 return [para]
             case 'h3' | 'h6':
                 return [self._parse_header(element)]
             case 'table':
-                data = _parse_table(element)
+                data = parse_table(element)
                 style = value_table_style(data, embedded=True)
-                table = Table(data,
-                              colWidths=_col_widths(data, style),
-                              rowHeights=_row_heights(data, style),
+                col_widths = calc_col_widths(data, style)
+                row_heights = calc_row_heights(data, style)
+                if data == [[]]:
+                    return []
+                table = Table(data=data,
+                              colWidths=col_widths,
+                              rowHeights=row_heights,
                               style=style,
                               hAlign='LEFT')
-                return [KeepTogether(table)]
+                return [table]
             case 'ul':
                 elements = self._parse_list(element)
                 return [ListFlowable(elements, bulletType='bullet')]
@@ -466,9 +496,7 @@ class CharacterizationParser:
         while i < len(top_level):
             element = top_level[i]
             parsed_elements = self._parse_element(element)
-            if (isinstance(element, Tag)
-                    and element.name in ['h3', 'h6']
-                    and i < len(top_level) - 1):
+            if is_header(element):
                 parsed_elements.append(Spacer(letter[0], 5))
                 next_elements = self._parse_element(top_level[i + 1])
                 extra_elements: list[Flowable] = []
@@ -481,7 +509,9 @@ class CharacterizationParser:
                 parsed_elements.extend(extra_elements)
                 i += 1
             self.flowables.extend(parsed_elements)
-            if element.next_sibling == '\n':
-                self.flowables.append(Spacer(letter[0], 9.2))
+            if (isinstance(element, Tag)
+                    and (element.name != 'a')
+                    and element.next_sibling == '\n'):
+                self.flowables.append(NEWLINE)
             i += 1
         return self.flowables

@@ -6,10 +6,10 @@ import measurepdf
 import utils
 
 
-MODULES = ['measurepdf', '_utils', 'etrm']
+MODULES = ['measurepdf', 'utils', 'etrm']
 UNIT_TEST = {
     'measurepdf': measurepdf.test,
-    '_utils': utils.test
+    'utils': utils.main
 }
 
 

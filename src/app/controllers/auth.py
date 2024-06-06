@@ -65,3 +65,6 @@ class AuthController:
             self.view.show('home')
         except UnauthorizedError:
             self.page.display_err('Unauthorized token')
+        except ConnectionError:
+            self.page.display_err('Please check your network connection'
+                                  ' and try again.')

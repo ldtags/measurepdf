@@ -55,6 +55,10 @@ class ParagraphElement:
 
         return stringWidth(self.text, font_name, font_size) + offset
 
+    @property
+    def height(self) -> float:
+        return DEF_PSTYLE.leading
+
     def join(self, element: ParagraphElement):
         if self.type == ElemType.REF:
             raise ElementJoinError('Cannot join reference tags')

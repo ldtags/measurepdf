@@ -5,12 +5,14 @@ rem This script automates the PyInstaller executable building process
 setlocal enabledelayedexpansion
 setlocal enableextensions
 
+for %%x in (%*) do (
+    if /I "--clean"=="%%~x" call %~dp0/clean.bat
+)
 
 set EXEC_NAME=MeasureSummary
-if not "%1"=="" set EXEC_NAME=%1
-
 set ASSETS=src\assets
-set BUILD_CMD=pyinstaller --clean --noconsole -y -n %EXEC_NAME% --icon=%ASSETS%\images\etrm.ico
+set BUILD_CMD=pyinstaller --clean -y -n %EXEC_NAME% --noconsole --icon=%ASSETS%\images\etrm.ico
+
 for %%x in (%ASSETS%\images\*) do (
     set BUILD_CMD=!BUILD_CMD! --add-data=%%x;src\assets\images
 )
@@ -21,7 +23,10 @@ for /f "tokens=* delims=" %%x in ('dir /b %ASSETS%\fonts\*') do (
 )
 
 cd %~dp0\..
-call %BUILD_CMD% cli.py
+call %BUILD_CMD% --hidden-import customtkinter cli.py
 
+mkdir .\dist\summaries
+ren %~dp0\..\dist\MeasureSummary bin
+rem cscript .\scripts\shortcut.vbs "%~dp0..\dist\Measure Summarizer.LNK" "%~dp0..\dist\bin\src\assets\images\etrm.ico"
 
 endlocal

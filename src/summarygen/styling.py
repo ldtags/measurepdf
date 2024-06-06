@@ -149,7 +149,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('LEFTPADDING', (0, 0), (-1, -1), 9),
             ('RIGHTPADDING', (0, 0), (-1, -1), 9),
-            ('TOPPADDING', (0, 0), (-1, -1), 8),
+            ('TOPPADDING', (0, 0), (-1, -1), 9),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
             ('BACKGROUND', (0, 0), (-1, 0), COLORS['ValueTableHeader']),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)]))

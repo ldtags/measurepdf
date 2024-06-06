@@ -40,13 +40,25 @@ class Reference(Paragraph):
 class ElementLine:
     def __init__(self,
                  elements: list[ParagraphElement] | None=None,
-                 max_width: float | None=None):
+                 max_width: float | None=INNER_WIDTH):
         self.elements: list[ParagraphElement] = elements or []
-        self.max_width = max_width or INNER_WIDTH
-        self.width = math.fsum([elem.width for elem in self.elements])
-        if self.width > self.max_width:
+        self.max_width = max_width
+        self.widths: list[float] = [elem.width for elem in self.elements]
+        self.heights: list[float] = [elem.height for elem in self.elements]
+        if self.max_width != None and self.width > self.max_width:
             raise WidthExceededError(f'Max width of {self.max_width} exceeded')
         self.__index: int = 0
+
+    @property
+    def width(self) -> float:
+        return math.fsum(self.widths)
+
+    @property
+    def height(self) -> float:
+        return max(self.heights)
+
+    def __getitem__(self, i: int) -> ParagraphElement:
+        return self.elements[i]
 
     def __len__(self) -> int:
         return len(self.elements)
@@ -64,10 +76,17 @@ class ElementLine:
         return result
 
     def __add(self, element: ParagraphElement):
+        if (self.max_width != None
+                and element.width + self.width > self.max_width):
+            raise WidthExceededError(f'Max width of {self.max_width} exceeded')
+
         try:
             self.elements[-1].join(element)
         except (IndexError, ElementJoinError):
             self.elements.append(element)
+
+        self.widths.append(element.width)
+        self.heights.append(element.height)
 
     def add(self, element: ParagraphElement):
         if element.text == '':
@@ -78,9 +97,6 @@ class ElementLine:
         else:
             new_elem = element
 
-        if new_elem.width + self.width > self.max_width:
-            raise WidthExceededError(f'Max width of {self.max_width} exceeded')
-
         if new_elem.type == ElemType.REF:
             self.__add(ParagraphElement(' ', type=ElemType.SPACE))
             self.__add(new_elem)
@@ -88,10 +104,10 @@ class ElementLine:
         else:
             self.__add(new_elem)
 
-        self.width += new_elem.width
-
     def pop(self, index: int=-1) -> ParagraphElement:
-        return self.elements.pop(index)
+        element = self.elements.pop(index)
+        self.widths.pop(index)
+        return element
 
 
 class ParagraphLine(Table):

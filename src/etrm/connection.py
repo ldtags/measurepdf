@@ -104,9 +104,12 @@ class ETRMConnection:
         }
 
         url = f'{API_URL}/measures/{statewide_id}/{version_id}'
-        response = requests.get(url,
-                                headers=headers,
-                                stream=True)
+        try:
+            response = requests.get(url,
+                                    headers=headers,
+                                    stream=True)
+        except requests.exceptions.ConnectionError as err:
+            raise ConnectionError from err
 
         if response.status_code == 404:
             raise NotFoundError(f'Measure {full_version_id} could not be'
@@ -145,9 +148,12 @@ class ETRMConnection:
             'Authorization': self.auth_token
         }
 
-        response = requests.get(f'{API_URL}/measures',
-                                params=params,
-                                headers=headers)
+        try:
+            response = requests.get(f'{API_URL}/measures',
+                                    params=params,
+                                    headers=headers)
+        except requests.exceptions.ConnectionError as err:
+            raise ConnectionError from err
 
         if response.status_code == 404:
             raise NotFoundError(f'Measures could not be found')
@@ -220,8 +226,11 @@ class ETRMConnection:
             'Authorization': self.auth_token
         }
 
-        response = requests.get(f'{API_URL}/measures/{measure_id}/',
-                                headers=headers)
+        url = f'{API_URL}/measures/{measure_id}/'
+        try:
+            response = requests.get(url, headers=headers)
+        except requests.exceptions.ConnectionError as err:
+            raise ConnectionError from err
 
         if response.status_code == 404:
             raise NotFoundError(f'No versions for measure {measure_id}'
