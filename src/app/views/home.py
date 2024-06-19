@@ -4,7 +4,6 @@ from src.app import styles
 from src.app.ctkobjects import (
     ScrollableFrame,
     ScrollableCheckBoxFrame,
-    ScrollableRadioButtonFrame,
     SearchBar,
     PromptWindow,
     InfoPromptWindow,
