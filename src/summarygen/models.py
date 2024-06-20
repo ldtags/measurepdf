@@ -34,26 +34,24 @@ class ParagraphElement:
         self.styles = styles or [TextStyle.NORMAL]
 
     @property
-    def width(self) -> float:
-        if TextStyle.SUB in self.styles:
-            font_size = DEF_PSTYLE.sub_size
-        elif TextStyle.SUP in self.styles:
-            font_size = DEF_PSTYLE.sup_size
-        else:
-            font_size = DEF_PSTYLE.font_size
+    def font_size(self) -> float:
+        _font_size = DEF_PSTYLE.font_size
+        if TextStyle.SUB in self.styles or TextStyle.SUP in self.styles:
+            _font_size *= 0.72
+        return _font_size
 
-        if TextStyle.SUB in self.styles and TextStyle.SUP in self.styles:
-            offset = 10
-        else:
-            offset = 0
-
-        font_name = DEF_PSTYLE.font_name
+    @property
+    def font_name(self) -> str:
+        _font_name = DEF_PSTYLE.font_name
         if TextStyle.STRONG in self.styles:
-            font_name += 'B'
+            _font_name += 'B'
         if TextStyle.ITALIC in self.styles:
-            font_name += 'I'
+            _font_name += 'I'
+        return _font_name
 
-        return stringWidth(self.text, font_name, font_size) + offset
+    @property
+    def width(self) -> float:
+        return stringWidth(self.text, self.font_name, self.font_size)
 
     @property
     def height(self) -> float:
