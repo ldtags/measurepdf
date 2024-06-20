@@ -38,7 +38,7 @@ class SearchBar(ctk.CTkFrame):
                              column=0,
                              columnspan=entry_width,
                              sticky=ctk.NSEW,
-                             padx=(5, 5))
+                             padx=(0, 0))
 
         if include_search_btn:
             self.search_btn = ctk.CTkButton(self,
@@ -49,7 +49,7 @@ class SearchBar(ctk.CTkFrame):
                                             width=parent.winfo_width() / 8)
             self.search_btn.grid(row=0,
                                  column=entry_width,
-                                 padx=(5, 5))
+                                 padx=(5, 0))
             if search_tooltip != None:
                 self.search_tooltip = ToolTip(self.search_btn,
                                               message=search_tooltip)
@@ -64,7 +64,7 @@ class SearchBar(ctk.CTkFrame):
                                            width=parent.winfo_width() / 8)
             self.reset_btn.grid(row=0,
                                 column=entry_width,
-                                padx=(5, 5))
+                                padx=(5, 0))
             if reset_tooltip != None:
                 self.reset_tooltip = ToolTip(self.reset_btn,
                                              message=reset_tooltip)
@@ -79,7 +79,7 @@ class SearchBar(ctk.CTkFrame):
                                          width=parent.winfo_width() / 8)
             self.add_btn.grid(row=0,
                               column=entry_width,
-                              padx=(5, 5))
+                              padx=(5, 0))
             if add_tooltip != None:
                 self.add_tooltip = ToolTip(self.add_btn,
                                            message=add_tooltip)

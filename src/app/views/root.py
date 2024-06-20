@@ -1,6 +1,11 @@
 import customtkinter as ctk
 
 from src import asset_path
+from src.app import themes
+
+
+ctk.set_default_color_theme(themes.get_theme('default'))
+ctk.set_appearance_mode('system')
 
 
 class Root(ctk.CTk):
@@ -13,7 +18,7 @@ class Root(ctk.CTk):
         self.minsize(width=550, height=290)
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
-        
+
         self.container = ctk.CTkFrame(self)
         self.container.grid(row=0, column=0, sticky=ctk.NSEW)
         self.container.grid_rowconfigure(0, weight=1)

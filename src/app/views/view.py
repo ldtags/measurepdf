@@ -1,8 +1,15 @@
+import os
 import customtkinter as ctk
+from ctypes import windll
 
 from src.app.views.root import Root
 from src.app.views.auth import AuthPage
 from src.app.views.home import HomePage
+
+
+# fixes blurry text on Windows 10
+if os.name == 'nt':
+    windll.shcore.SetProcessDpiAwareness(1)
 
 
 class View:

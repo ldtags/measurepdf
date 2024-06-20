@@ -6,7 +6,7 @@ class HomeModel:
         self.limit: int = 25
         self.count: int = 0
         self.measure_ids: list[str] = []
-        self.measure_versions: dict[str, list[str]] = []
+        self.measure_versions: dict[str, list[str]] = {}
         self.selected_measures: list[str] = []
         self.selected_versions: list[str] = []
 
