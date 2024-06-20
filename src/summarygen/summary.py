@@ -196,7 +196,8 @@ class MeasureSummary:
             _params_table_row(measure, 'Building Type', 'BldgType'),
             _params_table_row(measure, 'Building Vintage', 'BldgVint'),
             _params_table_row(measure, 'Building Location', 'BldgLoc'),
-            _params_table_row(measure, 'Delivery Type', 'DelivType')
+            _params_table_row(measure, 'Delivery Type', 'DelivType'),
+            _params_table_row(measure, 'Norm Unit', 'NormUnit')
         ]
         style = TSTYLES['ParametersTable']
         col_widths = (2.26*inch, 3.98*inch)
