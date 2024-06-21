@@ -40,9 +40,23 @@ class ETRMCache:
         self.version_cache: dict[str, list[str]] = {}
         self.measure_cache: dict[str, Measure] = {}
 
-    def get_ids(self, offset: int, limit: int) -> list[str] | None:
+    def get_ids(self,
+                offset: int,
+                limit: int,
+                use_category: str | None=None
+               ) -> list[str] | None:
+        if use_category != None:
+            pattern = rf'^SW{use_category}[0-9]{{3}}'
+            id_cache = list(
+                filter(
+                    lambda _id: re.fullmatch(pattern, _id) != None,
+                    self.id_cache
+                )
+            )
+        else:
+            id_cache = self.id_cache
         try:
-            cached_ids = self.id_cache[offset:offset + limit]
+            cached_ids = id_cache[offset:offset + limit]
             if cached_ids != [] and all(cached_ids):
                 return cached_ids
         except IndexError:
@@ -128,7 +142,8 @@ class ETRMConnection:
 
     def __get_measure_ids(self,
                           offset: int=0,
-                          limit: int=25
+                          limit: int=25,
+                          use_category: str | None=None
                          ) -> MeasuresResponse:
         """Returns the response of an eTRM API call for measure ids.
 
@@ -143,6 +158,9 @@ class ETRMConnection:
             'offset': str(offset),
             'limit': str(limit)
         }
+
+        if use_category != None:
+            params['use_category'] = use_category
 
         headers = {
             'Authorization': self.auth_token
@@ -167,7 +185,11 @@ class ETRMConnection:
 
         return MeasuresResponse(response.json())
 
-    def get_measure_ids(self, offset: int=0, limit: int=25) -> list[str]:
+    def get_measure_ids(self,
+                        offset: int=0,
+                        limit: int=25,
+                        use_category: str | None=None
+                       ) -> list[str]:
         """Returns a list of measure ids.
 
         Errors:
@@ -178,11 +200,11 @@ class ETRMConnection:
             `UnauthorizedError` - (!200) any other error
         """
 
-        cached_ids = self.cache.get_ids(offset, limit)
+        cached_ids = self.cache.get_ids(offset, limit, use_category)
         if cached_ids != None:
             return cached_ids
 
-        response_body = self.__get_measure_ids(offset, limit)
+        response_body = self.__get_measure_ids(offset, limit, use_category)
         measure_ids = list(map(lambda result: extract_id(result.url),
                                response_body.results))
         self.cache.add_ids(measure_ids, offset, limit)
