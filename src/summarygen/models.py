@@ -5,7 +5,7 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from src.utils import getc
 from src.exceptions import ElementJoinError
-from src.summarygen.styling import DEF_PSTYLE
+from src.summarygen.styling import DEF_PSTYLE, BetterParagraphStyle, PSTYLES
 
 
 class ElemType(Enum):
@@ -34,20 +34,50 @@ class ParagraphElement:
         self.styles = styles or [TextStyle.NORMAL]
 
     @property
+    def text_xml(self) -> str:
+        text = self.text
+        cur_styles: list[TextStyle] = []
+        for style in self.styles:
+            match style:
+                case TextStyle.SUP:
+                    if TextStyle.SUB not in cur_styles:
+                        text = f'{text}'
+                case TextStyle.SUB:
+                    if TextStyle.SUP not in cur_styles:
+                        text = f'{text}'
+                case TextStyle.STRONG:
+                    text = f'<b>{text}</b>'
+                case TextStyle.ITALIC:
+                    text = f'<i>{text}</i>'
+                case TextStyle.NORMAL:
+                    pass
+                case x:
+                    raise ValueError(f'{x} is not a valid TextStyle')
+            cur_styles.append(style)
+        return text
+
+    @property
+    def style(self) -> BetterParagraphStyle:
+        if self.type == ElemType.REF:
+            return PSTYLES['ReferenceTag']
+
+        for style in self.styles:
+            match style:
+                case TextStyle.SUP:
+                    return DEF_PSTYLE.superscripted
+                case TextStyle.SUB:
+                    return DEF_PSTYLE.subscripted
+                case _:
+                    pass
+        return DEF_PSTYLE
+
+    @property
     def font_size(self) -> float:
-        _font_size = DEF_PSTYLE.font_size
-        if TextStyle.SUB in self.styles or TextStyle.SUP in self.styles:
-            _font_size *= 0.72
-        return _font_size
+        return self.style.font_size
 
     @property
     def font_name(self) -> str:
-        _font_name = DEF_PSTYLE.font_name
-        if TextStyle.STRONG in self.styles:
-            _font_name += 'B'
-        if TextStyle.ITALIC in self.styles:
-            _font_name += 'I'
-        return _font_name
+        return self.style.font_name
 
     @property
     def width(self) -> float:

@@ -117,13 +117,58 @@ class BetterParagraphStyle(ParagraphStyle):
                                         sub_size,
                                         parent,
                                         self.font_size * (2 / 3))
+        kwargs['subscriptSize'] = self.sub_size
+
         self.sup_size = get_style_param('sup_size',
                                         sup_size,
                                         parent,
                                         self.font_size * (2 / 3))
+        kwargs['superscriptSize'] = self.sup_size
+
         self.attrs = kwargs
         self.parent = parent
         super().__init__(name, parent, **kwargs)
+        self.font_name = kwargs['fontName']
+        self.font_size = kwargs['fontSize']
+        self.leading = kwargs['leading']
+
+    @property
+    def subscripted(self) -> BetterParagraphStyle:
+        try:
+            return self._subscripted
+        except AttributeError:
+            self._subscripted = BetterParagraphStyle(
+                name=f'{self.name}-subscripted',
+                parent=self,
+                font_size=self.sub_size,
+                leading=self.leading - self.font_size
+            )
+            return self._subscripted
+
+    @property
+    def superscripted(self) -> BetterParagraphStyle:
+        try:
+            return self._superscripted
+        except AttributeError:
+            self._superscripted = BetterParagraphStyle(
+                name=f'{self.name}-superscripted',
+                parent=self,
+                font_size=self.sup_size
+            )
+            return self._superscripted
+
+    def refresh(self):
+        try:
+            del self._superscripted
+        except AttributeError:
+            pass
+
+        try:
+            del self._subscripted
+        except AttributeError:
+            pass
+
+        super().refresh()
 
     def set_attr(self, name: str, value):
         self.attrs[name] = value

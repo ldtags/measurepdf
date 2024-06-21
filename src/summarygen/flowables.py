@@ -33,38 +33,26 @@ class Reference(Paragraph):
 
 
 class ParagraphLine(Table):
-    def __init__(self,
-                 element_line: ElementLine,
-                 measure: Measure):
+    def __init__(self, element_line: ElementLine, measure: Measure):
         self.element_line = element_line
         self.measure = measure
         self.ref_link = f'{self.measure.link}/#references_list'
         col_widths = [element.width for element in element_line]
         row_heights = [DEF_PSTYLE.leading]
-        self.flowables = self.gen_flowables()
         Table.__init__(self,
                        [self.flowables],
                        colWidths=col_widths,
                        rowHeights=row_heights,
                        style=TSTYLES['ElementLine'])
 
-    def gen_flowables(self) -> list[Flowable]:
+    @property
+    def flowables(self) -> list[Flowable]:
         flowables: list[Flowable] = []
         for element in self.element_line:
             if element.type == ElemType.REF:
-                text = f'<b>{element.text}</b>'
-                flowables.append(Reference(text, self.ref_link))
+                flowables.append(Reference(element.text_xml, self.ref_link))
             else:
-                text = element.text
-                if TextStyle.SUP in element.styles:
-                    text = f'<super>{text}</super>'
-                if TextStyle.SUB in element.styles:
-                    text = f'<sub>{text}</sub>'
-                if TextStyle.STRONG in element.styles:
-                    text = f'<b>{text}</b>'
-                if TextStyle.ITALIC in element.styles:
-                    text = f'<i>{text}</i>'
-                flowables.append(Paragraph(text, style=DEF_PSTYLE))
+                flowables.append(Paragraph(element.text_xml, style=element.style))
         return flowables
 
 

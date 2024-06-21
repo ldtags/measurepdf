@@ -105,7 +105,7 @@ def _parse_element(element: PageElement) -> list[ParagraphElement]:
             for item in elements:
                 style = TextStyle(element.name)
                 if style not in item.styles:
-                    item.styles.append(style)
+                    item.styles.insert(0, style)
             return elements
         case _:
             raise RuntimeError(f'unsupported tag: {element.name}')
