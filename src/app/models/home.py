@@ -5,6 +5,7 @@ class HomeModel:
         self.offset: int = 0
         self.limit: int = 25
         self.count: int = 0
+        self.use_category: str | None = None
         self.measure_ids: list[str] = []
         self.measure_versions: dict[str, list[str]] = {}
         self.selected_measures: list[str] = []

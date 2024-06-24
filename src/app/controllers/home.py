@@ -1,9 +1,10 @@
 import os
 import re
 import sys
+import tkinter as tk
 import customtkinter as ctk
 
-from src import _ROOT, patterns
+from src import _ROOT, patterns, lookups
 from src.app.views import View
 from src.app.models import Model
 from src.summarygen import MeasureSummary
@@ -58,7 +59,7 @@ class HomeController:
         """Shows the home view."""
 
         if self.model.home.measure_ids == [] or self.model.home.count == 0:
-            measure_ids, count = self.model.connection.get_init_measure_ids()
+            measure_ids, count = self.model.connection.get_measure_ids()
             self.model.home.measure_ids = measure_ids
             self.model.home.count = count
             self.page.measure_id_list.measure_ids = measure_ids
@@ -103,18 +104,18 @@ class HomeController:
 
         return version_id in self.model.home.selected_versions
 
-    def get_measure_ids(self) -> list[str]:
-        """Returns a list of measure IDs.
-
-        Uses the `offset` and `limit` from the Home model to retrieve
-        the current set of measure IDs from the eTRM API.
+    def get_measure_ids(self) -> tuple[list[str], int]:
+        """Returns a list of measure IDs and the total count of measures.
 
         Does not handle eTRM connection errors.
         """
 
-        offset = self.model.home.offset
-        limit = self.model.home.limit
-        return self.model.connection.get_measure_ids(offset, limit)
+        ids, count = self.model.connection.get_measure_ids(
+            offset=self.model.home.offset,
+            limit=self.model.home.limit,
+            use_category=self.model.home.use_category
+        )
+        return (ids, count)
 
     def get_measure_versions(self, measure_id: str | None=None) -> list[str]:
         """Returns a list of all versions of all selected measures.
@@ -134,15 +135,33 @@ class HomeController:
 
         return versions
 
-    def update_measure_ids(self, measures: list[str] | None=None):
+    def update_measure_ids(self):
         """Sets the measure IDs in the Home view to the correct set of
         measure IDs using the `offset` and `limit` in the Home model.
 
         Does not handle eTRM connection errors.
         """
 
-        measure_ids = measures or self.get_measure_ids()
+        measure_ids, count = self.get_measure_ids()
+
+        # update the model
         self.model.home.measure_ids = measure_ids
+        self.model.home.count = count
+
+        # update the view
+        back_btn = self.page.measure_id_list.back_btn
+        if self.model.home.offset == 0 and back_btn._state == tk.NORMAL:
+            back_btn.configure(state=tk.DISABLED)
+        elif back_btn._state == tk.DISABLED:
+            back_btn.configure(state=tk.NORMAL)
+
+        next_btn = self.page.measure_id_list.next_btn
+        if (self.model.home.offset + self.model.home.limit >= count
+                and next_btn._state == tk.NORMAL):
+            next_btn.configure(state=tk.DISABLED)
+        elif next_btn._state == tk.DISABLED:
+            next_btn.configure(state=tk.NORMAL)
+
         self.page.measure_id_list.measure_ids = measure_ids
         self.page.measure_id_list.selected_measures = list(
             filter(lambda measure: self.is_selected_measure(measure),
@@ -276,11 +295,6 @@ class HomeController:
         try:
             self.model.home.increment_offset()
             self.update_measure_ids()
-            if self.model.home.offset != 0:
-                self.page.measure_id_list.back_btn.configure(state=ctk.NORMAL)
-            next_offset = self.model.home.offset + self.model.home.limit
-            if next_offset >= self.model.home.count:
-                self.page.measure_id_list.next_btn.configure(state=ctk.DISABLED)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -311,11 +325,6 @@ class HomeController:
         try:
             self.model.home.decrement_offset()
             self.update_measure_ids()
-            if self.model.home.offset == 0:
-                self.page.measure_id_list.back_btn.configure(state=ctk.DISABLED)
-            next_offset = self.model.home.offset + self.model.home.limit
-            if next_offset < self.model.home.count:
-                self.page.measure_id_list.next_btn.configure(state=ctk.NORMAL)
             return
         except NotFoundError as err:
             self.page.open_info_prompt(err.message,
@@ -375,6 +384,23 @@ class HomeController:
                                            ' of the measure being searched'
                                            ' for.',
                                            title=' Missing Statewide ID')
+                return
+
+            re_match = re.fullmatch(patterns.USE_CATEGORY, search_val)
+            if re_match != None:
+                use_category = re_match.group(2)
+                try:
+                    lookups.USE_CATEGORIES[use_category]
+                except KeyError:
+                    keys = list(lookups.USE_CATEGORIES.keys())
+                    self.page.open_info_prompt(f'{use_category} is not a'
+                                               ' valid use category.\n'
+                                               'Valid use categories are:'
+                                               f' {keys}')
+                    return
+                self.model.home.offset = 0
+                self.model.home.use_category = use_category
+                self.update_measure_ids()
                 return
 
             re_match = re.search(patterns.STWD_ID, search_val)

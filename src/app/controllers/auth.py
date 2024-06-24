@@ -58,7 +58,7 @@ class AuthController:
 
         self.model.connect(f'{token_header} {token}')
         try:
-            measure_ids, count = self.model.connection.get_init_measure_ids()
+            measure_ids, count = self.model.connection.get_measure_ids()
             self.model.home.measure_ids = measure_ids
             self.model.home.count = count
             self.view.home.measure_id_list.measure_ids = measure_ids

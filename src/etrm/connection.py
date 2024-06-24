@@ -37,6 +37,9 @@ class ETRMCache:
 
     def __init__(self):
         self.id_cache: list[str] = []
+        self.__id_count: int = -1
+        self.uc_id_caches: dict[str, list[str]] = {}
+        self.__uc_id_counts: dict[str, int] = {}
         self.version_cache: dict[str, list[str]] = {}
         self.measure_cache: dict[str, Measure] = {}
 
@@ -44,38 +47,54 @@ class ETRMCache:
                 offset: int,
                 limit: int,
                 use_category: str | None=None
-               ) -> list[str] | None:
+               ) -> tuple[list[str], int] | None:
         if use_category != None:
-            pattern = rf'^SW{use_category}[0-9]{{3}}'
-            id_cache = list(
-                filter(
-                    lambda _id: re.fullmatch(pattern, _id) != None,
-                    self.id_cache
-                )
-            )
+            try:
+                id_cache = self.uc_id_caches[use_category]
+                count = self.__uc_id_counts[use_category]
+            except KeyError:
+                return None
         else:
             id_cache = self.id_cache
+            count = self.__id_count
+
         try:
             cached_ids = id_cache[offset:offset + limit]
             if cached_ids != [] and all(cached_ids):
-                return cached_ids
+                return (cached_ids, count)
         except IndexError:
-            pass
+            return None
         return None
 
-    def add_ids(self, measure_ids: list[str], offset: int, limit: int):
-        cache_len = len(self.id_cache)
+    def add_ids(self,
+                measure_ids: list[str],
+                offset: int,
+                limit: int,
+                count: int,
+                use_category: str | None=None):
+        if use_category != None:
+            try:
+                id_cache = self.uc_id_caches[use_category]
+            except KeyError:
+                self.uc_id_caches[use_category] = []
+                id_cache = self.uc_id_caches[use_category]
+            self.__uc_id_counts[use_category] = count
+        else:
+            id_cache = self.id_cache
+            self.__id_count = count
+
+        cache_len = len(id_cache)
         if offset == cache_len:
-            self.id_cache.extend(measure_ids)
+            id_cache.extend(measure_ids)
         elif offset > cache_len:
-            self.id_cache.extend([''] * (offset - cache_len))
-            self.id_cache.extend(measure_ids)
+            id_cache.extend([''] * (offset - cache_len))
+            id_cache.extend(measure_ids)
         elif offset + limit > cache_len:
             new_ids = measure_ids[cache_len - offset:limit]
             for i in range(offset, cache_len):
-                if self.id_cache[i] == '':
-                    self.id_cache[i] = measure_ids[i - offset]
-            self.id_cache.extend(new_ids)
+                if id_cache[i] == '':
+                    id_cache[i] = measure_ids[i - offset]
+            id_cache.extend(new_ids)
 
     def get_versions(self, measure_id: str) -> list[str] | None:
         return self.version_cache.get(measure_id, None)
@@ -140,12 +159,12 @@ class ETRMConnection:
         self.cache.add_measure(measure)
         return measure
 
-    def __get_measure_ids(self,
-                          offset: int=0,
-                          limit: int=25,
-                          use_category: str | None=None
-                         ) -> MeasuresResponse:
-        """Returns the response of an eTRM API call for measure ids.
+    def get_measure_ids(self,
+                        offset: int=0,
+                        limit: int=25,
+                        use_category: str | None=None
+                       ) -> tuple[list[str], int]:
+        """Returns a list of measure ids.
 
         Errors:
             `NotFoundError` - (404) measure not found
@@ -154,6 +173,11 @@ class ETRMConnection:
 
             `UnauthorizedError` - (!200) any other error
         """
+
+        cache_response = self.cache.get_ids(offset, limit, use_category)
+        if cache_response != None:
+            return cache_response
+
         params = {
             'offset': str(offset),
             'limit': str(limit)
@@ -183,50 +207,16 @@ class ETRMConnection:
         if response.status_code != 200:
             raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
 
-        return MeasuresResponse(response.json())
-
-    def get_measure_ids(self,
-                        offset: int=0,
-                        limit: int=25,
-                        use_category: str | None=None
-                       ) -> list[str]:
-        """Returns a list of measure ids.
-
-        Errors:
-            `NotFoundError` - (404) measure not found
-
-            `ETRMResponseError` - (500) server error
-
-            `UnauthorizedError` - (!200) any other error
-        """
-
-        cached_ids = self.cache.get_ids(offset, limit, use_category)
-        if cached_ids != None:
-            return cached_ids
-
-        response_body = self.__get_measure_ids(offset, limit, use_category)
+        response_body = MeasuresResponse(response.json())
         measure_ids = list(map(lambda result: extract_id(result.url),
                                response_body.results))
-        self.cache.add_ids(measure_ids, offset, limit)
-        return measure_ids
-
-    def get_init_measure_ids(self, limit: int=25) -> tuple[list[str], int]:
-        """Returns a tuple containing the first `limit` measure ids and
-        the total number of measure ids.
-
-        Errors:
-            `NotFoundError` - (404) measure not found
-
-            `ETRMResponseError` - (500) server error
-
-            `UnauthorizedError` - (!200) any other error
-        """
-
-        response_body = self.__get_measure_ids(0, limit)
-        measure_ids = list(map(lambda result: extract_id(result.url),
-                               response_body.results))
-        self.cache.add_ids(measure_ids, 0, limit)
-        return (measure_ids, response_body.count)
+        count = response_body.count
+        self.cache.add_ids(measure_ids=measure_ids,
+                           offset=offset,
+                           limit=limit,
+                           count=count,
+                           use_category=use_category)
+        return (measure_ids, count)
 
     def get_measure_versions(self, measure_id: str) -> list[str]:
         """Returns a list of versions of the measure with the ID
