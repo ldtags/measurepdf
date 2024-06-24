@@ -14,8 +14,10 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.frames import Frame
 
+from src import lookups
 from src.etrm import ETRM_URL, ETRMConnection
 from src.etrm.models import Measure
+from src.exceptions import SummaryGenError
 from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styling import (
     BetterTableStyle,
@@ -243,6 +245,12 @@ class MeasureSummary:
         hstyle = PSTYLES['TableHeader']
         id_path = '/'.join(measure.full_version_id.split('-', 1))
         link = f'{ETRM_URL}/measure/{id_path}'
+        try:
+            ref_id = lookups.PERMUTATION_REFS[measure.use_category]
+        except KeyError:
+            raise SummaryGenError('unknown use category:'
+                                  f' {measure.use_category}')
+        reference = self.connection.get_reference(ref_id)
         data = [
             [Paragraph('Descriptions', hstyle),
                 _link('Technology Summary', f'{link}#technology-summary')],
@@ -298,7 +306,7 @@ class MeasureSummary:
             [Paragraph('Subscribe', hstyle),
                 _link('Subscriptions', f'{link}/subscriptions')],
             [Paragraph('Permutations', hstyle),
-                _link('Permutations', f'{link}/permutation-reports')]]
+                _link('Permutations', reference.source_document)]]
         tstyle = TSTYLES['SectionsTable']
         para_styles = (PSTYLES['TableHeader'], PSTYLES['Link'])
         col_widths = (1.42*inch, 4.81*inch)
