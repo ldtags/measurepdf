@@ -49,7 +49,9 @@ class SearchBar(ctk.CTkFrame):
         # self.grid_columnconfigure((2), weight=1)
 
         img_size = tuple([self.winfo_reqheight()] * 2)
-        search_img = utils.get_tkimage('search.png', size=img_size)
+        search_img = utils.get_tkimage(light_image='search-black.png',
+                                       dark_image='search-white.png',
+                                       size=img_size)
         self.search_label = ctk.CTkLabel(self.container,
                                          text='',
                                          image=search_img)
@@ -74,7 +76,7 @@ class SearchBar(ctk.CTkFrame):
             self.search_btn = ctk.CTkButton(self,
                                             text='',
                                             image=utils.get_tkimage(
-                                                'search.png',
+                                                'search-black.png',
                                                 size=(24, 24)),
                                             width=parent.winfo_width() / 8)
             # self.search_btn.grid(row=0,
