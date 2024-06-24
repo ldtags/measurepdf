@@ -229,3 +229,22 @@ class Measure:
             if table.name == name or table.api_name.lower() == name.lower():
                 return table
         return None
+
+
+class Reference:
+    def __init__(self, res_json: dict[str, Any]):
+        self.json = res_json
+        try:
+            self.reference_code = getc(res_json, 'reference_code', str)
+            self.reference_citation = getc(res_json, 'reference_citation', str)
+            self.source_reference = getc(res_json, 'source_reference', str | None)
+            self.source_url = getc(res_json, 'source_url', str | None)
+            self.reference_location = getc(res_json, 'reference_location', str | None)
+            self.reference_type = getc(res_json, 'reference_type', str)
+            self.publication_title = getc(res_json, 'publication_title', str | None)
+            self.lead_author = getc(res_json, 'lead_author', str | None)
+            self.lead_author_org = getc(res_json, 'lead_author_org', str | None)
+            self.sponsor_org = getc(res_json, 'sponsor_org', str | None)
+            self.source_document = getc(res_json, 'source_document', str)
+        except IndexError:
+            raise ETRMResponseError()
