@@ -4,7 +4,8 @@ import requests
 from src.etrm.models import (
     MeasuresResponse,
     MeasureVersionsResponse,
-    Measure
+    Measure,
+    Reference
 )
 from src.exceptions import (
     ETRMResponseError,
@@ -260,3 +261,37 @@ class ETRMConnection:
                                       response_body.versions))
         self.cache.add_versions(measure_id, measure_versions)
         return list(reversed(measure_versions))
+
+    def get_reference(self, reference: str) -> Reference:
+        """Returns the reference associated with `reference`
+
+        Errors:
+            `NotFoundError` - (404) reference not found
+
+            `ETRMResponseError` - (500) server error
+
+            `UnauthorizedError` - (!200) any other error
+        """
+
+        headers = {
+            'Authorization': self.auth_token
+        }
+
+        url = f'{API_URL}/references/{reference}/'
+        try:
+            response = requests.get(url, headers=headers)
+        except requests.exceptions.ConnectionError as err:
+            raise ConnectionError from err
+
+        if response.status_code == 404:
+            raise NotFoundError(f'No reference with the id {reference}'
+                                ' was found')
+
+        if response.status_code == 500:
+            raise ETRMResponseError('Server error occurred while retrieving'
+                                    f' reference {reference}')
+
+        if response.status_code != 200:
+            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
+
+        return Reference(response.json())
