@@ -186,19 +186,40 @@ class MeasureSummary:
         self.story.add(header)
         self.story.add(sections)
 
+    def __add_param_row(self,
+                        measure: Measure,
+                        label: str,
+                        param_name: str,
+                        data: list[tuple[str, Paragraph]]):
+            param = measure.get_shared_parameter(param_name)
+            if param == None:
+                return
+
+            param_labels = ', '.join(sorted(set(param.active_labels)))
+            data.append((label, Paragraph(param_labels,
+                                          PSTYLES['SmallParagraph'])))
+
     def add_parameters_table(self, measure: Measure):
         table_header = Paragraph('Parameters:', PSTYLES['h2'])
-        data = [
-            _params_table_row(measure,
-                              'Measure Application Type',
-                              'MeasAppType'),
-            _params_table_row(measure, 'Sector', 'Sector'),
-            _params_table_row(measure, 'Building Type', 'BldgType'),
-            _params_table_row(measure, 'Building Vintage', 'BldgVint'),
-            _params_table_row(measure, 'Building Location', 'BldgLoc'),
-            _params_table_row(measure, 'Delivery Type', 'DelivType'),
-            _params_table_row(measure, 'Norm Unit', 'NormUnit')
-        ]
+        data = []
+        self.__add_param_row(measure,
+                             'Measure Application Type',
+                             'MeasAppType',
+                             data)
+        self.__add_param_row(measure, 'Sector', 'Sector', data)
+        self.__add_param_row(measure, 'Building Type', 'BldgType', data)
+        self.__add_param_row(measure, 'Building Vintage', 'BldgVint', data)
+        self.__add_param_row(measure, 'Building Location', 'BldgLoc', data)
+        self.__add_param_row(measure, 'Delivery Type', 'DelivType', data)
+        self.__add_param_row(measure, 'Norm Unit', 'NormUnit', data)
+        self.__add_param_row(measure,
+                             'Electric Impact Profile ID',
+                             'E3MeaElecEndUseShape',
+                             data)
+        self.__add_param_row(measure,
+                             'Gas Impact Profile ID',
+                             'E3GasSavProfile',
+                             data)
         style = TSTYLES['ParametersTable']
         col_widths = (2.26*inch, 3.98*inch)
         base_height = 0.24*inch + style.top_padding + style.bottom_padding
