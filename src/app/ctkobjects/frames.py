@@ -7,3 +7,5 @@ class Frame(ctk.CTkFrame):
         super().__init__(parent, **kwargs)
 
         self.parent = parent
+
+        self.bind('<Button-1>', lambda _: self.focus())

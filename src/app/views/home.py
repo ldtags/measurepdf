@@ -18,11 +18,11 @@ from src.app.ctkobjects import (
 )
 
 
-class HomePage(ctk.CTkFrame):
-    def __init__(self, parent: ctk.CTkFrame, **kwargs):
+class HomePage(Frame):
+    def __init__(self, parent: tk.Frame, **kwargs):
         super().__init__(parent, **kwargs)
 
-        self.grid(row=0, column=0, sticky=ctk.NSEW)
+        self.grid(row=0, column=0, sticky=tk.NSEW)
 
         self.parent = parent
         self.prompt: PromptWindow | None = None
@@ -35,11 +35,6 @@ class HomePage(ctk.CTkFrame):
                              anchor=tk.NW,
                              fill=tk.BOTH,
                              expand=True)
-
-        self.controls_frame = ControlsFrame(self)
-        self.controls_frame.pack(side=tk.BOTTOM,
-                                 anchor=tk.SW,
-                                 fill=tk.X)
 
     @property
     def measure_id_list(self) -> MeasureListFrame:
@@ -126,17 +121,17 @@ class HomePage(ctk.CTkFrame):
         return result
 
 
-class MainFrame(ctk.CTkFrame):
+class MainFrame(Frame):
     def __init__(self, parent: tk.Frame, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.grid_columnconfigure((0, 1, 2),
                                   weight=1,
                                   uniform='HomePage')
+        self.grid_rowconfigure((0), weight=1)
 
         self.measure_id_list = MeasureListFrame(self)
         self.measure_id_list.grid(row=0,
-                                  rowspan=3,
                                   column=0,
                                   sticky=ctk.NSEW,
                                   padx=(20, 20),
@@ -144,7 +139,6 @@ class MainFrame(ctk.CTkFrame):
 
         self.measure_version_list = MeasureVersionsFrame(self)
         self.measure_version_list.grid(row=0,
-                                       rowspan=3,
                                        column=1,
                                        sticky=ctk.NSEW,
                                        padx=(20, 20),
@@ -152,15 +146,14 @@ class MainFrame(ctk.CTkFrame):
 
         self.measures_selection_list = SelectedMeasuresFrame(self)
         self.measures_selection_list.grid(row=0,
-                                          rowspan=3,
                                           column=2,
                                           sticky=ctk.NSEW,
                                           padx=(20, 20),
                                           pady=(20, 20))
 
 
-class MeasureListFrame(ctk.CTkFrame):
-    def __init__(self, parent: HomePage, **kwargs):
+class MeasureListFrame(Frame):
+    def __init__(self, parent: tk.Frame, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.grid_rowconfigure((0, 2), weight=0)
@@ -180,7 +173,7 @@ class MeasureListFrame(ctk.CTkFrame):
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
-                             sticky=ctk.NSEW,
+                             sticky=tk.NSEW,
                              padx=(10, 10),
                              pady=(10, 10))
 
@@ -188,17 +181,17 @@ class MeasureListFrame(ctk.CTkFrame):
         self.measure_frame.grid(row=1,
                                 column=0,
                                 columnspan=3,
-                                sticky=ctk.NSEW,
+                                sticky=tk.NSEW,
                                 padx=(10, 10),
                                 pady=(0, 10))
 
         self.back_btn = ctk.CTkButton(self,
                                       text='Back',
-                                      state=ctk.DISABLED,
+                                      state=tk.DISABLED,
                                       font=fonts.BODY)
         self.back_btn.grid(row=2,
                            column=0,
-                           sticky=ctk.SW,
+                           sticky=tk.SW,
                            padx=(10, 10),
                            pady=(0, 10))
         self.back_btn_tooltip = ToolTip(self.back_btn,
@@ -209,7 +202,7 @@ class MeasureListFrame(ctk.CTkFrame):
                                       font=fonts.BODY)
         self.next_btn.grid(row=2,
                            column=2,
-                           sticky=ctk.SE,
+                           sticky=tk.SE,
                            padx=(10, 10),
                            pady=(0, 10))
         self.next_btn_tooltip = ToolTip(self.next_btn,
@@ -232,8 +225,8 @@ class MeasureListFrame(ctk.CTkFrame):
         self.measure_frame.selected_items = items
 
 
-class MeasureVersionsFrame(ctk.CTkFrame):
-    def __init__(self, parent: HomePage, **kwargs):
+class MeasureVersionsFrame(Frame):
+    def __init__(self, parent: tk.Frame, **kwargs):
         super().__init__(parent, **kwargs)
 
         self.grid_rowconfigure((0), weight=0)
@@ -256,7 +249,7 @@ class MeasureVersionsFrame(ctk.CTkFrame):
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
-                             sticky=ctk.NSEW,
+                             sticky=tk.NSEW,
                              padx=(10, 10),
                              pady=(10, 10))
 
@@ -264,7 +257,7 @@ class MeasureVersionsFrame(ctk.CTkFrame):
         self.version_frame.grid(row=1,
                                 column=0,
                                 columnspan=3,
-                                sticky=ctk.NSEW,
+                                sticky=tk.NSEW,
                                 padx=(10, 10),
                                 pady=(0, 10))
 
@@ -290,14 +283,14 @@ class MeasureVersionsFrame(ctk.CTkFrame):
         self.version_frame.selected_items = items
 
 
-class SelectedMeasuresFrame(ctk.CTkFrame):
-    def __init__(self, master: HomePage, **kwargs):
+class SelectedMeasuresFrame(Frame):
+    def __init__(self, master: tk.Frame, **kwargs):
         super().__init__(master, **kwargs)
 
         self.grid_rowconfigure((0, 2), weight=0)
         self.grid_rowconfigure((1), weight=1)
-        self.grid_columnconfigure((0), weight=0)
-        self.grid_columnconfigure((1, 2), weight=0)
+        self.grid_columnconfigure((0), weight=1)
+        self.grid_columnconfigure((1, 2), weight=1)
 
         self.search_bar = SearchBar(self,
                                     placeholder='Add a measure...',
@@ -308,7 +301,7 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
-                             sticky=ctk.NSEW,
+                             sticky=tk.NSEW,
                              padx=(10, 10),
                              pady=(10, 10))
 
@@ -316,7 +309,7 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
         self.measures_frame.grid(row=1,
                                  column=0,
                                  columnspan=3,
-                                 sticky=ctk.NSEW,
+                                 sticky=tk.NSEW,
                                  padx=(10, 10),
                                  pady=(0, 10))
 
@@ -328,7 +321,7 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
                                        state='disabled')
         self.clear_btn.grid(row=2,
                             column=0,
-                            sticky=ctk.NSEW,
+                            sticky=tk.NSEW,
                             padx=(10, 10),
                             pady=(0, 10))
         self.clear_tooltip = ToolTip(self.clear_btn,
@@ -341,7 +334,7 @@ class SelectedMeasuresFrame(ctk.CTkFrame):
         self.add_btn.grid(row=2,
                           column=1,
                           columnspan=2,
-                          sticky=ctk.NSEW,
+                          sticky=tk.NSEW,
                           padx=(10, 10),
                           pady=(0, 10))
         self.add_tooltip = ToolTip(self.add_btn,

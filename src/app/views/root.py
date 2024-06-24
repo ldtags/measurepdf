@@ -4,7 +4,7 @@ from src import asset_path
 from src.app import themes
 
 
-ctk.set_default_color_theme(themes.get_theme('default'))
+ctk.set_default_color_theme('dark-blue')
 ctk.set_appearance_mode('system')
 
 

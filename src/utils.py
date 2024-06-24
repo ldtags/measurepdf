@@ -1,5 +1,5 @@
+import PIL.Image as Image
 import customtkinter as ctk
-from PIL import Image
 from typing import Type, TypeVar, overload, NewType, get_args, get_origin, Any
 from types import UnionType, NoneType
 
@@ -133,4 +133,5 @@ def get_tkimage(file_name: str,
                 size: tuple[int, int] | None=None
                ) -> ctk.CTkImage:
     file_path = asset_path(file_name, 'images')
-    return ctk.CTkImage(Image.open(file_path), size=size)
+    image = Image.open(file_path)
+    return ctk.CTkImage(light_image=image, dark_image=image, size=size)
