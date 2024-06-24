@@ -13,7 +13,7 @@ connection = etrm.ETRMConnection(config['etrm']['type'] + ' ' + config['etrm']['
 
 def build_summary(measure_ids: list[str]):
     dir_path = os.path.join(_ROOT, '..', 'summaries')
-    measure_pdf = summary.MeasureSummary(dir_path)
+    measure_pdf = summary.MeasureSummary(dir_path, connection)
     print('measure pdf object created', file=sys.stderr)
 
     for measure_id in measure_ids:

@@ -611,7 +611,9 @@ class HomeController:
 
         error: Exception | None = None
         try:
-            summary = MeasureSummary(dir_path=dir_path, file_name=file_name)
+            summary = MeasureSummary(dir_path=dir_path,
+                                     file_name=file_name,
+                                     connection=self.model.connection)
             for measure_id in self.model.home.selected_versions:
                 self.page.update_prompt(f'Retrieving measure {measure_id}...')
                 measure = self.model.connection.get_measure(measure_id)

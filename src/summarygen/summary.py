@@ -14,7 +14,7 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.frames import Frame
 
-from src.etrm import ETRM_URL
+from src.etrm import ETRM_URL, ETRMConnection
 from src.etrm.models import Measure
 from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styling import (
@@ -128,9 +128,11 @@ def calc_row_heights(data: list[list[str | Paragraph]],
 class MeasureSummary:
     def __init__(self,
                  dir_path: str,
+                 connection: ETRMConnection,
                  file_name: str='measure_summary',
                  override: bool=True):
         self.measures: list[Measure] = []
+        self.connection = connection
         self.story = Story()
         if os.path.exists(dir_path):
             self.dir_path = dir_path
