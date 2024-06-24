@@ -1,7 +1,55 @@
+import tkinter as tk
 import customtkinter as ctk
-from typing import Callable
+from typing import Callable, Literal
 
 from src import utils
+from src.exceptions import GUIError
+
+
+class Toplevel(ctk.CTkToplevel):
+    def __init__(self,
+                 parent: ctk.CTkFrame,
+                 position: Literal['centered', 'anchored']='centered',
+                 anchor: ctk.CTkBaseClass | None=None,
+                 *args,
+                 **kwargs):
+        super().__init__(parent, *args, **kwargs)
+
+        self.parent = parent
+        self.__position = position
+        self.__anchor = anchor
+
+        self.iconbitmap(utils.asset_path('etrm.ico', 'images'))
+        self.deiconify()
+        self.lift()
+        self.resizable(width=False, height=False)
+
+        self.bind('<Button-1>', lambda _: self.focus())
+
+    def place(self):
+        self.wait_visibility()
+        match self.__position:
+            case 'centered':
+                self.parent.wait_visibility()
+                x = self.parent.winfo_x()
+                x += self.parent.winfo_width() // 2 - self.winfo_width() // 2
+                y = self.parent.winfo_y()
+                y += self.parent.winfo_height() // 2 - self.winfo_height() // 2
+                self.geometry(f'+{x}+{y}')
+            case 'anchored':
+                if self.__anchor == None:
+                    raise GUIError('Cannot place an anchor positioned'
+                                   ' Toplevel without an anchor')
+                if not self.__anchor.winfo_exists():
+                    raise GUIError(f'Toplevel anchor {self.__anchor}'
+                                   ' does not exist')
+                self.__anchor.wait_visibility()
+                x = self.__anchor.winfo_x()
+                y = self.__anchor.winfo_y() + self.__anchor.winfo_height()
+                self.geometry(f'+{x}+{y}')
+            case _pos:
+                raise GUIError(f'{_pos} is not a valid Toplevel positioning.'
+                               '\nValid positionings: centered, anchored')
 
 
 class PromptWindow(ctk.CTkToplevel):

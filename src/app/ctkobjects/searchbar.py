@@ -3,9 +3,10 @@ import customtkinter as ctk
 
 from src import utils
 from src.app import fonts
+from src.app.ctkobjects.frames import Frame
 
 
-class SearchBar(ctk.CTkFrame):
+class SearchBar(Frame):
     def __init__(self,
                  parent: ctk.CTkFrame,
                  placeholder: str='',

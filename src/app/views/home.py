@@ -3,6 +3,7 @@ import tkinter as tk
 import tkinter.ttk as ttk
 import customtkinter as ctk
 
+from src import utils
 from src.app import styles, fonts
 from src.app.ctkobjects import (
     ScrollableFrame,
@@ -14,7 +15,8 @@ from src.app.ctkobjects import (
     FileDialogueWindow,
     ToolTip,
     Frame,
-    Button
+    Button,
+    Toplevel
 )
 
 
@@ -160,14 +162,48 @@ class MeasureListFrame(Frame):
         self.grid_rowconfigure((1), weight=1)
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
-        self.search_bar = SearchBar(self,
+        self.search_container = ctk.CTkFrame(self,
+                                             fg_color=self._fg_color)
+        self.search_container.grid(row=0,
+                                   column=0,
+                                   columnspan=3,
+                                   sticky=tk.NSEW,
+                                   padx=(10, 10),
+                                   pady=(10, 10))
+
+        self.search_bar = SearchBar(self.search_container,
                                     placeholder='Search for a measure...')
-        self.search_bar.grid(row=0,
-                             column=0,
-                             columnspan=3,
-                             sticky=tk.NSEW,
-                             padx=(10, 10),
-                             pady=(10, 10))
+        self.search_bar.pack(side=tk.LEFT,
+                             anchor=tk.NW,
+                             fill=tk.BOTH,
+                             expand=True,
+                             padx=(0, 5))
+
+        self.search_bar.update()
+        img_size = tuple([self.search_bar.search_bar._current_height - 2] * 2)
+        # filter_img = utils.get_tkimage(light_image='filter-black.png',
+        #                                dark_image='filter-white.png',
+        #                                size=img_size)
+        # self.filter_btn = ctk.CTkButton(self.search_container,
+        #                                 image=filter_img,
+        #                                 height=img_size[1],
+        #                                 width=img_size[0],
+        #                                 text='',
+        #                                 cursor='hand2')
+        # self.filter_btn.pack(side=tk.LEFT,
+        #                      anchor=tk.NW,
+        #                      padx=(5, 0))
+        reset_img = utils.get_tkimage(light_image='reset.png',
+                                      size=img_size)
+        self.reset_btn = ctk.CTkButton(self.search_container,
+                                       image=reset_img,
+                                       height=img_size[1],
+                                       width=img_size[0],
+                                       text='',
+                                       cursor='hand2')
+        self.reset_btn.pack(side=tk.LEFT,
+                            anchor=tk.NW,
+                            padx=(5, 0))
 
         self.measure_frame = ScrollableCheckBoxFrame(self)
         self.measure_frame.grid(row=1,
@@ -325,29 +361,3 @@ class SelectedMeasuresFrame(Frame):
     @measures.setter
     def measures(self, items: list[str]):
         self.measures_frame.items = items
-
-
-class ControlsFrame(Frame):
-    def __init__(self, parent: tk.Frame, **kwargs):
-        super().__init__(parent, **kwargs)
-
-        self.separator = ttk.Separator(self)
-        self.separator.pack(side=tk.TOP,
-                            anchor=tk.NW,
-                            fill=tk.X)
-
-        self.start_btn = Button(self,
-                                text='Create Summary',
-                                font=fonts.BODY)
-        self.start_btn.pack(side=tk.RIGHT,
-                            anchor=tk.E,
-                            padx=(10, 10),
-                            pady=(10, 10))
-
-        self.close_btn = Button(self,
-                                text='Close',
-                                font=fonts.BODY)
-        self.close_btn.pack(side=tk.RIGHT,
-                            anchor=tk.E,
-                            padx=(10, 10),
-                            pady=(10, 10))

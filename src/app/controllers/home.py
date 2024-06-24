@@ -150,15 +150,16 @@ class HomeController:
 
         # update the view
         back_btn = self.page.measure_id_list.back_btn
-        if self.model.home.offset == 0 and back_btn._state == tk.NORMAL:
-            back_btn.configure(state=tk.DISABLED)
+        if self.model.home.offset == 0:
+            if back_btn._state == tk.NORMAL:
+                back_btn.configure(state=tk.DISABLED)
         elif back_btn._state == tk.DISABLED:
             back_btn.configure(state=tk.NORMAL)
 
         next_btn = self.page.measure_id_list.next_btn
-        if (self.model.home.offset + self.model.home.limit >= count
-                and next_btn._state == tk.NORMAL):
-            next_btn.configure(state=tk.DISABLED)
+        if self.model.home.offset + self.model.home.limit >= count:
+            if next_btn._state == tk.NORMAL:
+                next_btn.configure(state=tk.DISABLED)
         elif next_btn._state == tk.DISABLED:
             next_btn.configure(state=tk.NORMAL)
 
@@ -341,13 +342,15 @@ class HomeController:
                                        title=' Connection Error')
         self.model.home.increment_offset()
 
-    def reset_ids(self):
+    def reset_ids(self, *args):
         """Resets the measure IDs frame and selected measure in the
         Home view and the selected measure in the Home model.
 
         Opens an info popup on error defining which error occurred.
         """
 
+        self.model.home.use_category = None
+        self.model.home.offset = 0
         self.model.home.selected_measures = []
         self.page.measure_id_list.selected_measures = []
         self.page.measure_version_list.versions = []
@@ -425,6 +428,7 @@ class HomeController:
         self.page.measure_id_list.back_btn.configure(command=self.prev_id_page)
         self.page.measure_id_list.search_bar.search_bar.bind('<Return>', self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
+        self.page.measure_id_list.reset_btn.configure(command=self.reset_ids)
 
     def update_measure_selections(self):
         """Sets the selected measure versions in the Home view to the
