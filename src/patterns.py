@@ -4,11 +4,12 @@
 import re
 
 
-__UC_ID = r'^SW([A-Za-z]{2})$'
+__UC_ID = r'^((?:SW)?([A-Za-z]{2}))$'
 UC_ID = re.compile(__UC_ID)
 """Statewide Use Category ID RegEx Pattern
 
-Group 1: Use Category
+Group 1: Statewide ID
+Group 2: Use Category
 """
 
 
