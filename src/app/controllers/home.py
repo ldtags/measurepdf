@@ -413,7 +413,11 @@ class HomeController:
         selected.
         """
 
-        self.page.measures_selection_list.measures = self.model.home.selected_versions
+        self.page.measures_selection_list.measures = sorted(
+            self.model.home.selected_versions,
+            key=self.__version_key,
+            reverse=True
+        )
         if self.model.home.selected_versions != []:
             self.page.measures_selection_list.clear_btn.configure(state=ctk.NORMAL)
             self.page.measures_selection_list.add_btn.configure(state=ctk.NORMAL)
