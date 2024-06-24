@@ -1,5 +1,5 @@
+import PIL.Image as Image
 import customtkinter as ctk
-from PIL import Image
 from typing import Type, TypeVar, overload, NewType, get_args, get_origin, Any
 from types import UnionType, NoneType
 
@@ -129,8 +129,16 @@ def getc(o: dict,
         raise TypeError(f'unsupported type: {_origin}')
 
 
-def get_tkimage(file_name: str,
-                size: tuple[int, int] | None=None
+def get_tkimage(light_image: str,
+                dark_image: str | None=None,
+                size: tuple[int, int]=(20, 20)
                ) -> ctk.CTkImage:
-    file_path = asset_path(file_name, 'images')
-    return ctk.CTkImage(Image.open(file_path), size=size)
+    light_path = asset_path(light_image, 'images')
+    _light_image = Image.open(light_path)
+    _dark_image = None
+    if dark_image != None:
+        dark_path = asset_path(dark_image, 'images')
+        _dark_image = Image.open(dark_path)
+    return ctk.CTkImage(light_image=_light_image,
+                        dark_image=_dark_image or _light_image,
+                        size=size)

@@ -116,14 +116,19 @@ class HomeController:
         limit = self.model.home.limit
         return self.model.connection.get_measure_ids(offset, limit)
 
-    def get_measure_versions(self) -> list[str]:
+    def get_measure_versions(self, measure_id: str | None=None) -> list[str]:
         """Returns a list of all versions of all selected measures.
 
         Does not handle eTRM connection errors.
         """
 
-        versions = []
-        for id in self.model.home.selected_measures:
+        if measure_id != None:
+            selected_measures = [measure_id]
+        else:
+            selected_measures = self.model.home.selected_measures
+
+        versions: list[str] = []
+        for id in selected_measures:
             id_versions = self.model.connection.get_measure_versions(id)
             versions.extend(id_versions)
 
@@ -143,6 +148,41 @@ class HomeController:
             filter(lambda measure: self.is_selected_measure(measure),
                    measure_ids))
 
+    def __version_key(self, full_version_id: str) -> int:
+        """Sorting key for measure versions."""
+
+        re_match = re.search(patterns.VRSN_ID, full_version_id)
+        if re_match == None:
+            return -1
+
+        key = 0
+        statewide_id = re_match.group(2)
+        version_id = re_match.group(3)
+
+        re_match = re.search(patterns.STWD_ID, statewide_id)
+        if re_match == None:
+            return -1
+
+        measure_type = re_match.group(2)
+        key += sum([ord(c) * -1000 for c in measure_type])
+        use_category = re_match.group(3)
+        key += sum([ord(c) * -1000 for c in use_category])
+
+        uc_version = re_match.group(4)
+        key += int(uc_version) * -100
+
+        try:
+            version, _ = version_id.split('-', 1)
+            version = int(version)
+            draft = 0
+        except ValueError:
+            version = int(version_id)
+            draft = 1
+
+        key += version * 10
+        key += draft
+        return key
+
     def update_measure_versions(self, versions: list[str] | None=None):
         """Sets the measure version IDs in the Home view to the versions
         of the currently selected measures.
@@ -150,8 +190,28 @@ class HomeController:
         Does not handle eTRM connection errors.
         """
 
-        measure_versions = versions or self.get_measure_versions()
-        self.model.home.measure_versions = measure_versions
+        if versions != None:
+            measure_versions = versions
+            for version in measure_versions:
+                re_match = re.search(patterns.VRSN_ID, version)
+                if re_match == None:
+                    continue
+                statewide_id = re_match.group(2)
+                try:
+                    self.model.home.measure_versions[statewide_id].append(version)
+                except KeyError:
+                    self.model.home.measure_versions[statewide_id] = [version]
+        else:
+            measure_versions = []
+            for id in self.model.home.selected_measures:
+                id_versions = self.get_measure_versions(id)
+                self.model.home.measure_versions[id] = id_versions
+
+        measure_versions = sorted(
+            self.model.home.all_versions,
+            key=self.__version_key,
+            reverse=True
+        )
         self.page.measure_version_list.versions = measure_versions
         self.page.measure_version_list.selected_versions = list(
             filter(lambda version: self.is_selected_version(version),
@@ -182,6 +242,7 @@ class HomeController:
                        set(prev_selections).difference(cur_selections)))
             for measure_id in unselected:
                 self.model.home.selected_measures.remove(measure_id)
+                self.model.home.measure_versions[measure_id] = []
 
             self.update_measure_versions()
             return
@@ -336,10 +397,8 @@ class HomeController:
         self.page.measure_id_list.measure_frame.set_command(self.select_measure_id)
         self.page.measure_id_list.next_btn.configure(command=self.next_id_page)
         self.page.measure_id_list.back_btn.configure(command=self.prev_id_page)
-        self.page.measure_id_list.search_bar.search_btn.configure(command=self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Return>', self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
-        self.page.measure_id_list.search_bar.reset_btn.configure(command=self.reset_ids)
 
     def update_measure_selections(self):
         """Sets the selected measure versions in the Home view to the
@@ -352,7 +411,11 @@ class HomeController:
         selected.
         """
 
-        self.page.measures_selection_list.measures = self.model.home.selected_versions
+        self.page.measures_selection_list.measures = sorted(
+            self.model.home.selected_versions,
+            key=self.__version_key,
+            reverse=True
+        )
         if self.model.home.selected_versions != []:
             self.page.measures_selection_list.clear_btn.configure(state=ctk.NORMAL)
             self.page.measures_selection_list.add_btn.configure(state=ctk.NORMAL)
@@ -451,10 +514,8 @@ class HomeController:
         """
 
         self.page.measure_version_list.version_frame.set_command(self.select_measure_version)
-        self.page.measure_version_list.search_bar.search_btn.configure(command=self.search_measure_versions)
         self.page.measure_version_list.search_bar.search_bar.bind('<Return>', self.search_measure_versions)
         self.page.measure_version_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
-        self.page.measure_version_list.search_bar.reset_btn.configure(command=self.reset_versions)
 
     def clear_selected_measures(self):
         """Clears all selected measures from the Home view and Home model."""
@@ -600,6 +661,5 @@ class HomeController:
 
         self.page.measures_selection_list.add_btn.configure(command=self.create_summary)
         self.page.measures_selection_list.clear_btn.configure(command=self.clear_selected_measures)
-        self.page.measures_selection_list.search_bar.add_btn.configure(command=self.add_measure_version)
         self.page.measures_selection_list.search_bar.search_bar.bind('<Return>', self.add_measure_version)
         self.page.measures_selection_list.search_bar.search_bar.bind('<Escape>', self.unfocus)

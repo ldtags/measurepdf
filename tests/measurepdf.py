@@ -24,12 +24,16 @@ def build_summary(measure_ids: list[str]):
     print(f'measure summary {measure_pdf.file_name} was successfully created')
 
 
-def test():
+def test(measures: list[str]):
     start = time.time()
-    build_summary(['SWWH025-07'])
+    build_summary(measures)
     elapsed = time.time() - start
     print(f'took {elapsed}s', file=sys.stderr)
 
 
 if __name__ == '__main__':
-    test()
+    if sys.argv == []:
+        print('Cannot run the measurepdf module test without measures',
+              file=sys.stderr)
+        exit(1)
+    test(sys.argv)
