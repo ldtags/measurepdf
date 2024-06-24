@@ -13,19 +13,17 @@ class ElementLine:
                  max_width: float | None=INNER_WIDTH):
         self.elements: list[ParagraphElement] = elements or []
         self.max_width = max_width
-        self.widths: list[float] = [elem.width for elem in self.elements]
-        self.heights: list[float] = [elem.height for elem in self.elements]
         if self.max_width != None and self.width > self.max_width:
             raise WidthExceededError(f'Max width of {self.max_width} exceeded')
         self.__index: int = 0
 
     @property
     def width(self) -> float:
-        return math.fsum(self.widths)
+        return math.fsum([elem.width for elem in self.elements])
 
     @property
     def height(self) -> float:
-        return max(self.heights)
+        return max([elem.height for elem in self.elements])
 
     def __getitem__(self, i: int) -> ParagraphElement:
         return self.elements[i]
@@ -55,9 +53,6 @@ class ElementLine:
         except (IndexError, ElementJoinError):
             self.elements.append(element)
 
-        self.widths.append(element.width)
-        self.heights.append(element.height)
-
     def add(self, element: ParagraphElement):
         if element.text == '':
             return
@@ -75,9 +70,7 @@ class ElementLine:
             self.__add(new_elem)
 
     def pop(self, index: int=-1) -> ParagraphElement:
-        element = self.elements.pop(index)
-        self.widths.pop(index)
-        return element
+        return self.elements.pop(index)
 
 
 class Story:
