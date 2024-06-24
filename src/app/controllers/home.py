@@ -172,10 +172,12 @@ class HomeController:
         key += int(uc_version) * -100
 
         try:
-            version, draft = (int(v) for v in version_id.split('-', 1))
+            version, _ = version_id.split('-', 1)
+            version = int(version)
+            draft = 0
         except ValueError:
             version = int(version_id)
-            draft = 0
+            draft = 1
 
         key += version * 10
         key += draft
