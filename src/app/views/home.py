@@ -161,15 +161,7 @@ class MeasureListFrame(Frame):
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.search_bar = SearchBar(self,
-                                    placeholder='Search for a measure...',
-                                    include_search_btn=True,
-                                    include_reset_btn=True,
-                                    search_tooltip='Search for a'
-                                                   ' measure by entering that'
-                                                   ' measure\'s statewide id'
-                                                   ' (i.e., SWAP001)',
-                                    reset_tooltip='Reset the currently shown'
-                                                  ' measures')
+                                    placeholder='Search for a measure...')
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
@@ -234,18 +226,7 @@ class MeasureVersionsFrame(Frame):
         self.grid_columnconfigure((0, 1, 2), weight=1)
 
         self.search_bar = SearchBar(self,
-                                    placeholder='Search for a version...',
-                                    include_search_btn=True,
-                                    include_reset_btn=True,
-                                    search_tooltip='Search for one of the'
-                                                   ' currently selected'
-                                                   ' measure\'s versions by'
-                                                   ' entering the full version'
-                                                   ' id (i.e., SWAP001-03)',
-                                    reset_tooltip='Reset the measure versions'
-                                                  ' shown below to all of the'
-                                                  ' selected measure\'s'
-                                                  ' versions')
+                                    placeholder='Search for a version...')
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,
@@ -293,11 +274,7 @@ class SelectedMeasuresFrame(Frame):
         self.grid_columnconfigure((1, 2), weight=1)
 
         self.search_bar = SearchBar(self,
-                                    placeholder='Add a measure...',
-                                    include_add_btn=True,
-                                    add_tooltip='Select a measure version'
-                                                ' by entering a full measure'
-                                                ' id (i.e., SWAP001-03)')
+                                    placeholder='Add a measure...')
         self.search_bar.grid(row=0,
                              column=0,
                              columnspan=3,

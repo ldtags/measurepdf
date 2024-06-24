@@ -3,19 +3,12 @@ import customtkinter as ctk
 
 from src import utils
 from src.app import fonts
-from src.app.ctkobjects.tooltip import ToolTip
 
 
 class SearchBar(ctk.CTkFrame):
     def __init__(self,
                  parent: ctk.CTkFrame,
                  placeholder: str='',
-                 include_search_btn: bool=False,
-                 include_reset_btn: bool=False,
-                 include_add_btn: bool=False,
-                 search_tooltip: str | None=None,
-                 reset_tooltip: str | None=None,
-                 add_tooltip: str | None=None,
                  **kwargs):
         super().__init__(parent, **kwargs)
 
@@ -44,10 +37,6 @@ class SearchBar(ctk.CTkFrame):
                             anchor=tk.NW,
                             fill=tk.X)
 
-        # self.grid_rowconfigure((1), weight=1)
-        # self.grid_columnconfigure((0, 1), weight=1)
-        # self.grid_columnconfigure((2), weight=1)
-
         img_size = tuple([self.winfo_reqheight()] * 2)
         search_img = utils.get_tkimage(light_image='search-black.png',
                                        dark_image='search-white.png',
@@ -70,49 +59,6 @@ class SearchBar(ctk.CTkFrame):
                              expand=True,
                              padx=(0, _border_width + 3),
                              pady=(_border_width, _border_width))
-
-
-        if include_search_btn:
-            self.search_btn = ctk.CTkButton(self,
-                                            text='',
-                                            image=utils.get_tkimage(
-                                                'search-black.png',
-                                                size=(24, 24)),
-                                            width=parent.winfo_width() / 8)
-            # self.search_btn.grid(row=0,
-            #                      column=entry_width,
-            #                      padx=(5, 0))
-            if search_tooltip != None:
-                self.search_tooltip = ToolTip(self.search_btn,
-                                              message=search_tooltip)
-
-        if include_reset_btn:
-            self.reset_btn = ctk.CTkButton(self,
-                                           text='',
-                                           image=utils.get_tkimage(
-                                                'reset.png',
-                                                size=(24, 24)),
-                                           width=parent.winfo_width() / 8)
-            # self.reset_btn.grid(row=0,
-            #                     column=entry_width,
-            #                     padx=(5, 0))
-            if reset_tooltip != None:
-                self.reset_tooltip = ToolTip(self.reset_btn,
-                                             message=reset_tooltip)
-
-        if include_add_btn:
-            self.add_btn = ctk.CTkButton(self,
-                                         text='',
-                                         image=utils.get_tkimage(
-                                                'plus.png',
-                                                size=(24, 24)),
-                                         width=parent.winfo_width() / 8)
-            # self.add_btn.grid(row=0,
-            #                   column=entry_width,
-            #                   padx=(5, 0))
-            if add_tooltip != None:
-                self.add_tooltip = ToolTip(self.add_btn,
-                                           message=add_tooltip)
 
     def get(self) -> str:
         return self.search_bar.get()

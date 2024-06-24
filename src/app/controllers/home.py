@@ -397,10 +397,8 @@ class HomeController:
         self.page.measure_id_list.measure_frame.set_command(self.select_measure_id)
         self.page.measure_id_list.next_btn.configure(command=self.next_id_page)
         self.page.measure_id_list.back_btn.configure(command=self.prev_id_page)
-        self.page.measure_id_list.search_bar.search_btn.configure(command=self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Return>', self.search_measure_ids)
         self.page.measure_id_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
-        self.page.measure_id_list.search_bar.reset_btn.configure(command=self.reset_ids)
 
     def update_measure_selections(self):
         """Sets the selected measure versions in the Home view to the
@@ -516,10 +514,8 @@ class HomeController:
         """
 
         self.page.measure_version_list.version_frame.set_command(self.select_measure_version)
-        self.page.measure_version_list.search_bar.search_btn.configure(command=self.search_measure_versions)
         self.page.measure_version_list.search_bar.search_bar.bind('<Return>', self.search_measure_versions)
         self.page.measure_version_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
-        self.page.measure_version_list.search_bar.reset_btn.configure(command=self.reset_versions)
 
     def clear_selected_measures(self):
         """Clears all selected measures from the Home view and Home model."""
@@ -665,6 +661,5 @@ class HomeController:
 
         self.page.measures_selection_list.add_btn.configure(command=self.create_summary)
         self.page.measures_selection_list.clear_btn.configure(command=self.clear_selected_measures)
-        self.page.measures_selection_list.search_bar.add_btn.configure(command=self.add_measure_version)
         self.page.measures_selection_list.search_bar.search_bar.bind('<Return>', self.add_measure_version)
         self.page.measures_selection_list.search_bar.search_bar.bind('<Escape>', self.unfocus)
