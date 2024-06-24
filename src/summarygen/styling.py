@@ -464,5 +464,7 @@ def value_table_style(data: list[list | tuple],
             table_styles.append(('BACKGROUND',
                                  (0, i),
                                  (-1, i), COLORS['ValueTableItemDark']))
+    
+    # TODO: add different colors for determinants and columns
 
     return BetterTableStyle(table_style.name, table_styles)
