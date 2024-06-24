@@ -42,7 +42,7 @@ class HomeController:
         version id.
         """
 
-        re_match = re.search(patterns.VRSN_ID, version_id)
+        re_match = re.search(patterns.VERSION_ID, version_id)
         if re_match == None:
             return None
 
@@ -151,7 +151,7 @@ class HomeController:
     def __version_key(self, full_version_id: str) -> int:
         """Sorting key for measure versions."""
 
-        re_match = re.search(patterns.VRSN_ID, full_version_id)
+        re_match = re.search(patterns.VERSION_ID, full_version_id)
         if re_match == None:
             return -1
 
@@ -193,7 +193,7 @@ class HomeController:
         if versions != None:
             measure_versions = versions
             for version in measure_versions:
-                re_match = re.search(patterns.VRSN_ID, version)
+                re_match = re.search(patterns.VERSION_ID, version)
                 if re_match == None:
                     continue
                 statewide_id = re_match.group(2)
@@ -492,7 +492,7 @@ class HomeController:
                 self.update_measure_versions(versions)
                 return
 
-            re_match = re.search(patterns.VRSN_ID, search_val)
+            re_match = re.search(patterns.VERSION_ID, search_val)
             if re_match != None:
                 stwd_id = re_match.group(2).upper()
                 versions = self.model.home.measure_versions.get(stwd_id, [])

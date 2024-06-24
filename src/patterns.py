@@ -25,7 +25,7 @@ Group 4: Use Category Version
 
 
 __VRSN_ID = r'^(([A-Za-z]{4}[0-9]{2,})-([0-9]+(?:-.+)?))$'
-VRSN_ID = re.compile(__VRSN_ID)
+VERSION_ID = re.compile(__VRSN_ID)
 """eTRM Measure Version ID Pattern
 
 Group 1: Full Version ID\n
