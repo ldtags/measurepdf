@@ -32,8 +32,8 @@ def test(measures: list[str]):
 
 
 if __name__ == '__main__':
-    if sys.argv == []:
+    if len(sys.argv) < 2:
         print('Cannot run the measurepdf module test without measures',
               file=sys.stderr)
         exit(1)
-    test(sys.argv)
+    test(sys.argv[1:])
