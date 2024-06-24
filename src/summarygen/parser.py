@@ -25,7 +25,7 @@ from reportlab.platypus import (
 )
 
 from src import _ROOT
-from src.etrm import ETRM_URL
+from src.etrm import ETRM_URL, ETRMConnection
 from src.etrm.models import Measure, ValueTable
 from src.exceptions import (
     SummaryGenError,
@@ -319,8 +319,10 @@ def gen_image(_url: str) -> Image:
 class CharacterizationParser:
     def __init__(self,
                  measure: Measure,
+                 connection: ETRMConnection,
                  name: str):
         self.measure = measure
+        self.connection = connection
         self.html = measure.characterizations[name]
         self.flowables: list[Flowable] = []
         self.width, self.height = PAGESIZE
@@ -343,30 +345,13 @@ class CharacterizationParser:
                      style=TSTYLES['ElementLine'],
                      hAlign='LEFT')
 
-    def gen_embedded_value_table(self,
-                                 vt_tag: EmbeddedValueTableTag,
-                                 table: ValueTable
-                                ) -> Table | None:
-        column_indexes: list[int] = []
-        headers: list[str] = []
-        for i, column in enumerate(table.columns):
-            if column.api_name in vt_tag.obj_info.vtconf.cids:
-                column_indexes.append(i)
-                headers.append(column.name)
-        body: list[list[str]] = []
-        for value_row in table.values:
-            row: list[str] = []
-            for index in column_indexes:
-                row.append(value_row[index])
-            body.append(row)
-        data = [headers]
-        data.extend(body)
-        if data == [[]]:
+    def gen_embedded_value_table(self, api_name: str) -> Table | None:
+        data = self.measure.get_table_data(api_name)
+        if data is None:
             return None
-
         style = value_table_style(data, embedded=True)
         col_widths = calc_col_widths(data, style)
-        row_heights = calc_row_heights(data, col_widths, style)
+        row_heights = calc_row_heights(data, style)
         return Table(data,
                      colWidths=col_widths,
                      rowHeights=row_heights,
@@ -407,7 +392,7 @@ class CharacterizationParser:
                 raise SummaryGenError(f'value table {api_name} does not exist'
                                       f' in {self.measure.full_version_id}')
             header = ValueTableHeader(table_obj.name, table_link)
-            table = self.gen_embedded_value_table(vt_tag, table_obj)
+            table = self.gen_embedded_value_table(api_name)
             if table == None:
                 return None
 

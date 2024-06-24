@@ -184,8 +184,9 @@ class MeasureSummary:
 
     def add_tech_summary(self, measure: Measure):
         header = Paragraph('Technology Summary', PSTYLES['h2'])
-        parser = CharacterizationParser(measure,
-                                        'technology_summary')
+        parser = CharacterizationParser(measure=measure,
+                                        connection=self.connection,
+                                        name='technology_summary')
         sections = parser.parse()
         self.story.add(header)
         self.story.add(sections)
@@ -218,11 +219,11 @@ class MeasureSummary:
         self.__add_param_row(measure, 'Norm Unit', 'NormUnit', data)
         self.__add_param_row(measure,
                              'Electric Impact Profile ID',
-                             'E3MeaElecEndUseShape',
+                             'electricImpactProfileID',
                              data)
         self.__add_param_row(measure,
                              'Gas Impact Profile ID',
-                             'E3GasSavProfile',
+                             'GasImpactProfileID',
                              data)
         style = TSTYLES['ParametersTable']
         col_widths = (2.26*inch, 3.98*inch)

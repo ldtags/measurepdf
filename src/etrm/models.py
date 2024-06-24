@@ -218,6 +218,12 @@ class Measure:
 
         return char_list
 
+    def get_determinant(self, name: str) -> Determinant | None:
+        for determinant in self.determinants:
+            if determinant.api_name == name or determinant.name == name:
+                return determinant
+        return None
+
     def get_shared_parameter(self, name: str) -> SharedDeterminant | None:
         for parameter in self.shared_determinant_refs:
             if parameter.version.split('-')[0] == name:
@@ -229,6 +235,32 @@ class Measure:
             if table.name == name or table.api_name.lower() == name.lower():
                 return table
         return None
+
+    def get_table_data(self, name: str) -> list[list[str]] | None:
+        table = self.get_value_table(name)
+        if table is None:
+            return None
+
+        headers: list[str] = []
+        for api_name in table.determinants:
+            determinant = self.get_determinant(api_name)
+            headers.append(determinant.name)
+        for column in table.columns:
+            headers.append(f'{column.name} ({column.unit})')
+
+        body: list[list[str]] = []
+        for row in table.values:
+            table_row: list[str] = []
+            for item in row:
+                if item is None:
+                    table_row.append('')
+                else:
+                    table_row.append(item)
+            body.append(table_row)
+
+        data = [headers]
+        data.extend(body)
+        return data
 
 
 class Reference:

@@ -160,7 +160,7 @@ class VTObjectInfo(ObjectInfo):
     def __init__(self, json_obj: dict):
         super().__init__(json_obj)
         self.api_name_unique = getc(json_obj, 'api_name_unique', str)
-        self.vtconf = getc(json_obj, 'vt_conf', VTConfig)
+        self.vtconf = getc(json_obj, 'vt_conf', VTConfig | None)
 
 
 class EmbeddedValueTableTag:
