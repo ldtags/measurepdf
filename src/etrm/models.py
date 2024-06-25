@@ -1,8 +1,8 @@
 import unicodedata
 from typing import Any
 
-from src.exceptions import ETRMResponseError
 from src.utils import getc
+from src.exceptions import ETRMResponseError
 
 
 ETRM_URL = 'https://www.caetrm.com'
@@ -235,32 +235,6 @@ class Measure:
             if table.name == name or table.api_name.lower() == name.lower():
                 return table
         return None
-
-    def get_table_data(self, name: str) -> list[list[str]] | None:
-        table = self.get_value_table(name)
-        if table is None:
-            return None
-
-        headers: list[str] = []
-        for api_name in table.determinants:
-            determinant = self.get_determinant(api_name)
-            headers.append(determinant.name)
-        for column in table.columns:
-            headers.append(f'{column.name} ({column.unit})')
-
-        body: list[list[str]] = []
-        for row in table.values:
-            table_row: list[str] = []
-            for item in row:
-                if item is None:
-                    table_row.append('')
-                else:
-                    table_row.append(item)
-            body.append(table_row)
-
-        data = [headers]
-        data.extend(body)
-        return data
 
 
 class Reference:

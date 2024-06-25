@@ -28,10 +28,12 @@ class ParagraphElement:
     def __init__(self,
                  text: str,
                  type: ElemType=ElemType.TEXT,
-                 styles: list[TextStyle] | None=None):
+                 styles: list[TextStyle] | None=None,
+                 style: BetterParagraphStyle | None=None):
         self.text = text
         self.type = type
         self.styles = styles or [TextStyle.NORMAL]
+        self.__style = style
 
     @property
     def text_xml(self) -> str:
@@ -58,8 +60,14 @@ class ParagraphElement:
 
     @property
     def style(self) -> BetterParagraphStyle:
+        if self.__style is not None:
+            return self.__style
+
         if self.type == ElemType.REF:
             return PSTYLES['ReferenceTag']
+
+        if self.type == ElemType.SPACE:
+            return PSTYLES['SmallParagraph']
 
         for style in self.styles:
             match style:
@@ -67,9 +75,17 @@ class ParagraphElement:
                     return DEF_PSTYLE.superscripted
                 case TextStyle.SUB:
                     return DEF_PSTYLE.subscripted
+                case TextStyle.STRONG:
+                    return DEF_PSTYLE.bold
+                case TextStyle.ITALIC:
+                    return DEF_PSTYLE.italic
                 case _:
                     pass
         return DEF_PSTYLE
+
+    @style.setter
+    def style(self, _style: BetterParagraphStyle):
+        self.__style = _style
 
     @property
     def font_size(self) -> float:
@@ -85,10 +101,41 @@ class ParagraphElement:
 
     @property
     def height(self) -> float:
-        return DEF_PSTYLE.leading
+        return self.style.leading
+
+    def split(self) -> list[ParagraphElement]:
+        elements: list[ParagraphElement] = []
+        words = self.text.split()
+        word_count = len(words)
+        if word_count == 0:
+            return elements
+        elif word_count == 1:
+            elements.append(self)
+            return elements
+
+        if self.text == '':
+            return elements
+
+        if self.text[0] == ' ':
+            words[0] = f' {words[0]}'
+
+        if len(self.text) > 1 and self.text[-1] == ' ':
+            words[-1] = f'{words[-1]} '
+
+        if word_count == 2:
+            elements.append(self.copy(f'{words[0]} '))
+            elements.append(self.copy(words[1]))
+        else:
+            for i, word in enumerate(words):
+                if i == 0:
+                    elem_cpy = self.copy(word)
+                else:
+                    elem_cpy = self.copy(f' {word}')
+                elements.append(elem_cpy)
+        return list(filter(lambda e: e.text != '', elements))
 
     def join(self, element: ParagraphElement):
-        if self.type == ElemType.REF:
+        if self.type == ElemType.REF or self.type == ElemType.SPACE:
             raise ElementJoinError('Cannot join reference tags')
 
         if self.type != element.type:
@@ -103,11 +150,13 @@ class ParagraphElement:
     def copy(self,
              text: str | None=None,
              type: ElemType | None=None,
-             styles: list[TextStyle] | None=None
+             styles: list[TextStyle] | None=None,
+             style: BetterParagraphStyle | None=None
             ) -> ParagraphElement:
         return ParagraphElement(text or self.text,
                                 type or self.type,
-                                styles or self.styles)
+                                styles or self.styles,
+                                style or self.style)
 
 
 class ObjectInfo:
@@ -146,7 +195,7 @@ class ReferenceTag(ParagraphElement):
         if text != None:
             ref_copy.obj_info.title = text.lower()
             ref_copy.obj_info.id = text.lower()
-            ref_copy.text = f' {text.upper()} '
+            ref_copy.text = text.upper()
         return ref_copy
 
 

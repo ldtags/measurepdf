@@ -4,18 +4,26 @@ from reportlab.platypus import Flowable, Table, KeepTogether
 
 from src.exceptions import WidthExceededError, ElementJoinError
 from src.summarygen.models import ParagraphElement, ElemType
-from src.summarygen.styling import INNER_WIDTH, INNER_HEIGHT
+from src.summarygen.styling import (
+    INNER_WIDTH,
+    INNER_HEIGHT,
+    BetterParagraphStyle
+)
 
 
 class ElementLine:
     def __init__(self,
                  elements: list[ParagraphElement] | None=None,
-                 max_width: float | None=INNER_WIDTH):
-        self.elements: list[ParagraphElement] = elements or []
+                 max_width: float | None=INNER_WIDTH,
+                 style: BetterParagraphStyle | None=None):
+        self.style = style
         self.max_width = max_width
-        if self.max_width != None and self.width > self.max_width:
-            raise WidthExceededError(f'Max width of {self.max_width} exceeded')
+        self.elements: list[ParagraphElement] = []
         self.__index: int = 0
+
+        if elements is not None:
+            for element in elements:
+                self.add(element)
 
     @property
     def width(self) -> float:
@@ -23,7 +31,15 @@ class ElementLine:
 
     @property
     def height(self) -> float:
+        if self.elements == []:
+            return 0
         return max([elem.height for elem in self.elements])
+
+    @property
+    def text(self) -> str:
+        if self.elements == []:
+            return ''
+        return ''.join([elem.text for elem in self.elements])
 
     def __getitem__(self, i: int) -> ParagraphElement:
         return self.elements[i]
@@ -44,7 +60,7 @@ class ElementLine:
         return result
 
     def __add(self, element: ParagraphElement):
-        if (self.max_width != None
+        if (self.max_width is not None
                 and element.width + self.width > self.max_width):
             raise WidthExceededError(f'Max width of {self.max_width} exceeded')
 
@@ -56,6 +72,9 @@ class ElementLine:
     def add(self, element: ParagraphElement):
         if element.text == '':
             return
+
+        if self.style is not None:
+            element.style = self.style
 
         if self.elements == []:
             new_elem = element.copy(element.text.lstrip())

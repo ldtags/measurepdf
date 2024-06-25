@@ -32,9 +32,15 @@ from src.summarygen.styling import (
 )
 from src.summarygen.flowables import NEWLINE
 from src.summarygen.rlobjects import Story
+from src.exceptions import (
+    ETRMResponseError,
+    ETRMRequestError
+)
 
 
 class FooterCanvas(Canvas):
+    """Custom canvas for adding header/footer content"""
+
     def __init__(self, *args, **kwargs):
         Canvas.__init__(self, *args, **kwargs)
         self.pages = []
@@ -75,19 +81,9 @@ class FooterCanvas(Canvas):
         self.restoreState()
 
 
-def _params_table_row(measure: Measure,
-                      label: str,
-                      param_name: str
-                     ) -> tuple[str, Paragraph]:
-    param = measure.get_shared_parameter(param_name)
-    if param == None:
-        return ('', '')
-
-    return (label, Paragraph(', '.join(sorted(set(param.active_labels))),
-                             PSTYLES['SmallParagraph']))
-
-
 def _link(display_text: str, link: str) -> Paragraph:
+    """Generates a clickable flowable that contains an external link"""
+
     return Paragraph(f'<link href=\"{link}\">{display_text}</link>',
                      PSTYLES['Link'])
 
@@ -98,6 +94,8 @@ def calc_row_heights(data: list[list[str | Paragraph]],
                      base_height: float,
                      base_widths: tuple[float, ...]
                     ) -> list[float]:
+    """Calculates row heights for static tables"""
+
     vpadding = table_style.top_padding + table_style.bottom_padding
     hpadding = table_style.left_padding + table_style.right_padding
     height = base_height + vpadding
@@ -135,6 +133,8 @@ def calc_row_heights(data: list[list[str | Paragraph]],
 
 
 class MeasureSummary:
+    """eTRM measure summary PDF generator"""
+
     def __init__(self,
                  dir_path: str,
                  connection: ETRMConnection,
@@ -206,6 +206,7 @@ class MeasureSummary:
             param = measure.get_shared_parameter(param_name)
             if param == None:
                 return
+            # change to not show field if not there
 
             param_labels = ', '.join(sorted(set(param.active_labels)))
             data.append((label, Paragraph(param_labels,
@@ -223,7 +224,7 @@ class MeasureSummary:
         self.__add_param_row(measure, 'Building Vintage', 'BldgVint', data)
         self.__add_param_row(measure, 'Building Location', 'BldgLoc', data)
         self.__add_param_row(measure, 'Delivery Type', 'DelivType', data)
-        self.__add_param_row(measure, 'Norm Unit', 'NormUnit', data)
+        self.__add_param_row(measure, 'Normalized Unit', 'NormUnit', data)
         self.__add_param_row(measure,
                              'Electric Impact Profile ID',
                              'electricImpactProfileID',
@@ -258,7 +259,11 @@ class MeasureSummary:
         except KeyError:
             raise SummaryGenError('unknown use category:'
                                   f' {measure.use_category}')
-        reference = self.connection.get_reference(ref_id)
+        try:
+            reference = self.connection.get_reference(ref_id)
+            perm_link = reference.source_document
+        except (ETRMResponseError, ETRMRequestError):
+            perm_link = f'{link}/permutation-report'
         data = [
             [Paragraph('Descriptions', hstyle),
                 _link('Technology Summary', f'{link}#technology-summary')],
@@ -307,14 +312,14 @@ class MeasureSummary:
                       f'{link}#gross-savings-installation-adjustment-gsia')],
             ['',
                 _link('Non-Energy Impacts', f'{link}#non-energy-impacts')],
-            [Paragraph('Cover Sheet', hstyle),
+            [Paragraph('Version Comparison', hstyle),
                 _link('Cover Sheet', f'{link}/cover-sheet')],
-            [Paragraph('Measure Property Data', hstyle),
+            [Paragraph('Field Validation List', hstyle),
                 _link('Property Data', f'{link}/property-data')],
             [Paragraph('Subscribe', hstyle),
                 _link('Subscriptions', f'{link}/subscriptions')],
             [Paragraph('Permutations', hstyle),
-                _link('Permutations', reference.source_document)]]
+                _link('Permutations', perm_link)]]
         tstyle = TSTYLES['SectionsTable']
         para_styles = (PSTYLES['TableHeader'], PSTYLES['Link'])
         col_widths = (1.42*inch, 4.81*inch)

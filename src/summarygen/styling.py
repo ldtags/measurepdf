@@ -157,6 +157,39 @@ class BetterParagraphStyle(ParagraphStyle):
             )
             return self._superscripted
 
+    @property
+    def bold(self) -> BetterParagraphStyle:
+        if self.font_name[-1] == 'B':
+            return self
+
+        try:
+            return self._bold
+        except AttributeError:
+            if len(self.font_name) >= 2 and self.font_name[-2:] == 'BI':
+                font_name = self.font_name[0:-1]
+            else:
+                font_name = f'{self.font_name}B'
+            self._bold = BetterParagraphStyle(
+                name=f'{self.name}-bold',
+                parent=self,
+                font_name=font_name
+            )
+            return self._bold
+
+    @property
+    def italic(self) -> BetterParagraphStyle:
+        if self.font_name[-1] == 'I':
+            return self
+
+        try:
+            return self._italic
+        except AttributeError:
+            self._italic = BetterParagraphStyle(
+                name=f'{self.name}-italic',
+                parent=self,
+                font_name=f'{self.font_name}I'
+            )
+
     def refresh(self):
         try:
             del self._superscripted
@@ -293,16 +326,15 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              leading=13.5 * 1.2))
     style_sheet.add(
         BetterParagraphStyle('ValueTableHeader',
-                             font_name='ArialB',
+                             font_name='SourceSansProB',
                              parent=style_sheet['SmallParagraph'],
                              textColor=colors.white))
     style_sheet.add(
         BetterParagraphStyle('ValueTableDeterminant',
-                             font_name='Arial',
                              parent=style_sheet['SmallParagraph']))
     style_sheet.add(
         BetterParagraphStyle('ValueTableItem',
-                             font_name='ArialB',
+                             font_name='SourceSansProB',
                              parent=style_sheet['SmallParagraph']))
     style_sheet.add(
         BetterParagraphStyle('TableHeader',
@@ -406,7 +438,7 @@ TSTYLES = __gen_tstyles()
 DEF_PSTYLE = PSTYLES['Paragraph']
 
 
-def value_table_style(data: list[list | tuple],
+def get_table_style(data: list[list | tuple],
                       embedded: bool=False
                      ) -> BetterTableStyle:
     table_style = TSTYLES['ValueTable']
