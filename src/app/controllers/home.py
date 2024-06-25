@@ -391,7 +391,7 @@ class HomeController:
 
             re_match = re.fullmatch(patterns.USE_CATEGORY, search_val)
             if re_match != None:
-                use_category = re_match.group(2)
+                use_category = re_match.group(2).upper()
                 try:
                     lookups.USE_CATEGORIES[use_category]
                 except KeyError:
