@@ -52,13 +52,19 @@ class FooterCanvas(Canvas):
 
     def draw_canvas(self, draw_page_num: bool=False):
         self.saveState()
-        id_footer = f'{current_measure.full_version_id} {current_measure.name}'
-        measure_id = Paragraph(id_footer,
-                               PSTYLES['SmallParagraph'])
-        _, h = measure_id.wrap(X_MARGIN, Y_MARGIN)
-        measure_id.drawOn(canvas=self,
-                          x=h * 1.5,
-                          y=h * 1.5)
+        style = PSTYLES['SmallParagraphBold']
+        id_footer = current_measure.full_version_id
+        measure_id = Paragraph(id_footer, style=style)
+        _, h = measure_id.wrap(INNER_WIDTH, Y_MARGIN)
+        x = h * 1.5
+        y = h * 1.5
+        measure_id.drawOn(canvas=self, x=x, y=y)
+        id_width = stringWidth(id_footer, style.font_name, style.font_size)
+        name_footer = current_measure.name
+        measure_name = Paragraph(name_footer, style=PSTYLES['SmallParagraph'])
+        _, h = measure_name.wrap(INNER_WIDTH - id_width, Y_MARGIN)
+        measure_name.drawOn(canvas=self, x=x + id_width + 3, y=y)
+
         if draw_page_num:
             page_number = Paragraph(f'{self._pageNumber}',
                                     PSTYLES['SmallParagraph'])
