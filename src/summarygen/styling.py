@@ -185,7 +185,6 @@ class BetterTableStyle(TableStyle):
         super().__init__(cmds, parent, **kwargs)
 
         self.name = name
-        self._rml_styles: list[str] = []
         self.font_size: float = 12
         self.font_name: str = 'Helvetica'
         self.top_padding: float = 6
@@ -207,52 +206,15 @@ class BetterTableStyle(TableStyle):
                 case 'RIGHTPADDING':
                     self.right_padding = float(cmd[3])
 
+    def get_pstyle(self) -> BetterParagraphStyle:
+        return BetterParagraphStyle(
+            name=self.name,
+            font_size=self.font_size,
+            font_name=self.font_name
+        )
+
     def add(self, cmd):
         self._cmds.append(cmd)
-        match cmd[0]:
-            case 'FONTSIZE' | 'SIZE':
-                self._rml_styles.append(
-                    f'<blockFont size=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'FONTNAME' | 'NAME':
-                self._rml_styles.append(
-                    f'<blockFont name=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'BACKGROUND':
-                color = cmd[3]
-                if not isinstance(color, colors.Color):
-                    raise Exception('color is required')
-                self._rml_styles.append(
-                    f'<blockBackground colorName=\"{color.hexval()}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'VALIGN':
-                self._rml_styles.append(
-                    f'<blockValign value=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'ALIGNMENT' | 'ALIGN':
-                self._rml_styles.append(
-                    f'<blockAlignment value=\"{cmd[3]}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-            case 'GRID':
-                color = cmd[4]
-                if not isinstance(color, colors.Color):
-                    raise Exception('color is required')
-                self._rml_styles.append(
-                    f'<lineStyle kind=\"GRID\" thickness=\"{cmd[3]}\" '
-                        + f'colorName=\"{color.hexval()}\" '
-                        + _rml_range(cmd[1], cmd[2])
-                        + ' />')
-
-    @property
-    def rml(self) -> str:
-        return (f'<blockTableStyle id=\"{self.name}>\"'
-                    + ''.join(self._rml_styles)
-                    + '</blockTableStyle>')
 
 
 _T = TypeVar('_T', BetterTableStyle, BetterParagraphStyle)
@@ -270,13 +232,6 @@ class StyleSheet(Generic[_T]):
 
     def add(self, style: _T, alias: str | None=None):
         self.styles[alias or style.name] = style
-
-    @property
-    def rml(self) -> str:
-        rml_styles = ''
-        for _, style in self.styles.items():
-            rml_styles += style.rml
-        return f'<stylesheet>{rml_styles}</stylesheet>'
 
 
 Font('SourceSansPro', 'source-sans-pro').register()
@@ -310,6 +265,10 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              font_size=12,
                              parent=style_sheet['Paragraph']))
     style_sheet.add(
+        BetterParagraphStyle('SmallParagraphBold',
+                             font_name='SourceSansProB',
+                             parent=style_sheet['SmallParagraph']))
+    style_sheet.add(
         BetterParagraphStyle('Test',
                              parent=style_sheet['Paragraph'],
                              borderWidth=1,
@@ -334,9 +293,17 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              leading=13.5 * 1.2))
     style_sheet.add(
         BetterParagraphStyle('ValueTableHeader',
-                             font_name='SourceSansProB',
+                             font_name='ArialB',
                              parent=style_sheet['SmallParagraph'],
                              textColor=colors.white))
+    style_sheet.add(
+        BetterParagraphStyle('ValueTableDeterminant',
+                             font_name='Arial',
+                             parent=style_sheet['SmallParagraph']))
+    style_sheet.add(
+        BetterParagraphStyle('ValueTableItem',
+                             font_name='ArialB',
+                             parent=style_sheet['SmallParagraph']))
     style_sheet.add(
         BetterParagraphStyle('TableHeader',
                              font_name='SourceSansProB',
