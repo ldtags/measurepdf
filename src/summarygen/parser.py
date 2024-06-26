@@ -24,7 +24,7 @@ from reportlab.platypus import (
 
 from src import _ROOT
 from src.etrm import ETRM_URL, ETRMConnection
-from src.etrm.models import Measure
+from src.etrm.models import Measure, ValueTable
 from src.exceptions import (
     SummaryGenError,
     WidthExceededError
@@ -300,11 +300,45 @@ class CharacterizationParser:
                      style=TSTYLES['ElementLine'],
                      hAlign='LEFT')
 
-    def get_table_content(self, name: str) -> list[list[ElementLine]] | None:
-        table = self.measure.get_value_table(name)
-        if table is None:
-            return None
+    def __gen_table(self,
+                    data: list[list[ElementLine]],
+                    style: BetterTableStyle
+                   ) -> Table:
+        # calculate table cell widths/heights
+        col_widths = calc_col_widths(data, style)
+        cell_widths = [width - style.left_padding - style.right_padding for width in col_widths]
+        row_heights = calc_row_heights(data, col_widths, style)
 
+        # wrap data to fit calculated sizes
+        frags: list[list[list[ElementLine]]] = []
+        for table_row in data:
+            frag_line: list[list[ElementLine]] = []
+            for i, elem_line in enumerate(table_row):
+                frag_line.append(wrap_elements(elem_line.elements,
+                                               max_width=cell_widths[i]))
+            frags.append(frag_line)
+
+        # convert wrapped data into flowables
+        table_cells: list[list[TableCell]] = []
+        for i, frag_line in enumerate(frags):
+            cells: list[TableCell] = []
+            for j, table_cell in enumerate(frag_line):
+                cell_lines: list[ParagraphLine] = []
+                for element_line in table_cell:
+                    para_line = ParagraphLine(element_line=element_line,
+                                              measure=self.measure)
+                    cell_lines.append(para_line)
+                cell = TableCell(cell_lines, width=col_widths[j])
+                cells.append(cell)
+            table_cells.append(cells)
+
+        return Table(table_cells,
+                     colWidths=col_widths,
+                     rowHeights=row_heights,
+                     style=style,
+                     hAlign='LEFT')
+
+    def get_table_content(self, table: ValueTable) -> list[list[ElementLine]]:
         headers: list[ElementLine] = []
         for api_name in table.determinants:
             determinant = self.measure.get_determinant(api_name)
@@ -344,54 +378,16 @@ class CharacterizationParser:
         data.extend(body)
         return data
 
-    def __gen_table(self,
-                    data: list[list[ElementLine]],
-                    style: BetterTableStyle
-                   ) -> Table:
-        # calculate table cell widths/heights
-        col_widths = calc_col_widths(data, style)
-        cell_widths = [width - style.left_padding - style.right_padding for width in col_widths]
-        row_heights = calc_row_heights(data, col_widths, style)
-
-        # wrap data to fit calculated sizes
-        frags: list[list[list[ElementLine]]] = []
-        for table_row in data:
-            frag_line: list[list[ElementLine]] = []
-            for i, elem_line in enumerate(table_row):
-                frag_line.append(wrap_elements(elem_line.elements,
-                                               max_width=cell_widths[i]))
-            frags.append(frag_line)
-
-        # convert wrapped data into flowables
-        table_cells: list[list[TableCell]] = []
-        for i, frag_line in enumerate(frags):
-            cells: list[TableCell] = []
-            for j, table_cell in enumerate(frag_line):
-                cell_lines: list[ParagraphLine] = []
-                for element_line in table_cell:
-                    para_line = ParagraphLine(element_line=element_line,
-                                              measure=self.measure)
-                    cell_lines.append(para_line)
-                cell = TableCell(cell_lines, width=col_widths[j])
-                cells.append(cell)
-            table_cells.append(cells)
-
-        return Table(table_cells,
-                     colWidths=col_widths,
-                     rowHeights=row_heights,
-                     style=style,
-                     hAlign='LEFT')
-
-    def gen_embedded_value_table(self, api_name: str) -> Table | None:
-        data = self.get_table_content(api_name)
+    def gen_embedded_value_table(self, table: ValueTable) -> Table | None:
+        data = self.get_table_content(table)
         if data == None:
             return None
-        style = get_table_style(data, embedded=True)
+        style = get_table_style(data, determinants=len(table.determinants))
         return self.__gen_table(data, style)
 
     def gen_static_value_table(self, element: Tag) -> Table | None:
         data = parse_table(element)
-        style = get_table_style(data, embedded=True)
+        style = get_table_style(data)
         return self.__gen_table(data, style)
 
     def _parse_list(self, ul: Tag) -> list[ListItem]:
@@ -425,13 +421,20 @@ class CharacterizationParser:
 
             change_id = vt_tag.obj_info.change_url.split('/')[4]
             table_link = f'{self.measure.link}/value-table/{change_id}/'
-            api_name = vt_tag.obj_info.api_name_unique
-            table_obj = self.measure.get_value_table(api_name)
-            if table_obj == None:
-                raise SummaryGenError(f'value table {api_name} does not exist'
+            value_table: ValueTable | None = None
+            possible_names = [vt_tag.obj_info.api_name_unique,
+                              vt_tag.obj_info.title,
+                              vt_tag.obj_info.verbose_name]
+            for name in possible_names:
+                value_table = self.measure.get_value_table(name)
+                if value_table != None:
+                    break
+            if value_table == None:
+                table_name = vt_tag.obj_info.verbose_name
+                raise SummaryGenError(f'value table {table_name} does not exist'
                                       f' in {self.measure.full_version_id}')
-            header = ValueTableHeader(table_obj.name, table_link)
-            table = self.gen_embedded_value_table(api_name)
+            header = ValueTableHeader(value_table.name, table_link)
+            table = self.gen_embedded_value_table(table=value_table)
             if table == None:
                 return None
 

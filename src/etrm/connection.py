@@ -219,6 +219,13 @@ class ETRMConnection:
                            use_category=use_category)
         return (measure_ids, count)
 
+    def get_all_measure_ids(self, use_category: str | None=None) -> list[str]:
+        _, count = self.get_measure_ids(use_category=use_category)
+        measure_ids, _ = self.get_measure_ids(offset=0,
+                                              limit=count,
+                                              use_category=use_category)
+        return measure_ids
+
     def get_measure_versions(self, measure_id: str) -> list[str]:
         """Returns a list of versions of the measure with the ID
         `measure_id`.

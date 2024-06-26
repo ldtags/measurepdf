@@ -556,6 +556,21 @@ class HomeController:
         self.page.measures_selection_list.clear_btn.configure(state=ctk.DISABLED)
         self.page.measures_selection_list.add_btn.configure(state=ctk.DISABLED)
 
+    def add_use_category(self, use_category: str):
+        connection = self.model.connection
+        measure_ids = connection.get_all_measure_ids(use_category=use_category)
+        for measure_id in measure_ids:
+            try:
+                versions = connection.get_measure_versions(measure_id)
+            except ETRMResponseError:
+                continue
+            versions.sort(key=self.__version_key, reverse=True)
+            for version in versions:
+                if version.count('-') == 1:
+                    self.model.home.selected_versions.append(version)
+                    break
+        self.update_measure_selections()
+
     def __add_measure_version(self, version_id: str):
         error: Exception | None = None
         try:
@@ -583,6 +598,22 @@ class HomeController:
             self.page.open_info_prompt('Please enter the full statewide ID'
                                        ' for the desired measure.',
                                        title=' Missing Statewide ID')
+            return
+
+        re_match = re.fullmatch(patterns.USE_CATEGORY, search_val)
+        if re_match != None:
+            use_category = re_match.group(2).upper()
+            try:
+                lookups.USE_CATEGORIES[use_category]
+            except KeyError:
+                keys = list(lookups.USE_CATEGORIES.keys())
+                self.page.open_info_prompt(f'{use_category} is not a'
+                                           ' valid use category.\n'
+                                           'Valid use categories are:'
+                                           f' {keys}')
+            self.add_use_category(use_category)
+            self.page.measures_selection_list.search_bar.clear()
+            self.unfocus()
             return
 
         version_id = self.sanitize_vrsn_id(search_val)
