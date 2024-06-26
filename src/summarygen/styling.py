@@ -1,6 +1,6 @@
 from __future__ import annotations
 import os
-from typing import Any, TypeVar, Generic
+from typing import Any, TypeVar, Generic, overload
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import inch, letter
@@ -67,8 +67,25 @@ class Font:
                            boldItalic=f'{self.name}BI')
 
 
-def _rml_range(start: tuple[int, int], stop: tuple[int, int]) -> str:
-    return f'start=\"{start[0]},{start[1]}\" stop=\"{stop[0]},{stop[1]}\"'
+Font('SourceSansPro', 'source-sans-pro').register()
+Font('Merriweather', 'merriweather').register()
+Font('Helvetica', 'helvetica').register()
+Font('Arial', 'arial').register()
+
+
+def rgb_color(red: float, green: float, blue: float) -> colors.Color:
+    return colors.Color(red=(red/255), green=(green/255), blue=(blue/255))
+
+
+COLORS = {
+    'ValueTableHeaderLight': rgb_color(174, 141, 100),
+    'ValueTableHeaderDark': rgb_color(153, 121, 80),
+    'ValueTableRowLight': rgb_color(242, 242, 242),
+    'ValueTableRowAltLight': rgb_color(230, 230, 230),
+    'ValueTableRowDark': rgb_color(230, 230, 230),
+    'ValueTableRowAltDark': rgb_color(217, 217, 217),
+    'ReferenceTagBG': rgb_color(100, 162, 68)
+}
 
 
 def get_style_param(name: str,
@@ -267,23 +284,6 @@ class StyleSheet(Generic[_T]):
         self.styles[alias or style.name] = style
 
 
-Font('SourceSansPro', 'source-sans-pro').register()
-Font('Merriweather', 'merriweather').register()
-Font('Helvetica', 'helvetica').register()
-Font('Arial', 'arial').register()
-
-
-def rgb_color(red: float, green: float, blue: float) -> colors.Color:
-    return colors.Color(red=(red/255), green=(green/255), blue=(blue/255))
-
-COLORS = {
-    'ValueTableHeader': rgb_color(174, 141, 100),
-    'ValueTableItemLight': rgb_color(242, 242, 242),
-    'ValueTableItemDark': rgb_color(230, 230, 230),
-    'ReferenceTagBG': rgb_color(100, 162, 68)
-}
-
-
 def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet = StyleSheet[BetterParagraphStyle]()
     style_sheet.add(
@@ -417,7 +417,6 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('RIGHTPADDING', (0, 0), (-1, -1), 9),
             ('TOPPADDING', (0, 0), (-1, -1), 9),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
-            ('BACKGROUND', (0, 0), (-1, 0), COLORS['ValueTableHeader']),
             ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)]))
     style_sheet.add(
         BetterTableStyle('ElementLine', [
@@ -438,32 +437,42 @@ TSTYLES = __gen_tstyles()
 DEF_PSTYLE = PSTYLES['Paragraph']
 
 
-def get_table_style(data: list[list | tuple],
-                      embedded: bool=False
-                     ) -> BetterTableStyle:
+def get_table_style(data: list[list],
+                    determinants: int=0
+                   ) -> BetterTableStyle:
     table_style = TSTYLES['ValueTable']
     table_styles = table_style.getCommands()
-    if embedded:
-        switch = 1
-        table_styles.extend([
-            ('FONTNAME', (0, 0), (-1, -1), 'ArialB')])
-    else:
-        switch = 0
-        table_styles.extend([
-            ('FONTNAME', (0, 0), (0, -1), 'ArialB'),
-            ('FONTNAME', (1, 0), (-1, -1), 'Arial')])
+
+    if determinants > 0:
+        table_styles.append(('BACKGROUND',
+                             (0, 0),
+                             (determinants - 1, 0),
+                             COLORS['ValueTableHeaderLight']))
+    if len(data) > 0 and len(data[0]) > determinants:
+        table_styles.append(('BACKGROUND',
+                             (determinants, 0),
+                             (-1, 0),
+                             COLORS['ValueTableHeaderDark']))
 
     for i in range(1, len(data)):
-        if i % 2 == switch:
-            table_styles.append(('BACKGROUND',
-                                (0, i),
-                                (-1, i),
-                                COLORS['ValueTableItemLight']))
-        else:
+        if determinants > 0:
+            if i % 2 == 1:
+                color = COLORS['ValueTableRowLight']
+            else:
+                color = COLORS['ValueTableRowAltLight']
             table_styles.append(('BACKGROUND',
                                  (0, i),
-                                 (-1, i), COLORS['ValueTableItemDark']))
-    
-    # TODO: add different colors for determinants and columns
+                                 (determinants - 1, i),
+                                 color))
+
+        if len(data[i]) > determinants:
+            if i % 2 == 1:
+                color = COLORS['ValueTableRowDark']
+            else:
+                color = COLORS['ValueTableRowAltDark']
+            table_styles.append(('BACKGROUND',
+                                 (determinants, i),
+                                 (-1, i),
+                                 color))
 
     return BetterTableStyle(table_style.name, table_styles)
