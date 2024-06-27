@@ -1,6 +1,6 @@
 import customtkinter as ctk
 
-from src import asset_path
+from src import asset_path, summarygen
 from src.app import themes
 
 
@@ -16,6 +16,9 @@ class Root(ctk.CTk):
         self.iconbitmap(asset_path('etrm.ico', 'images'))
         self.geometry(f'{width}x{height}')
         self.minsize(width=550, height=290)
+
+        self.protocol('WM_DELETE_WINDOW', lambda _: summarygen.clean())
+
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
 

@@ -38,6 +38,11 @@ from src.exceptions import (
 )
 
 
+def clean():
+    if os.path.exists(TMP_DIR):
+        shutil.rmtree(TMP_DIR)
+
+
 class FooterCanvas(Canvas):
     """Custom canvas for adding header/footer content"""
 
@@ -363,5 +368,4 @@ class MeasureSummary:
     def build(self):
         # if multiple measures, maybe add a table of contents
         self.summary.multiBuild(self.story.contents, canvasmaker=FooterCanvas)
-        if os.path.exists(TMP_DIR):
-            shutil.rmtree(TMP_DIR)
+        clean()
