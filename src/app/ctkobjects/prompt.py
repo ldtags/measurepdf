@@ -80,7 +80,8 @@ class PromptWindow(ctk.CTkToplevel):
         self.deiconify()
         self.resizable(width=False, height=False)
 
-        self.label = ctk.CTkLabel(self, text=text)
+        self.text_var = ctk.StringVar(self, text)
+        self.label = ctk.CTkLabel(self, textvariable=self.text_var)
         self.label.pack(padx=20,
                         pady=20)
 
@@ -101,7 +102,7 @@ class PromptWindow(ctk.CTkToplevel):
         self.destroy()
 
     def set_text(self, text: str):
-        self.label.configure(text=text)
+        self.text_var.set(text)
         self.update_idletasks()
 
 
