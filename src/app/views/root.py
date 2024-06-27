@@ -1,7 +1,7 @@
+import sys
 import customtkinter as ctk
 
 from src import asset_path, summarygen
-from src.app import themes
 
 
 ctk.set_default_color_theme('dark-blue')
@@ -17,7 +17,7 @@ class Root(ctk.CTk):
         self.geometry(f'{width}x{height}')
         self.minsize(width=550, height=290)
 
-        self.protocol('WM_DELETE_WINDOW', lambda _: summarygen.clean())
+        self.protocol('WM_DELETE_WINDOW', self.close)
 
         self.grid_rowconfigure(0, weight=1)
         self.grid_columnconfigure(0, weight=1)
@@ -26,3 +26,11 @@ class Root(ctk.CTk):
         self.container.grid(row=0, column=0, sticky=ctk.NSEW)
         self.container.grid_rowconfigure(0, weight=1)
         self.container.grid_columnconfigure(0, weight=1)
+
+    def close(self, *args):
+        try:
+            summarygen.clean()
+        except Exception as err:
+            print(err, file=sys.stderr)
+            pass
+        self.destroy()

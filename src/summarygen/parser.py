@@ -634,6 +634,8 @@ class CharacterizationParser:
             case 'ul':
                 elements = self._parse_list(element)
                 return [ListFlowable(elements, bulletType='bullet')]
+            case '<br>':
+                return [NEWLINE]
             case tag:
                 raise Exception(f'unsupported HTML tag: {tag}')
 
