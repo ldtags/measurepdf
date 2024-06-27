@@ -6,7 +6,6 @@ from reportlab.platypus import (
     Table,
     Spacer,
     KeepTogether,
-    Preformatted,
     XPreformatted
 )
 
@@ -17,6 +16,7 @@ from src.summarygen.models import (
 )
 from src.summarygen.styling import (
     BetterParagraphStyle,
+    BetterTableStyle,
     PSTYLES,
     DEF_PSTYLE,
     TSTYLES
@@ -58,7 +58,7 @@ class ParagraphLine(Table):
         else:
             self.ref_link = ''
         Table.__init__(self,
-                       [self.flowables],
+                       self.line_matrix,
                        colWidths=self.col_widths,
                        rowHeights=element_line.height,
                        style=TSTYLES['ElementLine'])
@@ -94,6 +94,15 @@ class ParagraphLine(Table):
     def is_empty(self) -> bool:
         return self.element_line.elements == []
 
+    @property
+    def line_matrix(self) -> list[list[Flowable]]:
+        """Formats flowables so that the `Table` can read them
+        
+        Should only have one line within the outer array
+        """
+
+        return [self.flowables]
+
 
 class TableCell(Table):
     def __init__(self,
@@ -119,3 +128,52 @@ class TableCell(Table):
     @property
     def row_heights(self) -> list[float]:
         return [elem.height for elem in self.elements]
+
+
+class ValueTable(Table):
+    def __init__(self,
+                 elements: list[list[list[ElementLine]]],
+                 style: BetterTableStyle,
+                 col_widths: list[float],
+                 row_heights: list[float],
+                 measure: Measure):
+        self.elements = elements
+        self.col_widths = col_widths
+        self.row_heights = row_heights
+        self.measure = measure
+        Table.__init__(self,
+                       data=self.table_cells,
+                       style=style,
+                       colWidths=col_widths,
+                       rowHeights=row_heights)
+
+    @property
+    def table_cells(self) -> list[list[TableCell]]:
+        _table_cells: list[list[TableCell | str]] = []
+        for frag_line in self.elements:
+            cells: list[TableCell] = []
+            for j, table_cell in enumerate(frag_line):
+                if table_cell == []:
+                    cell = ''
+                else:
+                    cell_lines: list[ParagraphLine] = []
+                    for element_line in table_cell:
+                        para_line = ParagraphLine(element_line=element_line,
+                                                  measure=self.measure)
+                        cell_lines.append(para_line)
+                    cell = TableCell(cell_lines, width=self.col_widths[j])
+                cells.append(cell)
+            _table_cells.append(cells)
+        return _table_cells
+
+    @table_cells.setter
+    def table_cells(self, _table_cells: list[list[TableCell]]):
+        elements: list[list[list[ElementLine]]] = []
+        for table_row in _table_cells:
+            element_row: list[list[ElementLine]] = []
+            for table_cell in table_row:
+                element_row.append(
+                    [para.element_line for para in table_cell.elements]
+                )
+            elements.append(element_row)
+        self.elements = elements
