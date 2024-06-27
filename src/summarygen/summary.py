@@ -8,9 +8,11 @@ from reportlab.platypus import (
     Table,
     Paragraph,
     PageBreak,
+    BaseDocTemplate,
     SimpleDocTemplate,
     KeepTogether,
-    PageTemplate
+    PageTemplate,
+    NextPageTemplate
 )
 from reportlab.platypus.frames import Frame
 
@@ -43,47 +45,90 @@ def clean():
         shutil.rmtree(TMP_DIR)
 
 
-class FooterCanvas(Canvas):
-    """Custom canvas for adding header/footer content"""
+class SummaryDocTemplate(BaseDocTemplate):
+    def __init__(self,
+                 filename: str,
+                 pagesize: tuple[float, float]=PAGESIZE,
+                 left_margin: float=X_MARGIN,
+                 right_margin: float=X_MARGIN,
+                 top_margin: float=Y_MARGIN,
+                 bottom_margin: float=Y_MARGIN,
+                 *args,
+                 **kwargs):
+        BaseDocTemplate.__init__(self,
+                                 filename=filename,
+                                 pagesize=pagesize,
+                                 leftMargin=left_margin,
+                                 rightMargin=right_margin,
+                                 topMargin=top_margin,
+                                 bottomMargin=bottom_margin,
+                                 *args,
+                                 **kwargs)
 
-    def __init__(self, *args, **kwargs):
-        Canvas.__init__(self, *args, **kwargs)
-        self.pages = []
+        self.left_margin = left_margin
+        self.right_margin = right_margin
+        self.top_margin = top_margin
+        self.bottom_margin = bottom_margin
+        self.page_width = pagesize[0]
+        x_margin = self.left_margin + self.right_margin
+        self.inner_width = self.page_width - x_margin
+        self.page_height = pagesize[1]
+        y_margin = self.top_margin + self.bottom_margin
+        self.inner_height = self.page_height - y_margin
+        self.__page_num = 1
 
-    def showPage(self):
-        self.pages.append(dict(self.__dict__))
-        self._startPage()
+    def afterPage(self):
+        """Called after all flowables have been drawn on a page"""
 
-    def save(self):
-        for page in self.pages:
-            self.__dict__.update(page)
-            self.draw_canvas()
-            Canvas.showPage(self)
-        Canvas.save(self)
+        self.__page_num += 1
 
-    def draw_canvas(self, draw_page_num: bool=False):
-        self.saveState()
-        style = PSTYLES['SmallParagraphBold']
-        id_footer = current_measure.full_version_id
-        measure_id = Paragraph(id_footer, style=style)
-        _, h = measure_id.wrap(INNER_WIDTH, Y_MARGIN)
-        x = h * 1.5
-        y = h * 1.5
-        measure_id.drawOn(canvas=self, x=x, y=y)
-        id_width = stringWidth(id_footer, style.font_name, style.font_size)
-        name_footer = current_measure.name
-        measure_name = Paragraph(name_footer, style=PSTYLES['SmallParagraph'])
-        _, h = measure_name.wrap(INNER_WIDTH - id_width, Y_MARGIN)
-        measure_name.drawOn(canvas=self, x=x + id_width + 3, y=y)
 
-        if draw_page_num:
-            page_number = Paragraph(f'{self._pageNumber}',
-                                    PSTYLES['SmallParagraph'])
-            _, h = page_number.wrap(X_MARGIN, Y_MARGIN)
-            page_number.drawOn(canvas=self,
-                               x=PAGESIZE[0] / 2,
-                               y=h * 1.5)
-        self.restoreState()
+class SummaryPageTemplate(PageTemplate):
+    def __init__(self,
+                 measure_id: str,
+                 measure_name: str,
+                 frames: Frame | list[Frame]):
+        self.measure_id = measure_id
+        self.measure_name = measure_name
+        PageTemplate.__init__(self, id=measure_id, frames=frames)
+
+    def draw_footer(self,
+                    canv: Canvas,
+                    doc: SummaryDocTemplate,
+                    draw_page_num: bool=False
+                   ) -> None:
+            """Used to draw a custom footer depending on the current state
+            of the doc template.
+            """
+
+            canv.saveState()
+
+            style = PSTYLES['SmallParagraphBold']
+            id_footer = Paragraph(self.measure_id, style=style)
+            _, h = id_footer.wrap(INNER_WIDTH, Y_MARGIN)
+            x = h * 1.5
+            y = h * 1.5
+            id_footer.drawOn(canvas=canv, x=x, y=y)
+            id_width = stringWidth(self.measure_id,
+                                   style.font_name, 
+                                   style.font_size)
+            name_footer = Paragraph(self.measure_name,
+                                    style=PSTYLES['SmallParagraph'])
+            _, h = name_footer.wrap(INNER_WIDTH - id_width, Y_MARGIN)
+            name_footer.drawOn(canvas=canv, x=x + id_width + 3, y=y)
+
+            if draw_page_num:
+                page_number = Paragraph(f'{doc.__page_num}',
+                                        PSTYLES['SmallParagraph'])
+                _, h = page_number.wrap(X_MARGIN, Y_MARGIN)
+                page_number.drawOn(canvas=canv,
+                                   x=PAGESIZE[0] / 2,
+                                   y=h * 1.5)
+
+            canv.restoreState()
+
+    def afterDrawPage(self, canv: Canvas, doc: SummaryDocTemplate):
+        self.draw_footer(canv, doc)
 
 
 def _link(display_text: str, link: str) -> Paragraph:
@@ -159,14 +204,7 @@ class MeasureSummary:
         if not override and os.path.exists(self.file_path):
             raise FileExistsError(f'a file named {file_name} already exists'
                                   f' in {dir_path}')
-        self.page_width = PAGESIZE[0]
-        self.page_height = PAGESIZE[1]
-        self.summary = SimpleDocTemplate(self.file_path,
-                                         pagesize=PAGESIZE,
-                                         leftMargin=X_MARGIN,
-                                         rightMargin=X_MARGIN,
-                                         topMargin=Y_MARGIN,
-                                         bottomMargin=Y_MARGIN)
+        self.summary = SummaryDocTemplate(self.file_path)
 
     def add_measure_details_table(self, measure: Measure):
         pstyle = PSTYLES['SmallParagraph']
@@ -344,29 +382,33 @@ class MeasureSummary:
         self.story.add(headed_table)
 
     def add_measure(self, measure: Measure):
-        global current_measure
-        current_measure = measure
         self.measures.append(measure)
-        frame = Frame(x1=X_MARGIN,
-                      y1=Y_MARGIN,
+        frame = Frame(x1=self.summary.left_margin,
+                      y1=self.summary.bottom_margin,
                       width=INNER_WIDTH,
                       height=INNER_HEIGHT,
                       id='normal')
-        template = PageTemplate(id=measure.full_version_id, frames=frame)
-        self.summary.addPageTemplates([template])
+        template = SummaryPageTemplate(measure_id=measure.full_version_id,
+                                       measure_name=measure.name,
+                                       frames=frame)
+        self.summary.addPageTemplates(template)
 
+    def reset(self):
+        self.story.clear()
+
+    def __build_summary(self, measure: Measure):
+        self.story.add(NextPageTemplate(measure.full_version_id))
+        if self.measures.index(measure) != 0:
+            self.story.add(PageBreak())
         self.add_measure_details_table(measure)
         self.story.add(NEWLINE)
         self.add_tech_summary(measure)
         self.story.add(NEWLINE)
         self.add_parameters_table(measure)
         self.add_sections_table(measure)
-        self.story.add(PageBreak())
-
-    def reset(self):
-        self.story.clear()
 
     def build(self):
-        # if multiple measures, maybe add a table of contents
-        self.summary.multiBuild(self.story.contents, canvasmaker=FooterCanvas)
+        for measure in self.measures:
+            self.__build_summary(measure)
+        self.summary.multiBuild(self.story.contents)
         clean()
