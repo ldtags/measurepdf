@@ -1,14 +1,11 @@
 from __future__ import annotations
-from bs4 import (
-    Tag,
-)
 from reportlab.lib.pagesizes import inch
-from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
     Paragraph,
     Table,
     Spacer,
+    KeepTogether,
     XPreformatted
 )
 
@@ -26,7 +23,7 @@ from src.summarygen.styling import (
 from src.summarygen.rlobjects import ElementLine
 
 
-NEWLINE = Spacer(1, 0.3 * inch)
+NEWLINE = KeepTogether(Spacer(1, 0.3 * inch))
 
 
 class Reference(Paragraph):
