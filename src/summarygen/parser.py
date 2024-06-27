@@ -278,7 +278,7 @@ def wrap_elements(elements: list[ParagraphElement],
     return element_lines
 
 
-def gen_image(_url: str) -> Image:
+def gen_image(_url: str, max_width=INNER_WIDTH) -> Image:
     img_name = _url[_url.rindex('/') + 1:]
     response = requests.get(_url, stream=True)
     if response.status_code != 200:
@@ -291,6 +291,12 @@ def gen_image(_url: str) -> Image:
         shutil.copyfileobj(response.raw, out_file)
     del response
     img = Image(tmp_path)
+    img_width = img.imageWidth
+    img_height = img.imageHeight
+    if img.imageWidth > max_width:
+        aspect = img_height / float(img_width)
+        del img
+        img = Image(tmp_path, width=max_width, height=max_width * aspect)
     return img
 
 
@@ -529,7 +535,7 @@ class CharacterizationParser:
 
     def _parse_text(self, text: str) -> Flowable:
         if text == '\n':
-            return Spacer(letter[0], 9.2)
+            return KeepTogether(Spacer(letter[0], 9.2))
         return Paragraph(text, PSTYLES['Paragraph'])
 
     def _parse_embedded_tag(self, tag: Tag) -> Flowable | None:

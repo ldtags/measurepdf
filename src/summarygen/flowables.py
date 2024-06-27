@@ -6,6 +6,7 @@ from reportlab.platypus import (
     Table,
     Spacer,
     KeepTogether,
+    Preformatted,
     XPreformatted
 )
 
@@ -23,7 +24,8 @@ from src.summarygen.styling import (
 from src.summarygen.rlobjects import ElementLine
 
 
-NEWLINE = KeepTogether(Spacer(1, 0.3 * inch))
+_NL_HEIGHT = 0.3 * inch
+NEWLINE = KeepTogether(Spacer(1, _NL_HEIGHT, isGlue=True))
 
 
 class Reference(Paragraph):
