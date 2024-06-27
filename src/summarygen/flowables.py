@@ -109,7 +109,7 @@ class TableCell(Table):
                  elements: list[ParagraphLine],
                  width: float,
                  style: BetterParagraphStyle | None=None):
-        self._elements = elements
+        self.elements = elements
         self.max_width = width
         self.pstyle = style
         if elements == []:
@@ -121,21 +121,6 @@ class TableCell(Table):
                        rowHeights=self.row_heights,
                        style=TSTYLES['ElementLine'],
                        hAlign='LEFT')
-
-    @property
-    def elements(self) -> list[ParagraphLine]:
-        lines: list[ParagraphLine] = []
-        for para_line in self._elements:
-            line = ElementLine(max_width=self.max_width)
-            for elem in para_line.element_line:
-                if elem.type == ElemType.NEWLINE:
-                    lines.append(ParagraphLine(line))
-                    line = ElementLine(max_width=self.max_width)
-                else:
-                    line.add(elem)
-            if line.elements != []:
-                lines.append(ParagraphLine(line))
-            return lines
 
     @property
     def line_matrix(self) -> list[list[ParagraphLine]]:
