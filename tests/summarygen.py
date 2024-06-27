@@ -44,6 +44,9 @@ MEASURES = [
     # single digit superscript
     # image rescaling
     # list
+
+    'SWFS010-03',
+    # edge case for measure details table column wrapping
 ]
 
 
