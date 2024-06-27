@@ -5,13 +5,19 @@ from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from src.utils import getc
 from src.exceptions import ElementJoinError
-from src.summarygen.styling import DEF_PSTYLE, BetterParagraphStyle, PSTYLES
+from src.summarygen.styling import (
+    DEF_PSTYLE,
+    BetterParagraphStyle,
+    PSTYLES,
+    INNER_WIDTH
+)
 
 
 class ElemType(Enum):
     TEXT = 'text'
     REF = 'ref'
     SPACE = 'space'
+    NEWLINE = 'newline'
 
 
 class TextStyle(Enum):
@@ -97,6 +103,8 @@ class ParagraphElement:
 
     @property
     def width(self) -> float:
+        if self.type == ElemType.NEWLINE:
+            return INNER_WIDTH - 0.01
         return stringWidth(self.text, self.font_name, self.font_size)
 
     @property
