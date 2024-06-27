@@ -52,16 +52,32 @@ class Toplevel(ctk.CTkToplevel):
                                '\nValid positionings: centered, anchored')
 
 
+class Popup(ctk.CTkToplevel):
+    def __init__(self, parent: ctk.CTkFrame, **kwargs):
+        super().__init__(parent, **kwargs)
+
+        lbl = tk.Label(self, text="this is the modal window popup")
+        lbl.pack()
+
+        btn = tk.Button(self, text="OK", command=self.destroy)
+        btn.pack()
+
+        self.transient(parent)
+        self.grab_set()
+        parent.wait_window(self)
+
+
 class PromptWindow(ctk.CTkToplevel):
     def __init__(self,
                  parent: ctk.CTkFrame,
                  text: str,
-                 title: str=' Processing',
+                 title: str | None=None,
                  *args,
                  **kwargs):
         super().__init__(parent, *args, **kwargs)
+        self.title(title or ' Processing')
+        self.iconbitmap(utils.asset_path('etrm.ico', 'images'))
         self.deiconify()
-        self.title(title)
         self.resizable(width=False, height=False)
 
         self.label = ctk.CTkLabel(self, text=text)
@@ -74,6 +90,7 @@ class PromptWindow(ctk.CTkToplevel):
         y = parent.winfo_y() + y_offset
         self.geometry(f'+{x}+{y}')
         self.lift()
+        self.focus()
 
         if self.winfo_exists():
             self.grab_set()
@@ -85,6 +102,7 @@ class PromptWindow(ctk.CTkToplevel):
 
     def set_text(self, text: str):
         self.label.configure(text=text)
+        self.update_idletasks()
 
 
 class InfoPromptWindow(ctk.CTkToplevel):

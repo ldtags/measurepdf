@@ -557,9 +557,21 @@ class HomeController:
         self.page.measures_selection_list.add_btn.configure(state=ctk.DISABLED)
 
     def add_use_category(self, use_category: str):
+        try:
+            verbose_name = lookups.USE_CATEGORIES[use_category]
+        except KeyError:
+            keys = list(lookups.USE_CATEGORIES.keys())
+            self.page.open_info_prompt(f'{use_category} is not a'
+                                       ' valid use category.\n'
+                                       'Valid use categories are:'
+                                       f' [{",".join(keys)}]')
+            return
+        self.page.open_prompt(f'Retrieving all {verbose_name} measures...')
         connection = self.model.connection
         measure_ids = connection.get_all_measure_ids(use_category=use_category)
         for measure_id in measure_ids:
+            self.page.update_prompt('Retrieving the most recent published'
+                                    f' version of {measure_id}...')
             try:
                 versions = connection.get_measure_versions(measure_id)
             except ETRMResponseError:
@@ -570,6 +582,7 @@ class HomeController:
                     self.model.home.selected_versions.append(version)
                     break
         self.update_measure_selections()
+        self.page.close_prompt()
 
     def __add_measure_version(self, version_id: str):
         error: Exception | None = None
@@ -611,6 +624,7 @@ class HomeController:
                                            ' valid use category.\n'
                                            'Valid use categories are:'
                                            f' {keys}')
+                return
             self.add_use_category(use_category)
             self.page.measures_selection_list.search_bar.clear()
             self.unfocus()
@@ -667,6 +681,52 @@ class HomeController:
         self.page.close_prompt()
         self.perror(error)
 
+    def get_file_info(self) -> tuple[str, str] | None:
+        """Opens the user prompts for defining the file name and destination
+        of the measure summary PDF.
+        
+        Returns the tuple: (directory path, file name)
+        """
+
+        if getattr(sys, 'frozen', False):
+            def_path = os.path.join(_ROOT, '..', '..', 'summaries')
+        else:
+            def_path = os.path.join(_ROOT, '..', 'summaries')
+        def_path = os.path.normpath(def_path)
+        if not os.path.exists(def_path):
+            self.page.open_info_prompt(f'no {def_path} folder exists')
+            return None
+
+        def_fname = 'measure_summary'
+        result = self.page.open_fd_prompt(def_path,
+                                          def_fname,
+                                          title=' Summary PDF Details')
+        if result[2] == False:
+            return None
+
+        dir_path = result[0]
+        if dir_path == '':
+            self.page.open_info_prompt('A destination folder is required'
+                                       ' to create a measure summary.')
+            return None
+
+        file_name = result[1]
+        if file_name == '':
+            self.page.open_info_prompt('A file name is required to create'
+                                       ' a measure summary.')
+            return None
+
+        path = os.path.normpath(os.path.join(dir_path, file_name + '.pdf'))
+        if os.path.exists(path):
+            conf = self.page.open_yesno_prompt(f'A file named {file_name} already'
+                                               f' exists in {dir_path}, '
+                                               ' would you like to overwrite it?',
+                                               title=' File Conflict Detected')
+            if not conf:
+                return None
+
+        return (dir_path, file_name)
+
     def create_summary(self):
         """Opens the user prompts for defining the file name and destination
         of the measure summary PDF.
@@ -675,44 +735,12 @@ class HomeController:
         """
 
         if self.model.home.selected_versions != []:
-            if getattr(sys, 'frozen', False):
-                def_path = os.path.join(_ROOT, '..', '..', 'summaries')
-            else:
-                def_path = os.path.join(_ROOT, '..', 'summaries')
-            def_path = os.path.normpath(def_path)
-            if not os.path.exists(def_path):
-                self.page.open_info_prompt(f'no {def_path} folder exists')
+            file_info = self.get_file_info()
+            if file_info == None:
                 return
-            def_fname = 'measure_summary'
-            result = self.page.open_fd_prompt(def_path,
-                                              def_fname,
-                                              title=' Summary PDF Details')
-            if result[2] == False:
-                return
-
-            dir_path = result[0]
-            if dir_path == '':
-                self.page.open_info_prompt('A destination folder is required'
-                                           ' to create a measure summary.')
-                return
-
-            file_name = result[1]
-            if file_name == '':
-                self.page.open_info_prompt('A file name is required to create'
-                                           ' a measure summary.')
-                return
-
-            path = os.path.normpath(os.path.join(dir_path, file_name + '.pdf'))
-            if os.path.exists(path):
-                conf = self.page.open_yesno_prompt(f'A file named {file_name} already'
-                                                   f' exists in {dir_path}, '
-                                                   ' would you like to overwrite it?',
-                                                   title=' File Conflict Detected')
-                if not conf:
-                    return
 
             self.page.open_prompt('Retrieving measures, please be patient...')
-            self.page.after(1000, self.__create_summary, dir_path, file_name)
+            self.page.after(1000, self.__create_summary, *file_info)
         else:
             self.page.open_info_prompt(text='At least one measure version is'
                                             ' required to create a summary')

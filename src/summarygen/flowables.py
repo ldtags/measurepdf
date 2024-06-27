@@ -1,4 +1,7 @@
 from __future__ import annotations
+from bs4 import (
+    Tag,
+)
 from reportlab.lib.pagesizes import inch
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (

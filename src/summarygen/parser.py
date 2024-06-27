@@ -2,6 +2,7 @@ from __future__ import annotations
 import requests
 import shutil
 import os
+import copy
 from bs4 import (
     BeautifulSoup,
     Tag,
@@ -19,7 +20,8 @@ from reportlab.platypus import (
     ListItem,
     Spacer,
     KeepTogether,
-    Image
+    Image,
+    XPreformatted
 )
 
 from src import _ROOT
@@ -29,6 +31,7 @@ from src.exceptions import (
     SummaryGenError,
     WidthExceededError
 )
+from src.summarygen.types import _TABLE_SPAN
 from src.summarygen.models import (
     ParagraphElement,
     ReferenceTag,
@@ -120,48 +123,104 @@ def _parse_elements(elements: list[PageElement]) -> list[ParagraphElement]:
     return contents
 
 
-def parse_table_headers(table: Tag) -> list[ElementLine]:
+def get_table_headers(table: Tag) -> list[ResultSet[Tag]]:
     thead = table.find('thead')
-    raw_headers: ResultSet[Tag] = []
-    if thead == None:
-        raw_headers = table.find_all('th')
-    elif isinstance(thead, Tag):
-        raw_headers = thead.find_all('th')
+    header_rows: list[ResultSet[Tag]] = []
+    if isinstance(thead, Tag):
+        raw_rows: ResultSet[Tag] = thead.find_all('tr')
+        if len(raw_rows) == 0:
+            raw_headers = thead.find_all('th')
+            if len(raw_headers) != 0:
+                header_rows.append(raw_headers)
+        else:
+            for raw_row in raw_rows:
+                raw_headers = raw_row.find_all('th')
+                if len(raw_headers) != 0:
+                    header_rows.append(raw_headers)
+    elif thead is None:
+        raw_rows: ResultSet[Tag] = table.find_all('tr')
+        if len(raw_rows) == 0:
+            raw_headers = table.find_all('th')
+            if len(raw_headers) != 0:
+                header_rows.append(raw_headers)
+        else:
+            for raw_row in raw_rows:
+                raw_headers = raw_row.find_all('th')
+                if len(raw_headers) != 0:
+                    header_rows.append(raw_headers)
     else:
         raise SummaryGenError('missing table headers')
-    headers: list[ElementLine] = []
-    for raw_header in raw_headers:
-        header_elements = _parse_element(raw_header)
-        headers.append(ElementLine(elements=header_elements,
-                                   max_width=None,
-                                   style=PSTYLES['ValueTableHeader']))
-    return headers
+    return header_rows
 
 
-def parse_table_body(table: Tag) -> list[list[ElementLine]]:
+def get_table_body(table: Tag) -> list[ResultSet[Tag]]:
     tbody = table.find('tbody')
     if not isinstance(tbody, Tag):
         raise SummaryGenError('missing table body')
     raw_rows: ResultSet[Tag] = tbody.find_all('tr')
-    body_rows: list[list[ElementLine]] = []
+    body_rows: list[ResultSet[Tag]] = []
     for raw_row in raw_rows:
         raw_cells: ResultSet[Tag] = raw_row.find_all('td')
-        cells: list[ElementLine] = []
-        for raw_cell in raw_cells:
-            cell_elements = _parse_element(raw_cell)
-            cells.append(ElementLine(elements=cell_elements,
-                                     max_width=None))
-        body_rows.append(cells)
+        if len(raw_cells) > 0:
+            body_rows.append(raw_cells)
     return body_rows
 
 
-def parse_table(table: Tag) -> list[list[ElementLine]]:
-    headers = parse_table_headers(table)
-    body = parse_table_body(table)
-    data: list[list[ElementLine]] = []
-    data.append(headers)
-    data.extend(body)
-    return data
+def get_spans(table_content: list[list[Tag | None]]) -> list[_TABLE_SPAN]:
+    span_list: list[_TABLE_SPAN] = []
+    for i, row in enumerate(table_content):
+        for j, col in enumerate(row):
+            if col is None:
+                continue
+            spans = (int(col.get('rowspan', 0)), int(col.get('colspan', 0)))
+            if sum(spans) != 0:
+                span_list.append(((i, j), spans))
+    return span_list
+
+
+def gen_spanned_table(rows: list[ResultSet[Tag]]) -> list[list[ElementLine]]:
+    content = copy.deepcopy(rows)
+    for i, row in enumerate(rows):
+        for j, cell in enumerate(row):
+            row_span = cell.get('colspan', 0)
+            for _ in range(int(row_span) - 1):
+                content[i].insert(j + 1, None)
+
+            col_span = cell.get('rowspan', 0)
+            for k in range(i + 1, i + int(col_span)):
+                try:
+                    content[k]
+                    row_len = len(content[k])
+                    if row_len < j + 1:
+                        content[k].extend([None] * ((j + 1) - row_len))
+                    else:
+                        content[k].insert(j, None)
+                except IndexError:
+                    break
+    return content
+
+
+def convert_spanned_table(content: list[ResultSet[Tag]],
+                          headers: int=1
+                         ) -> list[list[ElementLine]]:
+    table_body: list[list[ElementLine]] = []
+    for i, row in enumerate(content):
+        table_row: list[ElementLine] = []
+        if i < headers:
+            style = PSTYLES['ValueTableHeaderThin']
+        else:
+            style = PSTYLES['ValueTableDeterminant']
+        for cell in row:
+            if cell is None:
+                element = ElementLine([ParagraphElement('')], style=style)
+            else:
+                cell_elements = _parse_element(cell)
+                element = ElementLine(elements=cell_elements,
+                                      max_width=None,
+                                      style=style)
+            table_row.append(element)
+        table_body.append(table_row)
+    return table_body
 
 
 def split_word(element: ParagraphElement,
@@ -198,7 +257,7 @@ def wrap_elements(elements: list[ParagraphElement],
                 except WidthExceededError:
                     if elem.width > max_width:
                         avail_width = max_width - current_line.width
-                        word_frags = split_word(elem.width, avail_width)
+                        word_frags = split_word(elem, avail_width)
                         current_line.add(word_frags[0])
                         element_lines.append(current_line)
                         if len(word_frags) > 1:
@@ -236,39 +295,86 @@ def gen_image(_url: str) -> Image:
 
 
 def calc_col_widths(data: list[list[ElementLine]],
-                    style: BetterTableStyle
+                    style: BetterTableStyle,
+                    spans: list[_TABLE_SPAN]=[]
                    ) -> list[float]:
+    span_dict = {str((y, x)): col_span for (y, x), (_, col_span) in spans}
     headers = data[0]
     base_width = INNER_WIDTH / len(headers)
-    col_widths: list[float] = []
-    for i in range(len(headers)):
-        max_width = 0
-        for j in range(len(data)):
-            frags = wrap_elements(data[j][i].elements, max_width=base_width) # this is where ref tags get extra spaces. FIX!!!
+    width_matrix: list[list[float]] = []
+    skip = 0
+    for y, row in enumerate(data):
+        matrix_row: list[float] = []
+        for x in range(len(row)):
+            if skip != 0:
+                skip -= 1
+                continue
+            frags = wrap_elements(row[x].elements, max_width=base_width) # this is where ref tags get extra spaces. FIX!!!
             if frags == []:
                 width = 0
             else:
                 width = max([line.width for line in frags])
-            width += style.left_padding + style.right_padding
-            max_width = max(width, max_width)
-        col_widths.append(max_width)
-    return col_widths
+            col_span = span_dict.get(str((y, x)), 0)
+            if col_span > 1:
+                width_frags = [width / col_span] * col_span
+                width_frags[0] += style.left_padding
+                width_frags[-1] += style.right_padding
+                matrix_row.extend(width_frags)
+                skip = col_span - 1
+            else:
+                width += style.left_padding + style.right_padding
+                matrix_row.append(width)
+        width_matrix.append(matrix_row)
+
+    for (y, x), (row_span, _) in spans:
+        if row_span > 1:
+            width = max([widths for widths in zip(*width_matrix)][x])
+            for i in range(y, y + row_span):
+                width_matrix[i][x] = width
+
+    return [max(widths) for widths in zip(*width_matrix)]
 
 
 def calc_row_heights(data: list[list[ElementLine]],
                      col_widths: list[float],
-                     style: BetterTableStyle
+                     style: BetterTableStyle,
+                     spans: list[_TABLE_SPAN]=[]
                     ) -> list[float]:
-    row_heights: list[float] = []
-    for i in range(len(data)):
-        max_height = 0
-        for j, cell in enumerate(data[i]):
-            frags = wrap_elements(cell.elements, col_widths[j])
-            height = cell.height * len(frags)
-            height += style.top_padding + style.bottom_padding
-            max_height = max(height, max_height)
-        row_heights.append(max_height)
-    return row_heights
+    span_dict = {str((y, x)): span_sizes for (y, x), span_sizes in spans}
+    height_matrix: list[list[float]] = []
+    skip = 0
+    for y, row in enumerate(data):
+        matrix_row: list[float] = []
+        for x in range(len(row)):
+            if skip != 0:
+                skip -= 1
+                continue
+            row_span, col_span = span_dict.get(str((y, x)), (0, 0))
+            if col_span > 1:
+                col_width = sum(col_widths[x:x + col_span - 1])
+            else:
+                col_width = col_widths[x]
+            frags = wrap_elements(row[x].elements, col_width)
+            height = row[x].height * len(frags)
+            if col_span > 1:
+                height_frags = [height] * col_span
+                height_frags[0] += style.top_padding
+                height_frags[-1] += style.bottom_padding
+                matrix_row.extend(height_frags)
+                skip = col_span - 1
+            else:
+                height += style.top_padding + style.bottom_padding
+                matrix_row.append(height)
+        height_matrix.append(matrix_row)
+
+    for (y, x), (row_span, _) in spans:
+        if row_span > 1:
+            col = [heights for heights in zip(*height_matrix)][x]
+            height_frag = max(col) / row_span
+            for i in range(y, y + row_span):
+                height_matrix[i][x] = height_frag
+
+    return [max(heights) for heights in height_matrix]
 
 
 class CharacterizationParser:
@@ -302,33 +408,45 @@ class CharacterizationParser:
 
     def __gen_table(self,
                     data: list[list[ElementLine]],
-                    style: BetterTableStyle
+                    style: BetterTableStyle,
+                    spans: list[_TABLE_SPAN]=[]
                    ) -> Table:
+        span_dict = {str((y, x)): span_sizes for (y, x), span_sizes in spans}
+
         # calculate table cell widths/heights
-        col_widths = calc_col_widths(data, style)
+        col_widths = calc_col_widths(data, style, spans=spans)
+        # TODO: remove padding removal for items in the middle of a span
         cell_widths = [width - style.left_padding - style.right_padding for width in col_widths]
-        row_heights = calc_row_heights(data, col_widths, style)
+        row_heights = calc_row_heights(data, col_widths, style, spans=spans)
 
         # wrap data to fit calculated sizes
         frags: list[list[list[ElementLine]]] = []
-        for table_row in data:
+        for y, table_row in enumerate(data):
             frag_line: list[list[ElementLine]] = []
-            for i, elem_line in enumerate(table_row):
+            for x, elem_line in enumerate(table_row):
+                _, col_span = span_dict.get(str((y, x)), (0, 0))
+                if col_span > 1:
+                    cell_width = sum(cell_widths[x:x + col_span - 1])
+                else:
+                    cell_width = cell_widths[x]
                 frag_line.append(wrap_elements(elem_line.elements,
-                                               max_width=cell_widths[i]))
+                                               max_width=cell_width))
             frags.append(frag_line)
 
         # convert wrapped data into flowables
-        table_cells: list[list[TableCell]] = []
+        table_cells: list[list[TableCell | str]] = []
         for i, frag_line in enumerate(frags):
             cells: list[TableCell] = []
             for j, table_cell in enumerate(frag_line):
-                cell_lines: list[ParagraphLine] = []
-                for element_line in table_cell:
-                    para_line = ParagraphLine(element_line=element_line,
-                                              measure=self.measure)
-                    cell_lines.append(para_line)
-                cell = TableCell(cell_lines, width=col_widths[j])
+                if table_cell == []:
+                    cell = ''
+                else:
+                    cell_lines: list[ParagraphLine] = []
+                    for element_line in table_cell:
+                        para_line = ParagraphLine(element_line=element_line,
+                                                  measure=self.measure)
+                        cell_lines.append(para_line)
+                    cell = TableCell(cell_lines, width=col_widths[j])
                 cells.append(cell)
             table_cells.append(cells)
 
@@ -386,9 +504,17 @@ class CharacterizationParser:
         return self.__gen_table(data, style)
 
     def gen_static_value_table(self, element: Tag) -> Table | None:
-        data = parse_table(element)
-        style = get_table_style(data)
-        return self.__gen_table(data, style)
+        headers = get_table_headers(element)
+        body = get_table_body(element)
+        data = [*headers, *body]
+        spanned_table = gen_spanned_table(data)
+        spans = get_spans(spanned_table)
+        content = convert_spanned_table(spanned_table, headers=len(headers))
+        style = get_table_style(content,
+                                determinants=len(content),
+                                headers=len(headers),
+                                spans=spans)
+        return self.__gen_table(content, style, spans=spans)
 
     def _parse_list(self, ul: Tag) -> list[ListItem]:
         list_items: list[ListItem] = []
@@ -448,15 +574,15 @@ class CharacterizationParser:
             return gen_image(_url)
         return None
 
-    def gen_header(self, header: Tag) -> Paragraph:
-        if len(header.contents) != 1:
-            raise Exception('temp exception')
+    def gen_header(self, header: Tag) -> Flowable:
+        if len(header.contents) < 1:
+            return Paragraph('', PSTYLES[header.name])
 
-        child = header.contents[0]
-        if not isinstance(child, NavigableString):
-            raise Exception('temp exception')
-
-        return Paragraph(child.get_text(), PSTYLES[header.name])
+        elements = _parse_element(header.contents[0])
+        text = ''
+        for element in elements:
+            text += element.text_xml
+        return XPreformatted(text, PSTYLES[header.name])
 
     def _parse_element(self, element: PageElement) -> list[Flowable]:
         if isinstance(element, NavigableString):

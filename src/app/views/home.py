@@ -50,11 +50,10 @@ class HomePage(Frame):
     def measures_selection_list(self) -> SelectedMeasuresFrame:
         return self.main_frame.measures_selection_list
 
-    def open_prompt(self, text: str):
+    def open_prompt(self, text: str, title: str | None=None):
         if self.prompt is None or not self.prompt.winfo_exists():
-            self.prompt = PromptWindow(self, text)
-        self.prompt.wm_transient(self.parent)
-        self.prompt.focus()
+            self.prompt = PromptWindow(self, text, title)
+            self.prompt.update_idletasks()
 
     def update_prompt(self, text: str):
         if self.prompt is not None and self.prompt.winfo_exists():
@@ -75,7 +74,8 @@ class HomePage(Frame):
                           text: str,
                           ok_text: str='Ok',
                           cancel_txt: str='Cancel',
-                          title=''):
+                          title=''
+                         ) -> bool:
         if self.yn_prompt is None or not self.yn_prompt.winfo_exists():
             self.yn_prompt = InputPromptWindow(self,
                                                text=text,
