@@ -3,6 +3,7 @@ import requests
 import shutil
 import os
 import copy
+import math
 from bs4 import (
     BeautifulSoup,
     Tag,
@@ -183,20 +184,23 @@ def get_spans(table_content: list[list[Tag | None]]) -> list[_TABLE_SPAN]:
 def gen_spanned_table(rows: list[ResultSet[Tag]]) -> list[list[ElementLine]]:
     content = copy.deepcopy(rows)
     for i, row in enumerate(rows):
+        x_offset = 0
         for j, cell in enumerate(row):
-            row_span = cell.get('colspan', 0)
-            for _ in range(int(row_span) - 1):
-                content[i].insert(j + 1, None)
+            x = j + x_offset
+            row_span = int(cell.get('colspan', 0))
+            for _ in range(row_span - 1):
+                content[i].insert(x + 1, None)
+                x_offset += 1
 
-            col_span = cell.get('rowspan', 0)
-            for k in range(i + 1, i + int(col_span)):
+            col_span = int(cell.get('rowspan', 0))
+            for k in range(i + 1, i + col_span):
                 try:
                     content[k]
                     row_len = len(content[k])
-                    if row_len < j + 1:
-                        content[k].extend([None] * ((j + 1) - row_len))
+                    if row_len < x + 1:
+                        content[k].extend([None] * ((x + 1) - row_len))
                     else:
-                        content[k].insert(j, None)
+                        content[k].insert(x, None)
                 except IndexError:
                     break
     return content
@@ -431,7 +435,8 @@ class CharacterizationParser:
         # calculate table cell widths/heights
         col_widths = calc_col_widths(data, style, spans=spans)
         # TODO: remove padding removal for items in the middle of a span
-        cell_widths = [width - style.left_padding - style.right_padding for width in col_widths]
+        h_padding = style.left_padding + style.right_padding
+        cell_widths = [math.ceil(width - h_padding) for width in col_widths]
         row_heights = calc_row_heights(data, col_widths, style, spans=spans)
 
         # wrap data to fit calculated sizes
@@ -450,9 +455,9 @@ class CharacterizationParser:
 
         # convert wrapped data into flowables
         table_cells: list[list[TableCell | str]] = []
-        for frag_line in frags:
+        for y, frag_line in enumerate(frags):
             cells: list[TableCell] = []
-            for j, table_cell in enumerate(frag_line):
+            for x, table_cell in enumerate(frag_line):
                 if table_cell == []:
                     cell = ''
                 else:
@@ -461,7 +466,12 @@ class CharacterizationParser:
                         para_line = ParagraphLine(element_line=element_line,
                                                   measure=self.measure)
                         cell_lines.append(para_line)
-                    cell = TableCell(cell_lines, width=col_widths[j])
+                    _, col_span = span_dict.get(str((y, x)), (0, 0))
+                    if col_span > 1:
+                        col_width = sum(col_widths[x:x + col_span - 1])
+                    else:
+                        col_width = col_widths[x]
+                    cell = TableCell(cell_lines, width=col_width)
                 cells.append(cell)
             table_cells.append(cells)
 

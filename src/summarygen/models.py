@@ -36,7 +36,7 @@ class ParagraphElement:
                  type: ElemType=ElemType.TEXT,
                  styles: list[TextStyle] | None=None,
                  style: BetterParagraphStyle | None=None):
-        self.text = text
+        self.text = text.replace('\n', '')
         self.type = type
         self.styles = styles or [TextStyle.NORMAL]
         self.__style = style

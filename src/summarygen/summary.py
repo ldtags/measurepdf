@@ -145,6 +145,7 @@ class MeasureSummary:
                  connection: ETRMConnection,
                  file_name: str='measure_summary',
                  override: bool=True):
+        clean()
         self.measures: list[Measure] = []
         self.connection = connection
         self.story = Story()
