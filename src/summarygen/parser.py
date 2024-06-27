@@ -110,6 +110,8 @@ def _parse_element(element: PageElement) -> list[ParagraphElement]:
                 if style not in item.styles:
                     item.styles.insert(0, style)
             return elements
+        case 'br':
+            return [ParagraphElement('', type=ElemType.NEWLINE)]
         case _:
             raise RuntimeError(f'unsupported tag: {element.name}')
 
@@ -224,21 +226,28 @@ def convert_spanned_table(content: list[ResultSet[Tag]],
 
 
 def split_word(element: ParagraphElement,
-               avail_width: float=INNER_WIDTH
+               rem_width: float=INNER_WIDTH,
+               max_width: float=INNER_WIDTH
               ) -> list[ParagraphElement]:
-    width = avail_width
+    width = rem_width
     word: str = element.text
-    fractions: list[ParagraphElement] = []
-    while word != '':
-        i = 0
-        while i < len(word):
-            if element.copy(word[0:i]).width > width:
-                break
-            i += 1
-        fractions.append(element.copy(word[0:i]))
-        word[0:i] = ''
-        width = INNER_WIDTH
-    return fractions
+    frags: list[ParagraphElement] = []
+    i = 0
+    while i < len(word):
+        j = i + 1
+        elem_frag = element.copy(text=word[i:j])
+        while j < len(word) and elem_frag.width < width:
+            j += 1
+            elem_frag = element.copy(text=word[i:j])
+
+        if j == len(word):
+            frags.append(elem_frag)
+            break
+
+        frags.append(element.copy(text=word[i:j - 1]))
+        i = j - 1
+        width = max_width
+    return frags
 
 
 def wrap_elements(elements: list[ParagraphElement],
@@ -257,11 +266,11 @@ def wrap_elements(elements: list[ParagraphElement],
                 except WidthExceededError:
                     if elem.width > max_width:
                         avail_width = max_width - current_line.width
-                        word_frags = split_word(elem, avail_width)
+                        word_frags = split_word(elem, avail_width, max_width)
                         current_line.add(word_frags[0])
                         element_lines.append(current_line)
                         if len(word_frags) > 1:
-                            for word_frag in word_frags[1:len(word_frags) - 1]:
+                            for word_frag in word_frags[1:len(word_frags)]:
                                 current_line = ElementLine(max_width=max_width,
                                                            style=style)
                                 current_line.add(word_frag)
@@ -441,7 +450,7 @@ class CharacterizationParser:
 
         # convert wrapped data into flowables
         table_cells: list[list[TableCell | str]] = []
-        for i, frag_line in enumerate(frags):
+        for frag_line in frags:
             cells: list[TableCell] = []
             for j, table_cell in enumerate(frag_line):
                 if table_cell == []:
