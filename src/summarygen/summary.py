@@ -211,10 +211,9 @@ class MeasureSummary:
                         data: list[tuple[str, Paragraph]]):
             param = measure.get_shared_parameter(param_name)
             if param == None:
-                return
-            # change to not show field if not there
-
-            param_labels = ', '.join(sorted(set(param.active_labels)))
+                param_labels = ''
+            else:
+                param_labels = ', '.join(sorted(set(param.active_labels)))
             data.append((label, Paragraph(param_labels,
                                           PSTYLES['SmallParagraph'])))
 
