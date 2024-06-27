@@ -47,7 +47,7 @@ from src.summarygen.styling import (
     DEF_PSTYLE,
     TSTYLES,
     INNER_WIDTH,
-    X_MARGIN,
+    INNER_HEIGHT,
     PAGESIZE,
     get_table_style,
     BetterParagraphStyle
@@ -60,6 +60,47 @@ from src.summarygen.flowables import (
     ParagraphLine,
     NEWLINE
 )
+
+
+class FlowableList:
+    def __init__(self,
+                 inner_height: float=INNER_HEIGHT,
+                 inner_width: float=INNER_WIDTH):
+        self.inner_height = inner_height
+        self.inner_width = inner_width
+        self.flowables: list[Flowable] = []
+        self.current_height: float=0
+
+    @property
+    def avail_height(self) -> float:
+        return self.inner_height - self.current_height
+
+    def get_height(self, flowable: Flowable) -> float:
+        if isinstance(flowable, KeepTogether | ListFlowable):
+            height = 0
+            for item in flowable._content:
+                height += self.get_height(item)
+        else:
+            _, height = flowable.wrap(0, 0)
+        return height
+
+    def can_fit(self, *flowables: Flowable) -> bool:
+        height = 0
+        for flowable in flowables:
+            height += self.get_height(flowable)
+        return height <= self.avail_height
+
+    def add(self, *flowables: Flowable):
+        for flowable in flowables:
+            height = self.get_height(flowable)
+            if not self.can_fit(flowable):
+                self.current_height = 0
+            self.current_height += height
+            self.flowables.append(flowable)
+
+    def clear(self):
+        self.flowables = []
+        self.current_height = 0
 
 
 TMP_DIR = os.path.join(_ROOT, 'assets', 'images', 'tmp')
@@ -404,9 +445,8 @@ class CharacterizationParser:
         self.measure = measure
         self.connection = connection
         self.html = measure.characterizations[name]
-        self.flowables: list[Flowable] = []
+        self.flowables = FlowableList()
         self.width, self.height = PAGESIZE
-        self.inner_width = self.width - X_MARGIN * 2
 
     def gen_summary_paragraph(self,
                               elements: list[ParagraphElement]
@@ -631,9 +671,13 @@ class CharacterizationParser:
             case 'a':
                 _url = element.get('href', None)
                 if _url != None:
-                    return [KeepTogether([NEWLINE,
-                                          gen_image(_url),
-                                          NEWLINE])]
+                    img = gen_image(_url)
+                    flowables: list[Flowable] = []
+                    if self.flowables.can_fit(KeepTogether([NEWLINE, img])):
+                        flowables.append(KeepTogether([NEWLINE, img]))
+                    elif self.flowables.can_fit(img):
+                        flowables.extend([NEWLINE, img])
+                    return flowables
                 return []
             case 'p':
                 elements: list[ParagraphElement] = []
@@ -659,7 +703,7 @@ class CharacterizationParser:
                 raise Exception(f'unsupported HTML tag: {tag}')
 
     def parse(self) -> list[Flowable]:
-        self.flowables = []
+        self.flowables.clear()
         soup = BeautifulSoup(self.html, 'html.parser')
         top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
         i = 0
@@ -678,10 +722,10 @@ class CharacterizationParser:
                 parsed_elements = [KeepTogether(parsed_elements)]
                 parsed_elements.extend(extra_elements)
                 i += 1
-            self.flowables.extend(parsed_elements)
+            self.flowables.add(*parsed_elements)
             if (isinstance(element, Tag)
                     and (element.name != 'a')
                     and element.next_sibling == '\n'):
-                self.flowables.append(NEWLINE)
+                self.flowables.add(NEWLINE)
             i += 1
-        return self.flowables
+        return self.flowables.flowables
