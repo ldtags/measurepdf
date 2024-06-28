@@ -369,7 +369,7 @@ def calc_col_widths(data: list[list[ElementLine]],
             if skip != 0:
                 skip -= 1
                 continue
-            frags = wrap_elements(row[x].elements, max_width=base_width) # this is where ref tags get extra spaces. FIX!!!
+            frags = wrap_elements(row[x].elements, max_width=base_width)
             if frags == []:
                 width = 0
             else:
