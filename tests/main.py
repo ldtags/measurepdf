@@ -27,8 +27,7 @@ def parse_args() -> ap.Namespace:
     return parser.parse_args()
 
 
-if __name__ == '__main__':
-    sys.stdout.flush()
+def main():
     args = parse_args()
     unit_modules = getattr(args, 'unit', None)
     if unit_modules != None:
@@ -47,3 +46,7 @@ if __name__ == '__main__':
 
         for module in unit_modules:
             UNIT_TEST[module]()
+
+
+if __name__ == '__main__':
+    main()
