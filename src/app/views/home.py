@@ -1,6 +1,5 @@
 from __future__ import annotations
 import tkinter as tk
-import tkinter.ttk as ttk
 import customtkinter as ctk
 
 from src import utils
@@ -14,9 +13,7 @@ from src.app.ctkobjects import (
     InputPromptWindow,
     FileDialogueWindow,
     ToolTip,
-    Frame,
-    Button,
-    Toplevel
+    Frame
 )
 
 

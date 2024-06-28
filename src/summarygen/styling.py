@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 import copy
-from typing import Any, TypeVar, Generic, overload
+from typing import Any, TypeVar, Generic
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import inch, letter

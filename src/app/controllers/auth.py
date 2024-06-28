@@ -5,16 +5,6 @@ from src.app.models import Model
 from src.app.views import View
 
 
-def __validate_token_input_char(_input: str | None=None) -> bool:
-    if _input is None or _input == '':
-        return True
-
-    if not re.fullmatch('^[a-zA-Z0-9 ]$', _input):
-        return False
-
-    return True
-
-
 class AuthController:
     def __init__(self, model: Model, view: View):
         self.model = model

@@ -9,7 +9,6 @@ from reportlab.platypus import (
     Paragraph,
     PageBreak,
     BaseDocTemplate,
-    SimpleDocTemplate,
     KeepTogether,
     PageTemplate,
     NextPageTemplate
