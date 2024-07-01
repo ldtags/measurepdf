@@ -86,9 +86,9 @@ def getc(o: dict,
 
         try:
             return list(map(lambda item: list_type(item), attr))
-        except:
+        except Exception as err:
             raise TypeError(f'list item {attr} cannot cast to'
-                            f' {list_type}')
+                            f' {list_type}') from err
     elif _origin is dict:
         # TODO implement type union support
         if not isinstance(attr, dict):

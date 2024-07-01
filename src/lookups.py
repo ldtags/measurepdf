@@ -32,3 +32,8 @@ PERMUTATION_REFS = {
     'WH': 'R3212',
     'WP': 'R3213'
 }
+
+
+SHARED_VALUE_TABLES = {
+    'EULID': 'EUL'
+}

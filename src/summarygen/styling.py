@@ -403,7 +403,9 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('FONTNAME', (0, 0), (-1, -1), 'SourceSansPro'),
             ('FONTSIZE', (0, 0), (0, -1), 13.5),
-            ('FONTSIZE', (1, 0), (-1, -1), 12)]))
+            ('FONTSIZE', (1, 0), (-1, -1), 12),
+            ('VALIGN', (0, 0), (0, -1), 'TOP'),
+            ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
     style_sheet.add(
         BetterTableStyle('SectionsTable', [
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),

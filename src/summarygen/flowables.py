@@ -1,5 +1,6 @@
 from __future__ import annotations
 import math
+from typing import get_args
 from reportlab.lib.pagesizes import inch
 from reportlab.platypus import (
     Flowable,
@@ -168,25 +169,35 @@ def wrap_elements(elements: list[ParagraphElement],
 class SummaryParagraph(Table):
     def __init__(self,
                  elements: list[ParagraphElement],
-                 measure: Measure):
+                 measure: Measure | None=None,
+                 **kwargs):
+        if measure is None:
+            if all([isinstance(e, list) for e in elements]):
+                Table.__init__(self, elements, **kwargs)
+                return
+            else:
+                raise SummaryGenError('Cannot create a summary paragraph'
+                                      ' without an eTRM measure object')
+
         lines = [[ParagraphLine(line, measure)]
                     for line in wrap_elements(elements)]
-        # TODO: add case for when lines is empty
-
+        if lines == []:
+            lines = [[]]
         col_widths = [INNER_WIDTH]
         row_heights = [DEF_PSTYLE.leading] * len(lines)
-        return Table(lines,
-                     colWidths=col_widths,
-                     rowHeights=row_heights,
-                     style=TSTYLES['ElementLine'],
-                     hAlign='LEFT')
+        Table.__init__(self,
+                       lines,
+                       colWidths=col_widths,
+                       rowHeights=row_heights,
+                       style=TSTYLES['ElementLine'],
+                       hAlign='LEFT')
 
 
 class TableCell(Table):
     def __init__(self,
                  elements: list[ParagraphLine],
                  width: float,
-                 style: BetterParagraphStyle | None=None):
+                 style: BetterParagraphStyle | None=None,):
         self.elements = elements
         self.max_width = width
         self.pstyle = style
@@ -216,11 +227,21 @@ class TableCell(Table):
 class ValueTable(Table):
     def __init__(self,
                  data: list[list[ElementLine]],
-                 measure: Measure,
+                 measure: Measure | None=None,
                  headers: int=1,
                  determinants: int=0,
-                 spans: list[_TABLE_SPAN] | None=None):
-        self.data = data
+                 spans: list[_TABLE_SPAN] | None=None,
+                 **kwargs):
+        if measure is None:
+            if all([all([isinstance(cell, TableCell) for cell in row])
+                    for row in data]):
+                Table.__init__(self, data, **kwargs)
+                return
+            else:
+                raise SummaryGenError('Cannot create a value table without'
+                                      ' an eTRM measure object')
+
+        self.data = data    
         self.measure = measure
         self.spans = spans or []
         self.style = get_table_style(data, headers, determinants, self.spans)
@@ -362,11 +383,11 @@ class ValueTable(Table):
             frags.append(frag_line)
         return frags
 
-    def __convert_data(self) -> list[TableCell]:
-        frags = self.__wrap_data(self.data, self.col_widths)
+    def __convert_data(self) -> list[list[TableCell | str]]:
+        frags = self.__wrap_data()
         table_cells: list[list[TableCell | str]] = []
         for y, frag_line in enumerate(frags):
-            cells: list[TableCell] = []
+            cells: list[TableCell | str] = []
             for x, table_cell in enumerate(frag_line):
                 if table_cell == []:
                     cell = ''
@@ -409,7 +430,7 @@ class EmbeddedValueTable(KeepTogether):
         change_id = self.info.change_url.split('/')[4]
         table_link = f'{self.measure.link}/value-table/{change_id}/'
         header = ValueTableHeader(self.value_table.name, table_link)
-        KeepTogether.__init__(self, [table, header])
+        KeepTogether.__init__(self, [header, table])
 
     def __get_table(self) -> ValueTableObject:
         possible_names = [

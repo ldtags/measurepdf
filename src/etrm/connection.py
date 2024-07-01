@@ -1,16 +1,22 @@
 import re
 import requests
+from typing import overload
 
+from src import patterns
 from src.etrm.models import (
     MeasuresResponse,
     MeasureVersionsResponse,
     Measure,
-    Reference
+    Reference,
+    SharedLookupRef,
+    SharedValueTable
 )
 from src.exceptions import (
     ETRMResponseError,
     UnauthorizedError,
-    NotFoundError
+    NotFoundError,
+    ETRMRequestError,
+    ETRMConnectionError
 )
 
 
@@ -31,9 +37,9 @@ def extract_id(_url: str) -> str | None:
 
 
 class ETRMCache:
-    """Cache for eTRM API response data.
+    """Cache for eTRM API response data
 
-    Decreases time required for repeat API calls for the same data.
+    Used to decrease eTRM API connection layer latency on repeat calls
     """
 
     def __init__(self):
@@ -43,6 +49,8 @@ class ETRMCache:
         self.__uc_id_counts: dict[str, int] = {}
         self.version_cache: dict[str, list[str]] = {}
         self.measure_cache: dict[str, Measure] = {}
+        self.references: dict[str, Reference] = {}
+        self.shared_value_tables: dict[str, SharedValueTable] = {}
 
     def get_ids(self,
                 offset: int,
@@ -109,53 +117,92 @@ class ETRMCache:
     def add_measure(self, measure: Measure):
         self.measure_cache[measure.full_version_id] = measure
 
+    def get_reference(self, ref_id: str) -> Reference | None:
+        return self.references.get(ref_id, None)
+
+    def add_reference(self, ref_id: str, reference: Reference):
+        self.references[ref_id] = reference
+
+    def get_shared_value_table(self,
+                               table_name: str,
+                               version: str
+                              ) -> SharedValueTable | None:
+        return self.shared_value_tables.get(f'{table_name}-{version}', None)
+
+    def add_shared_value_table(self,
+                               table_name: str,
+                               version: str,
+                               value_table: SharedValueTable):
+        self.shared_value_tables[f'{table_name}-{version}'] = value_table
+
 
 class ETRMConnection:
-    """eTRM API connection layer."""
+    """eTRM API connection layer"""
 
     def __init__(self, auth_token: str):
-        self.auth_token = auth_token
+        self.auth_token = self.__sanitize_auth_token(auth_token)
+        self.headers = {
+            'Authorization': auth_token
+        }
         self.cache = ETRMCache()
 
+    def __sanitize_auth_token(self, token: str) -> str:
+        re_match = re.fullmatch(patterns.AUTH_TOKEN, token)
+        if re_match == None:
+            raise UnauthorizedError(f'invalid API key: {token}')
+
+        token_type = 'Token'
+        api_key = re_match.group(3)
+        if not isinstance(api_key, str):
+            raise ETRMConnectionError('An error occurred while parsing the '
+                                      f' API key from {token}')
+
+        return f'{token_type} {api_key}'
+
+    def get(self,
+            url: str,
+            headers: dict[str, str] | None=None,
+            params: dict[str, str] | None=None,
+            stream: bool=True,
+            **kwargs
+           ) -> requests.Response:
+        req_headers: dict[str, str] = {**self.headers}
+        if headers != None:
+            req_headers |= headers
+
+        try:
+            response = requests.get(url,
+                                    params=params,
+                                    headers=req_headers,
+                                    stream=stream,
+                                    **kwargs)
+        except requests.exceptions.ConnectionError as err:
+            raise ConnectionError() from err
+
+        match response.status_code:
+            case 200:
+                return response
+            case 401:
+                raise UnauthorizedError('Unauthorized API key:'
+                                        f' {self.auth_token}')
+            case 404:
+                raise NotFoundError(f'No resource found at [{url}]')
+            case 500:
+                raise ETRMResponseError('Server error occurred while'
+                                        ' attempting to access the resource'
+                                        f' at [{url}]')
+            case status:
+                raise ETRMResponseError('Unexpected status code received:'
+                                        f' {status}')
+
     def get_measure(self, full_version_id: str) -> Measure:
-        """Returns a detailed measure object.
-
-        Errors:
-            `NotFoundError` - (404) measure not found
-
-            `ETRMResponseError` - (500) server error
-
-            `UnauthorizedError` - (!200) any other error
-        """
-
         cached_measure = self.cache.get_measure(full_version_id)
         if cached_measure != None:
             return cached_measure
 
         statewide_id, version_id = full_version_id.split('-', 1)
-        headers = {
-            'Authorization': self.auth_token
-        }
-
         url = f'{API_URL}/measures/{statewide_id}/{version_id}'
-        try:
-            response = requests.get(url,
-                                    headers=headers,
-                                    stream=True)
-        except requests.exceptions.ConnectionError as err:
-            raise ConnectionError from err
-
-        if response.status_code == 404:
-            raise NotFoundError(f'Measure {full_version_id} could not be'
-                                ' found')
-
-        if response.status_code == 500:
-            raise ETRMResponseError('Server error occurred when retrieving'
-                                    f' measure {full_version_id}')
-
-        if response.status_code != 200:
-            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
-
+        response = self.get(url)
         measure = Measure(response.json())
         self.cache.add_measure(measure)
         return measure
@@ -165,16 +212,6 @@ class ETRMConnection:
                         limit: int=25,
                         use_category: str | None=None
                        ) -> tuple[list[str], int]:
-        """Returns a list of measure ids.
-
-        Errors:
-            `NotFoundError` - (404) measure not found
-
-            `ETRMResponseError` - (500) server error
-
-            `UnauthorizedError` - (!200) any other error
-        """
-
         cache_response = self.cache.get_ids(offset, limit, use_category)
         if cache_response != None:
             return cache_response
@@ -187,27 +224,7 @@ class ETRMConnection:
         if use_category != None:
             params['use_category'] = use_category
 
-        headers = {
-            'Authorization': self.auth_token
-        }
-
-        try:
-            response = requests.get(f'{API_URL}/measures',
-                                    params=params,
-                                    headers=headers)
-        except requests.exceptions.ConnectionError as err:
-            raise ConnectionError from err
-
-        if response.status_code == 404:
-            raise NotFoundError(f'Measures could not be found')
-
-        if response.status_code == 500:
-            raise ETRMResponseError('Server error occurred when retrieving'
-                                    ' measures')
-
-        if response.status_code != 200:
-            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
-
+        response = self.get(f'{API_URL}/measures', params=params)
         response_body = MeasuresResponse(response.json())
         measure_ids = list(map(lambda result: extract_id(result.url),
                                response_body.results))
@@ -227,78 +244,62 @@ class ETRMConnection:
         return measure_ids
 
     def get_measure_versions(self, measure_id: str) -> list[str]:
-        """Returns a list of versions of the measure with the ID
-        `measure_id`.
-
-        Errors:
-            `NotFoundError` - (404) measure not found
-
-            `ETRMResponseError` - (500) server error
-
-            `UnauthorizedError` - (!200) any other error
-        """
-
         cached_versions = self.cache.get_versions(measure_id)
         if cached_versions != None:
             return list(reversed(cached_versions))
 
-        headers = {
-            'Authorization': self.auth_token
-        }
-
-        url = f'{API_URL}/measures/{measure_id}/'
-        try:
-            response = requests.get(url, headers=headers)
-        except requests.exceptions.ConnectionError as err:
-            raise ConnectionError from err
-
-        if response.status_code == 404:
-            raise NotFoundError(f'No versions for measure {measure_id}'
-                                ' were found')
-
-        if response.status_code == 500:
-            raise ETRMResponseError('Server error occurred while retrieving'
-                                    f' versions for measure {measure_id}')
-
-        if response.status_code != 200:
-            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
-
+        response = self.get(f'{API_URL}/measures/{measure_id}/')
         response_body = MeasureVersionsResponse(response.json())
         measure_versions = sorted(map(lambda result: result.version,
                                       response_body.versions))
         self.cache.add_versions(measure_id, measure_versions)
         return list(reversed(measure_versions))
 
-    def get_reference(self, reference: str) -> Reference:
-        """Returns the reference associated with `reference`
+    def get_reference(self, ref_id: str) -> Reference:
+        cached_ref = self.cache.get_reference(ref_id)
+        if cached_ref is not None:
+            return cached_ref
 
-        Errors:
-            `NotFoundError` - (404) reference not found
+        response = self.get(f'{API_URL}/references/{ref_id}/')
+        reference = Reference(response.json())
+        self.cache.add_reference(ref_id, reference)
+        return reference
 
-            `ETRMResponseError` - (500) server error
+    @overload
+    def get_shared_value_table(self,
+                               lookup_ref: SharedLookupRef
+                              ) -> SharedValueTable:
+        ...
 
-            `UnauthorizedError` - (!200) any other error
-        """
+    @overload
+    def get_shared_value_table(self,
+                               table_name: str,
+                               version: str | int
+                              ) -> SharedValueTable:
+        ...
 
-        headers = {
-            'Authorization': self.auth_token
-        }
+    def get_shared_value_table(self, *args) -> SharedValueTable:
+        if len(args) == 1:
+            if not isinstance(args[0], SharedLookupRef):
+                raise ETRMRequestError(f'unknown overload args: {args}')
+            table_name = args[0].name
+            version = args[0].version
+            url = args[0].url
+        elif len(args) == 2:
+            if not (isinstance(args[0], str)
+                        and isinstance(args[1], str | int)):
+                raise ETRMRequestError(f'unknown overload args: {args}')
+            table_name = args[0]
+            version = f'{args[1]:03d}'
+            url = f'{API_URL}/shared-value-tables/{table_name}/{version}'
+        else:
+            raise ETRMRequestError('missing required parameters')
 
-        url = f'{API_URL}/references/{reference}/'
-        try:
-            response = requests.get(url, headers=headers)
-        except requests.exceptions.ConnectionError as err:
-            raise ConnectionError from err
+        cached_table = self.cache.get_shared_value_table(table_name, version)
+        if cached_table is not None:
+            return cached_table
 
-        if response.status_code == 404:
-            raise NotFoundError(f'No reference with the id {reference}'
-                                ' was found')
-
-        if response.status_code == 500:
-            raise ETRMResponseError('Server error occurred while retrieving'
-                                    f' reference {reference}')
-
-        if response.status_code != 200:
-            raise UnauthorizedError(f'Unauthorized token: {self.auth_token}')
-
-        return Reference(response.json())
+        response = self.get(url)
+        value_table = SharedValueTable(response.json())
+        self.cache.add_shared_value_table(table_name, version, value_table)
+        return value_table

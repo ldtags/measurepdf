@@ -34,6 +34,7 @@ from src.summarygen.styling import (
 from src.summarygen.flowables import NEWLINE
 from src.summarygen.rlobjects import Story
 from src.exceptions import (
+    ETRMConnectionError,
     ETRMResponseError,
     ETRMRequestError
 )
@@ -128,13 +129,6 @@ class SummaryPageTemplate(PageTemplate):
 
     def afterDrawPage(self, canv: Canvas, doc: SummaryDocTemplate):
         self.draw_footer(canv, doc)
-
-
-def _link(display_text: str, link: str) -> Paragraph:
-    """Generates a clickable flowable that contains an external link"""
-
-    return Paragraph(f'<link href=\"{link}\">{display_text}</link>',
-                     PSTYLES['Link'])
 
 
 def calc_row_heights(data: list[list[str | Paragraph]],
@@ -242,20 +236,85 @@ class MeasureSummary:
         self.story.add(header)
         self.story.add(sections)
 
+    def __get_impact(self,
+                     param_name: str,
+                     column: str,
+                     measure: Measure) -> str:
+        shared_param = measure.get_shared_parameter(param_name)
+        if shared_param is None:
+            return ''
+
+        try:
+            table_name = lookups.SHARED_VALUE_TABLES[shared_param.name]
+        except KeyError:
+            return ''
+        shared_lookup = measure.get_shared_lookup(table_name)
+        if shared_lookup is None:
+            return ''
+
+        try:
+            value_table = self.connection.get_shared_value_table(shared_lookup)
+        except ETRMConnectionError:
+            return ''
+
+        impacts: list[float] = []
+        for label in shared_param.active_labels:
+            try:
+                impact = value_table[label][column]
+                if isinstance(impact, str):
+                    try:
+                        impact = float(impact)
+                    except ValueError:
+                        impact = 0
+                impacts.append(impact or 0)
+            except KeyError:
+                continue
+
+        impact_avg = sum(impacts) / len(impacts)
+        if impact_avg == 0:
+            return ''
+        return f'{impact_avg:.2f}'
+
     def __build_parameters_table(self,
                                  params: list[tuple[str, str]],
+                                 impacts: list[tuple[str, str, str]],
                                  measure: Measure
-                                ) -> list[tuple[str, Paragraph]]:
-        data: list[tuple[str, Paragraph]] = []
+                                ) -> Table:
+        data: list[tuple[str, str]] = []
         for label, api_name in params:
             param = measure.get_shared_parameter(api_name)
             if param == None:
                 param_labels = ''
             else:
                 param_labels = ', '.join(sorted(set(param.active_labels)))
-            data.append((label, Paragraph(param_labels,
-                                          PSTYLES['SmallParagraph'])))
-        return data
+            data.append((label, param_labels))
+
+        for label, api_name, column in impacts:
+            impact = self.__get_impact(api_name, column, measure)
+            data.append((label, impact))
+
+        style = PSTYLES['SmallParagraph']
+        formatted_data: list[tuple[Paragraph, Paragraph]] = []
+        for label, item in data:
+            label_para = Paragraph(label, style=PSTYLES['Paragraph'])
+            item_para = Paragraph(item, PSTYLES['SmallParagraph'])
+            formatted_data.append((label_para, item_para))
+
+        style = TSTYLES['ParametersTable']
+        para_styles = (PSTYLES['Paragraph'], PSTYLES['SmallParagraph'])
+        col_widths = (2.26*inch, 3.98*inch)
+        base_height = 0.24*inch + style.top_padding + style.bottom_padding
+        row_heights = calc_row_heights(formatted_data,
+                                       style,
+                                       para_styles,
+                                       base_height,
+                                       col_widths)
+        return Table(formatted_data,
+                     colWidths=col_widths,
+                     rowHeights=row_heights,
+                     style=TSTYLES['ParametersTable'],
+                     hAlign='LEFT')
+
 
     def add_parameters_table(self, measure: Measure):
         params = [
@@ -267,28 +326,45 @@ class MeasureSummary:
             ('Delivery Type', 'DelivType'),
             ('Normalized Unit', 'NormUnit'),
             ('Electric Impact Profile ID', 'electricImpactProfileID'),
-            ('Gas Impact Profile ID', 'GasImpactProfileID')
+            ('Gas Impact Profile ID', 'GasImpactProfileID'),
+            ('Effective Useful Life ID', 'EULID')
         ]
-        data = self.__build_parameters_table(params, measure)
-        style = TSTYLES['ParametersTable']
-        col_widths = (2.26*inch, 3.98*inch)
-        base_height = 0.24*inch + style.top_padding + style.bottom_padding
-        row_heights = calc_row_heights(data,
-                                       style,
-                                       PSTYLES['SmallParagraph'],
-                                       base_height,
-                                       col_widths)
-        table = Table(data,
-                      colWidths=col_widths,
-                      rowHeights=row_heights,
-                      style=TSTYLES['ParametersTable'],
-                      hAlign='LEFT')
+        impacts = [
+            ('Effective Useful Life (Years)', 'EULID', 'EUL_Yrs'),
+            ('Remaining Useful Life (Years)', 'EULID', 'RUL_Yrs')
+        ]
+        table = self.__build_parameters_table(params, impacts, measure)
         table_header = Paragraph('Parameters:', PSTYLES['h2'])
         self.story.add(KeepTogether([table_header, table]))
 
+    def __build_sections_table(self,
+                               sections: list[tuple[str, str, str]]
+                              ) -> Table:
+        data: list[tuple[Paragraph | str, Paragraph]] = []
+        for title, label, link in sections:
+            if title != '':
+                title_para = Paragraph(title, style=PSTYLES['TableHeader'])
+            else:
+                title_para = ''
+            link_para = Paragraph(f'<link href=\"{link}\">{label}</link>',
+                                  PSTYLES['Link'])
+            data.append((title_para, link_para))
+        tstyle = TSTYLES['SectionsTable']
+        para_styles = (PSTYLES['TableHeader'], PSTYLES['Link'])
+        col_widths = (1.42*inch, 4.81*inch)
+        base_height = PSTYLES['TableHeader'].leading
+        row_heights = calc_row_heights(data,
+                                       tstyle,
+                                       para_styles,
+                                       base_height,
+                                       col_widths)
+        return Table(data,
+                     colWidths=col_widths,
+                     rowHeights=row_heights,
+                     style=tstyle,
+                     hAlign='LEFT')
+
     def add_sections_table(self, measure: Measure):
-        table_header = Paragraph('Sections:', PSTYLES['h2'])
-        hstyle = PSTYLES['TableHeader']
         id_path = '/'.join(measure.full_version_id.split('-', 1))
         link = f'{ETRM_URL}/measure/{id_path}'
         try:
@@ -301,78 +377,77 @@ class MeasureSummary:
             perm_link = reference.source_document
         except (ETRMResponseError, ETRMRequestError):
             perm_link = f'{link}/permutation-report'
-        data = [
-            [Paragraph('Descriptions', hstyle),
-                _link('Technology Summary', f'{link}#technology-summary')],
-            ['', 
-                _link('Measure Case Description',
-                      f'{link}#measure-case-description')],
-            ['',
-                _link('Base Case Description',
-                      f'{link}#base-case-description')],
-            [Paragraph('Requirements', hstyle),
-                _link('Code Requirements', f'{link}#code-requirements')],
-            ['',
-                _link('Program Requirements',
-                      f'{link}#program-requirements')],
-            ['',
-                _link('Program Exclusions', f'{link}#program-exclusions')],
-            ['',
-                _link('Data Collection Requirements',
-                      f'{link}#data-collection-requirements')],
-            [Paragraph('Savings', hstyle),
-                _link('Electric Savings (kWh)',
-                      f'{link}#electric-savings-kwh')],
-            ['',
-                _link('Electric Demand Reduction (kW)',
-                      f'{link}#peak-electric-demand-reduction-kw')],
-            ['',
-                _link('Gas Savings (Therms)', f'{link}#gas-savings-therms')],
-            [Paragraph('Cost', hstyle),
-                _link('Base Case Material Cost ($/Unit)',
-                      f'{link}#base-case-material-cost-unit')],
-            ['',
-                _link('Measure Case Material Cost ($/Unit)',
-                      f'{link}#measure-case-material-cost-unit')],
-            ['',
-                _link('Base Case Labor Cost ($/Unit)',
-                      f'{link}#base-case-labor-cost-unit')],
-            ['',
-                _link('Measure Case Labor Cost ($/Unit)',
-                      f'{link}#measure-case-labor-cost-unit')],
-            [Paragraph('Other', hstyle),
-                _link('Life Cycle', f'{link}#life-cycle')],
-            ['',
-                _link('Net-to-gross', f'{link}#net-to-gross')],
-            ['',
-                _link('Gross Savings Installation Adjustment (GSIA)',
-                      f'{link}#gross-savings-installation-adjustment-gsia')],
-            ['',
-                _link('Non-Energy Impacts', f'{link}#non-energy-impacts')],
-            [Paragraph('Version Comparison', hstyle),
-                _link('Cover Sheet', f'{link}/cover-sheet')],
-            [Paragraph('Field Validation List', hstyle),
-                _link('Property Data', f'{link}/property-data')],
-            [Paragraph('Subscribe', hstyle),
-                _link('Subscriptions', f'{link}/subscriptions')],
-            [Paragraph('Permutations', hstyle),
-                _link('Permutations', perm_link)]]
-        tstyle = TSTYLES['SectionsTable']
-        para_styles = (PSTYLES['TableHeader'], PSTYLES['Link'])
-        col_widths = (1.42*inch, 4.81*inch)
-        base_height = PSTYLES['TableHeader'].leading
-        row_heights = calc_row_heights(data,
-                                       tstyle,
-                                       para_styles,
-                                       base_height,
-                                       col_widths)
-        table = Table(data,
-                      colWidths=col_widths,
-                      rowHeights=row_heights,
-                      style=tstyle,
-                      hAlign='LEFT')
-        headed_table = KeepTogether([table_header, table])
-        self.story.add(headed_table)
+        sections = [
+            ('Descriptions',
+                'Technology Summary',
+                f'{link}#technology-summary'),
+            ('',
+                'Measure Case Description',
+                f'{link}#measure-case-description'),
+            ('',
+                'Base Case Description',
+                f'{link}#base-case-description'),
+            ('Requirements',
+                'Code Requirements',
+                f'{link}#code-requirements'),
+            ('',
+                'Program Requirements',
+                f'{link}#program-requirements'),
+            ('',
+                'Program Exclusions',
+                f'{link}#program-exclusions'),
+            ('',
+                'Data Collection Requirements',
+                f'{link}#data-collection-requirements'),
+            ('Savings',
+                'Electric Savings (kWh)',
+                f'{link}#electric-savings-kwh'),
+            ('',
+                'Electric Demand Reduction (kW)',
+                f'{link}#peak-electric-demand-reduction-kw'),
+            ('',
+                'Gas Savings (Therms)',
+                f'{link}#gas-savings-therms'),
+            ('Cost',
+                'Base Case Material Cost ($/Unit)',
+                f'{link}#base-case-material-cost-unit'),
+            ('',
+                'Measure Case Material Cost ($/Unit)',
+                f'{link}#measure-case-material-cost-unit'),
+            ('',
+                'Base Case Labor Cost ($/Unit)',
+                f'{link}#base-case-labor-cost-unit'),
+            ('',
+                'Measure Case Labor Cost ($/Unit)',
+                f'{link}#measure-case-labor-cost-unit'),
+            ('Other',
+                'Life Cycle',
+                f'{link}#life-cycle'),
+            ('',
+                'Net-to-gross',
+                f'{link}#net-to-gross'),
+            ('',
+                'Gross Savings Installation Adjustment (GSIA)',
+                f'{link}#gross-savings-installation-adjustment-gsia'),
+            ('',
+                'Non-Energy Impacts',
+                f'{link}#non-energy-impacts'),
+            ('Version Comparison',
+                'Cover Sheet',
+                f'{link}/cover-sheet'),
+            ('Field Validation List',
+                'Property Data',
+                f'{link}/property-data'),
+            ('Subscribe',
+                'Subscriptions',
+                f'{link}/subscriptions'),
+            ('Permutations',
+                'Permutations',
+                perm_link)
+        ]
+        table = self.__build_sections_table(sections)
+        table_header = Paragraph('Sections:', PSTYLES['h2'])
+        self.story.add(KeepTogether([table_header, table]))
 
     def add_measure(self, measure: Measure):
         self.measures.append(measure)

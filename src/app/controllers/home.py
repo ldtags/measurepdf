@@ -3,6 +3,7 @@ import re
 import sys
 import tkinter as tk
 import customtkinter as ctk
+import traceback
 
 from src import _ROOT, patterns, lookups
 from src.app.views import View

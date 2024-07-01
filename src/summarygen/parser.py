@@ -15,7 +15,6 @@ from reportlab.lib.pagesizes import letter
 from reportlab.platypus import (
     Flowable,
     Paragraph,
-    Table,
     ListFlowable,
     ListItem,
     Spacer,
@@ -41,8 +40,6 @@ from src.summarygen.models import (
 )
 from src.summarygen.styling import (
     PSTYLES,
-    DEF_PSTYLE,
-    TSTYLES,
     INNER_WIDTH,
     INNER_HEIGHT,
     PAGESIZE
@@ -298,11 +295,11 @@ class CharacterizationParser:
         self.flowables = FlowableList()
         self.width, self.height = PAGESIZE
 
-    def handle_text(self, element: NavigableString) -> Flowable:
+    def handle_text(self, element: NavigableString) -> list[Flowable]:
         text = element.get_text()
         if text == '\n':
-            return KeepTogether(Spacer(letter[0], 9.2))
-        return Paragraph(text, PSTYLES['Paragraph'])
+            return [KeepTogether(Spacer(letter[0], 9.2))]
+        return [Paragraph(text, PSTYLES['Paragraph'])]
 
     def handle_embedded_tag(self, tag: Tag) -> Flowable | None:
         json_str = tag.attrs.get('data-etrmreference', None)
@@ -329,9 +326,9 @@ class CharacterizationParser:
             return get_image(_url)
         return None
 
-    def handle_h(self, header: Tag) -> Flowable:
+    def handle_h(self, header: Tag) -> list[Flowable]:
         if len(header.contents) < 1:
-            return Paragraph('', PSTYLES[header.name])
+            return [Paragraph('', PSTYLES[header.name])]
 
         elements = _parse_element(header.contents[0])
         text = ''
@@ -391,7 +388,7 @@ class CharacterizationParser:
 
     def parse_element(self, element: PageElement) -> list[Flowable]:
         if isinstance(element, NavigableString):
-            return self.handle_text()
+            return self.handle_text(element)
 
         if not isinstance(element, Tag):
             return []

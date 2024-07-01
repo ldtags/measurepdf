@@ -45,11 +45,41 @@ class MeasureVersionInfo:
 class MeasureVersionsResponse:
     def __init__(self, res_json: dict[str, Any]):
         try:
-            self.statewide_measure_id = getc(res_json, 'statewide_measure_id', str)
+            self.statewide_measure_id = getc(res_json,
+                                             'statewide_measure_id',
+                                             str)
             self.use_category = getc(res_json, 'use_category', str)
-            self.versions = getc(res_json, 'versions', list[MeasureVersionInfo])
+            self.versions = getc(res_json,
+                                 'versions',
+                                 list[MeasureVersionInfo])
         except IndexError:
             raise ETRMResponseError('malformed measure versions response')
+
+
+class Version:
+    def __init__(self, res_json: dict[str, Any]):
+        try:
+            version_string = getc(res_json, 'version_string', str)
+        except IndexError:
+            raise ETRMResponseError()
+        try:
+            self.table_name, self.version = version_string.split('-', 1)
+        except ValueError:
+            raise ETRMResponseError(f'{version_string} is not'
+                                    ' properly formatted')
+
+
+class SharedDeterminantRef:
+    def __init__(self, res_json: dict[str, Any]):
+        try:
+            self.order = getc(res_json, 'order', int)
+            _version = getc(res_json, 'version', Version)
+            self.name = _version.table_name
+            self.version = _version.version
+            self.active_labels = getc(res_json, 'active_labels', list[str])
+            self.url = getc(res_json, 'url', str)
+        except IndexError:
+            raise ETRMResponseError()
 
 
 class Label:
@@ -76,22 +106,13 @@ class Determinant:
             raise ETRMResponseError()
 
 
-class SharedDeterminant:
+class SharedLookupRef:
     def __init__(self, res_json: dict[str, Any]):
         try:
             self.order = getc(res_json, 'order', int)
-            self.version = getc(res_json, 'version', dict[str, str])['version_string']
-            self.active_labels = getc(res_json, 'active_labels', list[str])
-            self.url = getc(res_json, 'url', str)
-        except IndexError:
-            raise ETRMResponseError()
-
-
-class SharedValueTable:
-    def __init__(self, res_json: dict[str, Any]):
-        try:
-            self.order = getc(res_json, 'order', int)
-            self.version = getc(res_json, 'version', dict[str, str])['version_string']
+            _version = getc(res_json, 'version', Version)
+            self.name = _version.table_name
+            self.version = _version.version
             self.url = getc(res_json, 'url', str)
         except IndexError:
             raise ETRMResponseError()
@@ -103,7 +124,12 @@ class Column:
             self.name = getc(res_json, 'name', str)
             self.api_name = getc(res_json, 'api_name', str)
             self.unit = getc(res_json, 'unit', str)
-            self.reference_refs = getc(res_json, 'reference_refs', list[str])
+            try:
+                self.reference_refs = getc(res_json,
+                                           'reference_refs',
+                                           list[str])
+            except TypeError:
+                self.reference_refs = getc(res_json, 'references', list[str])
         except IndexError:
             raise ETRMResponseError()
 
@@ -122,6 +148,47 @@ class ValueTable:
             self.reference_refs = getc(res_json, 'reference_refs', list[str])
         except IndexError:
             raise ETRMResponseError()
+
+
+class SharedValueTable:
+    def __init__(self, res_json: dict[str, Any]):
+        self.json = res_json
+        try:
+            self.name = getc(res_json, 'name', str)
+            self.api_name = getc(res_json, 'api_name', str)
+            self.parameters = getc(res_json, 'parameters', list[str])
+            self.columns = getc(res_json, 'columns', list[Column])
+            self.values = getc(res_json,
+                               'values',
+                               list[list[str | float | None]])
+            self.references = getc(res_json, 'references', list[str])
+            self.version = getc(res_json, 'version', str)
+            self.status = getc(res_json, 'status', str)
+            self.change_description = getc(res_json, 'change_description', str)
+            self.owner = getc(res_json, 'owner', str)
+            self.is_published = getc(res_json, 'is_published', bool)
+            self.committed_date = getc(res_json, 'committed_date', str)
+            self.last_updated_date = getc(res_json, 'last_updated_date', str)
+            self.type = getc(res_json, 'type', str)
+            self.versions_url = getc(res_json, 'versions_url', str)
+            self.url = getc(res_json, 'url', str)
+
+            headers = [
+                *self.parameters,
+                *[col.api_name for col in self.columns]
+            ]
+
+            self.data: dict[str, dict[str, str | float | None]] = {}
+            for row in self.values:
+                self.data[row[0]] = {}
+                for i, item in enumerate(row[1:], 1):
+                    self.data[row[0]][headers[i]] = item
+
+        except IndexError:
+            raise ETRMResponseError()
+
+    def __getitem__(self, description: str) -> dict[str, str | float | None]:
+        return self.data[description]
 
 
 class Calculation:
@@ -177,23 +244,42 @@ class Measure:
     def __init__(self, res_json: dict[str, Any]):
         self._json = res_json
         try:
-            self.statewide_measure_id = getc(res_json, 'statewide_measure_id', str)
+            self.statewide_measure_id = getc(res_json,
+                                             'statewide_measure_id',
+                                             str)
             self.is_published = getc(res_json, 'is_published', bool)
             self.name = getc(res_json, 'name', str)
             self.use_category = getc(res_json, 'use_category', str)
             self.status = getc(res_json, 'status', str)
-            self.effective_start_date = getc(res_json, 'effective_start_date', str)
+            self.effective_start_date = getc(res_json,
+                                             'effective_start_date',
+                                             str)
             self.sunset_date = getc(res_json, 'sunset_date', str | None)
             self.pa_lead = getc(res_json, 'pa_lead', str)
             self.permutation_method = getc(res_json, 'permutation_method', int)
-            self.workpaper_cover_sheet = getc(res_json, 'workpaper_cover_sheet', str)
-            self.characterization_source_file = getc(res_json, 'characterization_source_file', str | None)
-            self.determinants = getc(res_json, 'determinants', list[Determinant])
-            self.shared_determinant_refs = getc(res_json, 'shared_determinant_refs', list[SharedDeterminant])
-            self.shared_lookup_refs = getc(res_json, 'shared_lookup_refs', list[SharedValueTable])
-            self.value_tables = getc(res_json, 'value_tables', list[ValueTable])
-            self.calculations = getc(res_json, 'calculations', list[Calculation])
-            self.exclusion_tables = getc(res_json, 'exclusion_tables', list[ExclusionTable])
+            self.workpaper_cover_sheet = getc(res_json,
+                                              'workpaper_cover_sheet',
+                                              str)
+            self.characterization_source_file \
+                = getc(res_json, 'characterization_source_file', str | None)
+            self.determinants = getc(res_json,
+                                     'determinants',
+                                     list[Determinant])
+            self.shared_determinant_refs = getc(res_json,
+                                                'shared_determinant_refs',
+                                                list[SharedDeterminantRef])
+            self.shared_lookup_refs = getc(res_json,
+                                           'shared_lookup_refs',
+                                           list[SharedLookupRef])
+            self.value_tables = getc(res_json,
+                                     'value_tables',
+                                     list[ValueTable])
+            self.calculations = getc(res_json,
+                                     'calculations',
+                                     list[Calculation])
+            self.exclusion_tables = getc(res_json,
+                                         'exclusion_tables',
+                                         list[ExclusionTable])
             self.full_version_id = getc(res_json, 'full_version_id', str)
             self.date_committed = getc(res_json, 'date_committed', str)
             self.change_description = getc(res_json, 'change_description', str)
@@ -220,20 +306,28 @@ class Measure:
 
     def get_determinant(self, name: str) -> Determinant | None:
         for determinant in self.determinants:
-            if determinant.api_name == name or determinant.name == name:
+            if (determinant.api_name.lower() == name.lower()
+                    or determinant.name.lower() == name.lower()):
                 return determinant
         return None
 
-    def get_shared_parameter(self, name: str) -> SharedDeterminant | None:
+    def get_shared_parameter(self, name: str) -> SharedDeterminantRef | None:
         for parameter in self.shared_determinant_refs:
-            if parameter.version.split('-')[0] == name:
+            if parameter.name.lower() == name.lower():
                 return parameter
         return None
 
     def get_value_table(self, name: str) -> ValueTable | None:
         for table in self.value_tables:
-            if table.name == name or table.api_name.lower() == name.lower():
+            if (table.name.lower() == name.lower()
+                    or table.api_name.lower() == name.lower()):
                 return table
+        return None
+
+    def get_shared_lookup(self, name: str) -> SharedLookupRef | None:
+        for lookup_ref in self.shared_lookup_refs:
+            if lookup_ref.name.lower() == name.lower():
+                return lookup_ref
         return None
 
 
@@ -243,13 +337,21 @@ class Reference:
         try:
             self.reference_code = getc(res_json, 'reference_code', str)
             self.reference_citation = getc(res_json, 'reference_citation', str)
-            self.source_reference = getc(res_json, 'source_reference', str | None)
+            self.source_reference = getc(res_json,
+                                         'source_reference',
+                                         str | None)
             self.source_url = getc(res_json, 'source_url', str | None)
-            self.reference_location = getc(res_json, 'reference_location', str | None)
+            self.reference_location = getc(res_json,
+                                           'reference_location',
+                                           str | None)
             self.reference_type = getc(res_json, 'reference_type', str)
-            self.publication_title = getc(res_json, 'publication_title', str | None)
+            self.publication_title = getc(res_json,
+                                          'publication_title',
+                                          str | None)
             self.lead_author = getc(res_json, 'lead_author', str | None)
-            self.lead_author_org = getc(res_json, 'lead_author_org', str | None)
+            self.lead_author_org = getc(res_json,
+                                        'lead_author_org',
+                                        str | None)
             self.sponsor_org = getc(res_json, 'sponsor_org', str | None)
             self.source_document = getc(res_json, 'source_document', str)
         except IndexError:
