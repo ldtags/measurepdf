@@ -131,6 +131,13 @@ class SummaryPageTemplate(PageTemplate):
         self.draw_footer(canv, doc)
 
 
+def calc_col_widths(data: list[list[str | Paragraph]],
+                    table_style: BetterTableStyle,
+                    para_styles: tuple[BetterParagraphStyle, ...]
+                   ) -> list[float]:
+    
+
+
 def calc_row_heights(data: list[list[str | Paragraph]],
                      table_style: BetterTableStyle,
                      para_styles: tuple[BetterParagraphStyle, ...],
@@ -236,48 +243,8 @@ class MeasureSummary:
         self.story.add(header)
         self.story.add(sections)
 
-    def __get_impact(self,
-                     param_name: str,
-                     column: str,
-                     measure: Measure) -> str:
-        shared_param = measure.get_shared_parameter(param_name)
-        if shared_param is None:
-            return ''
-
-        try:
-            table_name = lookups.SHARED_VALUE_TABLES[shared_param.name]
-        except KeyError:
-            return ''
-        shared_lookup = measure.get_shared_lookup(table_name)
-        if shared_lookup is None:
-            return ''
-
-        try:
-            value_table = self.connection.get_shared_value_table(shared_lookup)
-        except ETRMConnectionError:
-            return ''
-
-        impacts: list[float] = []
-        for label in shared_param.active_labels:
-            try:
-                impact = value_table[label][column]
-                if isinstance(impact, str):
-                    try:
-                        impact = float(impact)
-                    except ValueError:
-                        impact = 0
-                impacts.append(impact or 0)
-            except KeyError:
-                continue
-
-        impact_avg = sum(impacts) / len(impacts)
-        if impact_avg == 0:
-            return ''
-        return f'{impact_avg:.2f}'
-
     def __build_parameters_table(self,
                                  params: list[tuple[str, str]],
-                                 impacts: list[tuple[str, str, str]],
                                  measure: Measure
                                 ) -> Table:
         data: list[tuple[str, str]] = []
@@ -288,10 +255,6 @@ class MeasureSummary:
             else:
                 param_labels = ', '.join(sorted(set(param.active_labels)))
             data.append((label, param_labels))
-
-        for label, api_name, column in impacts:
-            impact = self.__get_impact(api_name, column, measure)
-            data.append((label, impact))
 
         style = PSTYLES['SmallParagraph']
         formatted_data: list[tuple[Paragraph, Paragraph]] = []
@@ -336,6 +299,54 @@ class MeasureSummary:
         table = self.__build_parameters_table(params, impacts, measure)
         table_header = Paragraph('Parameters:', PSTYLES['h2'])
         self.story.add(KeepTogether([table_header, table]))
+
+    def __get_impact(self,
+                     param_name: str,
+                     column: str,
+                     measure: Measure) -> str:
+        shared_param = measure.get_shared_parameter(param_name)
+        if shared_param is None:
+            return ''
+
+        try:
+            table_name = lookups.SHARED_VALUE_TABLES[shared_param.name]
+        except KeyError:
+            return ''
+        shared_lookup = measure.get_shared_lookup(table_name)
+        if shared_lookup is None:
+            return ''
+
+        try:
+            value_table = self.connection.get_shared_value_table(shared_lookup)
+        except ETRMConnectionError:
+            return ''
+
+        impacts: list[float] = []
+        for label in shared_param.active_labels:
+            try:
+                impact = value_table[label][column]
+                if isinstance(impact, str):
+                    try:
+                        impact = float(impact)
+                    except ValueError:
+                        impact = 0
+                impacts.append(impact or 0)
+            except KeyError:
+                continue
+
+        impact_avg = sum(impacts) / len(impacts)
+        if impact_avg == 0:
+            return ''
+        return f'{impact_avg:.2f}'
+
+    def add_impact_table(self, measure: Measure):
+        table_header = Paragraph('Impact:', style=PSTYLES['h2'])
+        data = [
+            ('Effective Useful Life (Years)',
+                self.__get_impact('EULID', 'EUL_Yrs', measure)),
+            ('Remaining Useful Life (Years)',
+                self.__get_impact('EULID', 'RUL_Yrs', measure))
+        ]
 
     def __build_sections_table(self,
                                sections: list[tuple[str, str, str]]
