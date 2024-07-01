@@ -69,7 +69,7 @@ class ETRMCache:
 
         try:
             cached_ids = id_cache[offset:offset + limit]
-            if cached_ids != [] and all(cached_ids):
+            if len(cached_ids) == limit and all(cached_ids):
                 return (cached_ids, count)
         except IndexError:
             return None
