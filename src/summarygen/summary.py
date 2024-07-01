@@ -131,13 +131,6 @@ class SummaryPageTemplate(PageTemplate):
         self.draw_footer(canv, doc)
 
 
-def calc_col_widths(data: list[list[str | Paragraph]],
-                    table_style: BetterTableStyle,
-                    para_styles: tuple[BetterParagraphStyle, ...]
-                   ) -> list[float]:
-    
-
-
 def calc_row_heights(data: list[list[str | Paragraph]],
                      table_style: BetterTableStyle,
                      para_styles: tuple[BetterParagraphStyle, ...],
