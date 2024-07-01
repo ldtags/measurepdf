@@ -242,40 +242,34 @@ class MeasureSummary:
         self.story.add(header)
         self.story.add(sections)
 
-    def __add_param_row(self,
-                        measure: Measure,
-                        label: str,
-                        param_name: str,
-                        data: list[tuple[str, Paragraph]]):
-            param = measure.get_shared_parameter(param_name)
+    def __build_parameters_table(self,
+                                 params: list[tuple[str, str]],
+                                 measure: Measure
+                                ) -> list[tuple[str, Paragraph]]:
+        data: list[tuple[str, Paragraph]] = []
+        for label, api_name in params:
+            param = measure.get_shared_parameter(api_name)
             if param == None:
                 param_labels = ''
             else:
                 param_labels = ', '.join(sorted(set(param.active_labels)))
             data.append((label, Paragraph(param_labels,
                                           PSTYLES['SmallParagraph'])))
+        return data
 
     def add_parameters_table(self, measure: Measure):
-        table_header = Paragraph('Parameters:', PSTYLES['h2'])
-        data = []
-        self.__add_param_row(measure,
-                             'Measure Application Type',
-                             'MeasAppType',
-                             data)
-        self.__add_param_row(measure, 'Sector', 'Sector', data)
-        self.__add_param_row(measure, 'Building Type', 'BldgType', data)
-        self.__add_param_row(measure, 'Building Vintage', 'BldgVint', data)
-        self.__add_param_row(measure, 'Building Location', 'BldgLoc', data)
-        self.__add_param_row(measure, 'Delivery Type', 'DelivType', data)
-        self.__add_param_row(measure, 'Normalized Unit', 'NormUnit', data)
-        self.__add_param_row(measure,
-                             'Electric Impact Profile ID',
-                             'electricImpactProfileID',
-                             data)
-        self.__add_param_row(measure,
-                             'Gas Impact Profile ID',
-                             'GasImpactProfileID',
-                             data)
+        params = [
+            ('Measure Application Type', 'MeasAppType'),
+            ('Sector', 'Sector'),
+            ('Building Type', 'BldgType'),
+            ('Building Vintage', 'BldgVint'),
+            ('Building Location', 'BldgLoc'),
+            ('Delivery Type', 'DelivType'),
+            ('Normalized Unit', 'NormUnit'),
+            ('Electric Impact Profile ID', 'electricImpactProfileID'),
+            ('Gas Impact Profile ID', 'GasImpactProfileID')
+        ]
+        data = self.__build_parameters_table(params, measure)
         style = TSTYLES['ParametersTable']
         col_widths = (2.26*inch, 3.98*inch)
         base_height = 0.24*inch + style.top_padding + style.bottom_padding
@@ -289,8 +283,8 @@ class MeasureSummary:
                       rowHeights=row_heights,
                       style=TSTYLES['ParametersTable'],
                       hAlign='LEFT')
-        headed_table = KeepTogether([table_header, table])
-        self.story.add(headed_table)
+        table_header = Paragraph('Parameters:', PSTYLES['h2'])
+        self.story.add(KeepTogether([table_header, table]))
 
     def add_sections_table(self, measure: Measure):
         table_header = Paragraph('Sections:', PSTYLES['h2'])
