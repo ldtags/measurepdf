@@ -1,5 +1,6 @@
 import os
 import re
+import math
 import shutil
 from reportlab.lib.pagesizes import inch
 from reportlab.pdfgen.canvas import Canvas
@@ -31,7 +32,7 @@ from src.summarygen.styling import (
     INNER_HEIGHT,
     INNER_WIDTH
 )
-from src.summarygen.flowables import NEWLINE
+from src.summarygen.flowables import NEWLINE, SummaryTable
 from src.summarygen.rlobjects import Story
 from src.exceptions import (
     ETRMConnectionError,
@@ -186,6 +187,7 @@ class MeasureSummary:
                  override: bool=True):
         clean()
         self.measures: list[Measure] = []
+        self.__cur_measure: Measure | None = None
         self.connection = connection
         self.story = Story()
         if os.path.exists(dir_path):
@@ -199,7 +201,11 @@ class MeasureSummary:
                                   f' in {dir_path}')
         self.summary = SummaryDocTemplate(self.file_path)
 
-    def add_measure_details_table(self, measure: Measure):
+    def add_measure_details_table(self):
+        if self.__cur_measure is None:
+            return
+
+        measure = self.__cur_measure
         pstyle = PSTYLES['SmallParagraph']
         data: list[tuple[str, Paragraph]] = [
             ['Statewide Measure Id', Paragraph(measure.full_version_id,
@@ -225,29 +231,78 @@ class MeasureSummary:
                       rowHeights=row_heights,
                       style=style,
                       hAlign='LEFT')
-        self.story.add(table)
+        self.story.add(table, NEWLINE)
 
-    def add_tech_summary(self, measure: Measure):
+    def add_tech_summary(self):
         header = Paragraph('Technology Summary', PSTYLES['h2'])
-        parser = CharacterizationParser(measure=measure,
+        parser = CharacterizationParser(measure=self.__cur_measure,
                                         connection=self.connection,
                                         name='technology_summary')
-        sections = parser.parse()
-        self.story.add(header)
-        self.story.add(sections)
+        flowables = parser.parse()
+        self.story.add(header, *flowables, NEWLINE)
+
+    def __get_shared_avg(self,
+                         param_name: str,
+                         column: str,
+                         measure: Measure) -> str:
+        shared_param = measure.get_shared_parameter(param_name)
+        if shared_param is None:
+            return ''
+
+        try:
+            table_name = lookups.SHARED_VALUE_TABLES[shared_param.name]
+        except KeyError:
+            return ''
+        shared_lookup = measure.get_shared_lookup(table_name)
+        if shared_lookup is None:
+            return ''
+
+        try:
+            value_table = self.connection.get_shared_value_table(shared_lookup)
+        except ETRMConnectionError:
+            return ''
+
+        impacts: list[float] = []
+        for label in shared_param.active_labels:
+            try:
+                col_data = value_table.data[label][column]
+                vals = list(
+                    filter(
+                        lambda val: val is not None,
+                        col_data
+                    )
+                )
+                avg = math.fsum(vals) / len(vals)
+                impacts.append(avg)
+            except KeyError:
+                continue
+
+        if len(impacts) == 0:
+            return ''
+
+        impact_avg = sum(impacts) / len(impacts)
+        if impact_avg == 0:
+            return ''
+        return f'{impact_avg:.2f}'
 
     def __build_parameters_table(self,
                                  params: list[tuple[str, str]],
-                                 measure: Measure
+                                 impacts: list[tuple[str, str]]=[]
                                 ) -> Table:
         data: list[tuple[str, str]] = []
         for label, api_name in params:
-            param = measure.get_shared_parameter(api_name)
+            param = self.__cur_measure.get_shared_parameter(api_name)
             if param == None:
                 param_labels = ''
             else:
                 param_labels = ', '.join(sorted(set(param.active_labels)))
             data.append((label, param_labels))
+
+        for label, api_name, column_name in impacts:
+            impact = self.__get_shared_avg(param_name=api_name,
+                                           column=column_name,
+                                           measure=self.__cur_measure)
+            data.append((label, impact))
 
         style = PSTYLES['SmallParagraph']
         formatted_data: list[tuple[Paragraph, Paragraph]] = []
@@ -271,8 +326,10 @@ class MeasureSummary:
                      style=TSTYLES['ParametersTable'],
                      hAlign='LEFT')
 
+    def add_parameters_table(self):
+        if self.__cur_measure is None:
+            return
 
-    def add_parameters_table(self, measure: Measure):
         params = [
             ('Measure Application Type', 'MeasAppType'),
             ('Sector', 'Sector'),
@@ -289,57 +346,49 @@ class MeasureSummary:
             ('Effective Useful Life (Years)', 'EULID', 'EUL_Yrs'),
             ('Remaining Useful Life (Years)', 'EULID', 'RUL_Yrs')
         ]
-        table = self.__build_parameters_table(params, impacts, measure)
+        table = self.__build_parameters_table(params, impacts)
         table_header = Paragraph('Parameters:', PSTYLES['h2'])
-        self.story.add(KeepTogether([table_header, table]))
+        self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
-    def __get_impact(self,
-                     param_name: str,
-                     column: str,
-                     measure: Measure) -> str:
-        shared_param = measure.get_shared_parameter(param_name)
-        if shared_param is None:
-            return ''
+    def add_impact_table(self):
+        if self.__cur_measure is None:
+            return
 
-        try:
-            table_name = lookups.SHARED_VALUE_TABLES[shared_param.name]
-        except KeyError:
-            return ''
-        shared_lookup = measure.get_shared_lookup(table_name)
-        if shared_lookup is None:
-            return ''
+        permutations = self.connection.get_permutations(self.__cur_measure)
+        first_baseline = permutations.get_first_baseline()
+        second_baseline = permutations.get_second_baseline()
+        first_mtc = permutations.average('UnitMeaCost1stBaseline')
+        second_mtc = permutations.average('UnitMeaCost2ndBaseline')
+        mat_param = self.__cur_measure.get_shared_parameter('MeasAppType')
+        if mat_param != None:
+            if all(x in mat_param.active_labels for x in [['NC', 'NR']]):
+                standard = first_baseline
+                pre_existing = 0.0
+                inc_cost = first_mtc
+                full_cost = 0.0
+            elif 'AR' in mat_param.active_labels:
+                standard = second_baseline
+                pre_existing = first_baseline
+                inc_cost = second_mtc
+                full_cost = first_mtc
+            else:
+                standard = 0.0
+                pre_existing = first_baseline
+                inc_cost = 0.0
+                full_cost = first_mtc
 
-        try:
-            value_table = self.connection.get_shared_value_table(shared_lookup)
-        except ETRMConnectionError:
-            return ''
-
-        impacts: list[float] = []
-        for label in shared_param.active_labels:
-            try:
-                impact = value_table[label][column]
-                if isinstance(impact, str):
-                    try:
-                        impact = float(impact)
-                    except ValueError:
-                        impact = 0
-                impacts.append(impact or 0)
-            except KeyError:
-                continue
-
-        impact_avg = sum(impacts) / len(impacts)
-        if impact_avg == 0:
-            return ''
-        return f'{impact_avg:.2f}'
-
-    def add_impact_table(self, measure: Measure):
-        table_header = Paragraph('Impact:', style=PSTYLES['h2'])
-        data = [
-            ('Effective Useful Life (Years)',
-                self.__get_impact('EULID', 'EUL_Yrs', measure)),
-            ('Remaining Useful Life (Years)',
-                self.__get_impact('EULID', 'RUL_Yrs', measure))
+        data: list[tuple[str, str]] = [
+            ('Standard', f'{standard:.2f}'),
+            ('Pre-Existing', f'{pre_existing:.2f}'),
+            ('Incremental Cost', f'{inc_cost:.2f}'),
+            ('Full Measure Cost', f'{full_cost:.2f}')
         ]
+        table = SummaryTable(data,
+                             header_orient='left',
+                             header_style=PSTYLES['Paragraph'],
+                             body_style=PSTYLES['SmallParagraph'])
+        header = Paragraph('Impact:', style=PSTYLES['h2'])
+        self.story.add(KeepTogether([header, table]), NEWLINE)
 
     def __build_sections_table(self,
                                sections: list[tuple[str, str, str]]
@@ -368,7 +417,11 @@ class MeasureSummary:
                      style=tstyle,
                      hAlign='LEFT')
 
-    def add_sections_table(self, measure: Measure):
+    def add_sections_table(self):
+        if self.__cur_measure is None:
+            return
+
+        measure = self.__cur_measure
         id_path = '/'.join(measure.full_version_id.split('-', 1))
         link = f'{ETRM_URL}/measure/{id_path}'
         try:
@@ -455,10 +508,10 @@ class MeasureSummary:
 
     def add_measure(self, measure: Measure):
         self.measures.append(measure)
-        frame = Frame(x1=self.summary.left_margin,
-                      y1=self.summary.bottom_margin,
+        frame = Frame(x1=X_MARGIN,
+                      y1=Y_MARGIN,
                       width=INNER_WIDTH,
-                      height=INNER_HEIGHT,
+                      height=INNER_HEIGHT + 12,
                       id='normal')
         template = SummaryPageTemplate(measure_id=measure.full_version_id,
                                        measure_name=measure.name,
@@ -469,18 +522,20 @@ class MeasureSummary:
         self.story.clear()
 
     def __build_summary(self, measure: Measure):
-        self.story.add(NextPageTemplate(measure.full_version_id))
+        measure_id = self.__cur_measure.full_version_id
+        self.story.add(NextPageTemplate(measure_id))
         if self.measures.index(measure) != 0:
             self.story.add(PageBreak())
-        self.add_measure_details_table(measure)
-        self.story.add(NEWLINE)
-        self.add_tech_summary(measure)
-        self.story.add(NEWLINE)
-        self.add_parameters_table(measure)
-        self.add_sections_table(measure)
+        self.add_measure_details_table()
+        self.add_tech_summary()
+        self.add_parameters_table()
+        self.add_impact_table()
+        self.add_sections_table()
 
     def build(self):
         for measure in self.measures:
+            self.__cur_measure = measure
             self.__build_summary(measure)
+        self.__cur_measure = None
         self.summary.multiBuild(self.story.contents)
         clean()

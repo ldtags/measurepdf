@@ -17,7 +17,6 @@ from reportlab.platypus import (
     Paragraph,
     ListFlowable,
     ListItem,
-    Spacer,
     KeepTogether,
     Image,
     XPreformatted
@@ -41,7 +40,6 @@ from src.summarygen.models import (
 from src.summarygen.styling import (
     PSTYLES,
     INNER_WIDTH,
-    INNER_HEIGHT,
     PAGESIZE
 )
 from src.summarygen.flowables import (
@@ -50,49 +48,9 @@ from src.summarygen.flowables import (
     ValueTable as ValueTableFlowable,
     EmbeddedValueTable,
     SummaryParagraph,
-    NEWLINE
+    NEWLINE,
+    Spacer
 )
-
-
-class FlowableList:
-    def __init__(self,
-                 inner_height: float=INNER_HEIGHT,
-                 inner_width: float=INNER_WIDTH):
-        self.inner_height = inner_height
-        self.inner_width = inner_width
-        self.flowables: list[Flowable] = []
-        self.current_height: float=0
-
-    @property
-    def avail_height(self) -> float:
-        return self.inner_height - self.current_height
-
-    def get_height(self, flowable: Flowable) -> float:
-        if isinstance(flowable, KeepTogether | ListFlowable):
-            height = 0
-            for item in flowable._content:
-                height += self.get_height(item)
-        else:
-            _, height = flowable.wrap(0, 0)
-        return height
-
-    def can_fit(self, *flowables: Flowable) -> bool:
-        height = 0
-        for flowable in flowables:
-            height += self.get_height(flowable)
-        return height <= self.avail_height
-
-    def add(self, *flowables: Flowable):
-        for flowable in flowables:
-            height = self.get_height(flowable)
-            if not self.can_fit(flowable):
-                self.current_height = 0
-            self.current_height += height
-            self.flowables.append(flowable)
-
-    def clear(self):
-        self.flowables = []
-        self.current_height = 0
 
 
 TMP_DIR = os.path.join(_ROOT, 'assets', 'images', 'tmp')
@@ -115,7 +73,7 @@ def is_header(element: PageElement) -> bool:
         and element.next_sibling != None)
 
 
-def _parse_element(element: PageElement) -> list[ParagraphElement]:
+def convert_element(element: PageElement) -> list[ParagraphElement]:
     """Converts a `PageElement` object into a list of `ParagraphElement`
     objects.
     """
@@ -128,17 +86,17 @@ def _parse_element(element: PageElement) -> list[ParagraphElement]:
 
     match element.name:
         case 'p':
-            elements = _parse_elements(element.contents)
+            elements = convert_elements(element.contents)
             return elements
         case 'th' | 'td' | 'li':
-            return _parse_elements(element.contents)
+            return convert_elements(element.contents)
         case 'div' | 'span':
             json_str = element.attrs.get('data-etrmreference', None)
             if json_str != None:
                 return [ReferenceTag(json_str)]
-            return _parse_elements(element.contents)
+            return convert_elements(element.contents)
         case 'strong' | 'sup' | 'sub' | 'em':
-            elements = _parse_elements(element.contents)
+            elements = convert_elements(element.contents)
             for item in elements:
                 style = TextStyle(element.name)
                 if style not in item.styles:
@@ -150,10 +108,10 @@ def _parse_element(element: PageElement) -> list[ParagraphElement]:
             raise RuntimeError(f'unsupported tag: {element.name}')
 
 
-def _parse_elements(elements: list[PageElement]) -> list[ParagraphElement]:
+def convert_elements(elements: list[PageElement]) -> list[ParagraphElement]:
     contents: list[ParagraphElement] = []
     for element in elements:
-        parsed_elements = _parse_element(element)
+        parsed_elements = convert_element(element)
         if parsed_elements != None:
             contents.extend(parsed_elements)
     return contents
@@ -253,7 +211,7 @@ def convert_spanned_table(content: list[ResultSet[Tag]],
             if cell is None:
                 element = ElementLine([ParagraphElement('')], style=style)
             else:
-                cell_elements = _parse_element(cell)
+                cell_elements = convert_element(cell)
                 element = ElementLine(elements=cell_elements,
                                       max_width=None,
                                       style=style)
@@ -292,7 +250,6 @@ class CharacterizationParser:
         self.measure = measure
         self.connection = connection
         self.html = measure.characterizations[name]
-        self.flowables = FlowableList()
         self.width, self.height = PAGESIZE
 
     def handle_text(self, element: NavigableString) -> list[Flowable]:
@@ -330,7 +287,7 @@ class CharacterizationParser:
         if len(header.contents) < 1:
             return [Paragraph('', PSTYLES[header.name])]
 
-        elements = _parse_element(header.contents[0])
+        elements = convert_element(header.contents[0])
         text = ''
         for element in elements:
             text += element.text_xml
@@ -340,18 +297,13 @@ class CharacterizationParser:
         _url = tag.get('href', None)
         if _url != None:
             img = get_image(_url)
-            flowables: list[Flowable] = []
-            if self.flowables.can_fit(KeepTogether([NEWLINE, img])):
-                flowables.append(KeepTogether([NEWLINE, img]))
-            elif self.flowables.can_fit(img):
-                flowables.extend([NEWLINE, img])
-            return flowables
+            return [NEWLINE, img, NEWLINE]
         return []
 
     def handle_p(self, tag: Tag) -> list[Flowable]:
         elements: list[ParagraphElement] = []
         for child in tag.contents:
-            elements.extend(_parse_element(child))
+            elements.extend(convert_element(child))
         if elements == []:
             return []
         return [SummaryParagraph(elements, self.measure)]
@@ -373,7 +325,7 @@ class CharacterizationParser:
         list_items: list[ListItem] = []
         li_list: ResultSet[Tag] = tag.find_all('li')
         for li in li_list:
-            items = _parse_element(li)
+            items = convert_element(li)
             element = SummaryParagraph(items, self.measure)
             if element != None:
                 list_item = ListItem(element, bulletColor=colors.black)
@@ -418,9 +370,9 @@ class CharacterizationParser:
                 raise Exception(f'unsupported HTML tag: {tag}')
 
     def parse(self) -> list[Flowable]:
-        self.flowables.clear()
         soup = BeautifulSoup(self.html, 'html.parser')
         top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
+        flowables: list[Flowable] = []
         i = 0
         while i < len(top_level):
             element = top_level[i]
@@ -437,10 +389,10 @@ class CharacterizationParser:
                 parsed_elements = [KeepTogether(parsed_elements)]
                 parsed_elements.extend(extra_elements)
                 i += 1
-            self.flowables.add(*parsed_elements)
+            flowables.extend(parsed_elements)
             if (isinstance(element, Tag)
                     and (element.name != 'a')
                     and element.next_sibling == '\n'):
-                self.flowables.add(NEWLINE)
+                flowables.append(NEWLINE)
             i += 1
-        return self.flowables.flowables
+        return flowables

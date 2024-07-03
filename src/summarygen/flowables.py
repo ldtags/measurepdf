@@ -1,16 +1,17 @@
 from __future__ import annotations
 import math
-from typing import get_args
+from typing import Literal
 from reportlab.lib.pagesizes import inch
 from reportlab.platypus import (
     Flowable,
     Paragraph,
     Table,
-    Spacer,
     KeepTogether,
-    XPreformatted
+    XPreformatted,
+    Spacer as _Spacer
 )
 
+from src import utils
 from src.etrm.models import Measure, ValueTable as ValueTableObject
 from src.summarygen.types import _TABLE_SPAN
 from src.summarygen.models import (
@@ -20,6 +21,7 @@ from src.summarygen.models import (
 )
 from src.summarygen.styling import (
     BetterParagraphStyle,
+    BetterTableStyle,
     PSTYLES,
     DEF_PSTYLE,
     TSTYLES,
@@ -30,8 +32,55 @@ from src.summarygen.rlobjects import ElementLine
 from src.exceptions import WidthExceededError, SummaryGenError
 
 
+class Spacer(_Spacer):
+    def wrap(self, availWidth, availHeight):
+        height = min(self.height, availHeight - 1e-8)
+        return (availWidth, height)
+
+
 _NL_HEIGHT = 0.3 * inch
-NEWLINE = KeepTogether(Spacer(1, _NL_HEIGHT, isGlue=True))
+NEWLINE = Spacer(1, _NL_HEIGHT, isGlue=True)
+
+
+class TableBaseClass(Table):
+    """Handler for the extra `Table` constructor call made during the
+    reportlab build process
+
+    Use the `CustomTable` class for creating custom `Table` flowables
+    """
+
+    def __init__(self, data: list[list | tuple], **kwargs):
+        Table.__init__(self, data, **kwargs)
+
+
+class CustomTable(TableBaseClass):
+    """Custom flowable class for extending the reportlab `Table` class"""
+
+    def __init__(self,
+                 data: list[list | tuple],
+                 col_widths: list[float],
+                 row_heights: list[float],
+                 style: BetterTableStyle,
+                 **kwargs):
+        if data == []:
+            data = [[]]
+
+        for row in data:
+            assert len(col_widths) == len(row)
+            for cell in row:
+                assert cell != 0
+
+        for column in [list(col) for col in zip(*data)]:
+            assert len(row_heights) == len(column)
+            for cell in column:
+                assert cell != 0
+
+        TableBaseClass.__init__(self,
+                                data=data,
+                                colWidths=col_widths,
+                                rowHeights=row_heights,
+                                style=style,
+                                **kwargs)
 
 
 class Reference(XPreformatted):
@@ -108,6 +157,8 @@ def split_word(element: ParagraphElement,
                rem_width: float=INNER_WIDTH,
                max_width: float=INNER_WIDTH
               ) -> list[ParagraphElement]:
+    if element.text == 'Refrigerator':
+        pass
     width = rem_width
     word: str = element.text
     frags: list[ParagraphElement] = []
@@ -119,7 +170,7 @@ def split_word(element: ParagraphElement,
             j += 1
             elem_frag = element.copy(text=word[i:j])
 
-        if j == len(word):
+        if j == len(word) and elem_frag.width < width:
             frags.append(elem_frag)
             break
 
@@ -171,13 +222,9 @@ class SummaryParagraph(Table):
                  elements: list[ParagraphElement],
                  measure: Measure | None=None,
                  **kwargs):
-        if measure is None:
-            if all([isinstance(e, list) for e in elements]):
-                Table.__init__(self, elements, **kwargs)
-                return
-            else:
-                raise SummaryGenError('Cannot create a summary paragraph'
-                                      ' without an eTRM measure object')
+        if kwargs != {}:
+            Table.__init__(self, elements, **kwargs)
+            return
 
         lines = [[ParagraphLine(line, measure)]
                     for line in wrap_elements(elements)]
@@ -191,6 +238,79 @@ class SummaryParagraph(Table):
                        rowHeights=row_heights,
                        style=TSTYLES['ElementLine'],
                        hAlign='LEFT')
+
+
+class SummaryTable(CustomTable):
+    def __init__(self,
+                 elements: list[list[str]],
+                 header_orient: Literal['top', 'left']='top',
+                 header_style: BetterParagraphStyle=PSTYLES['TableHeader'],
+                 body_style: BetterParagraphStyle=PSTYLES['Paragraph'],
+                 table_style: BetterTableStyle=TSTYLES['SummaryTable'],
+                 col_widths: list[float] | None=None):
+        """Custom flowable for tables that are directly placed onto
+        the summary PDF
+        """
+
+        self.table_style = table_style
+        self.table_width = INNER_WIDTH
+
+        if len(elements) > 1:
+            row_len = len(elements[0])
+            for row in elements[1:]:
+                if len(row) != row_len:
+                    raise SummaryGenError('All summary table rows must have'
+                                          ' the same length')
+
+        data: list[list[Paragraph]] = []
+        for y, row in enumerate(elements):
+            data_row: list[Paragraph] = []
+            for x, cell in enumerate(row):
+                if (y == 0 and header_orient == 'top'
+                        or x == 0 and header_orient == 'left'):
+                    style = header_style
+                else:
+                    style = body_style
+                data_row.append(Paragraph(cell, style=style))
+            data.append(data_row)
+
+        col_widths = col_widths or self.__calc_col_widths(data)
+        row_heights = self.__calc_row_heights(data, col_widths)
+        CustomTable.__init__(self,
+                             data=data,
+                             col_widths=col_widths,
+                             row_heights=row_heights,
+                             style=table_style,
+                             hAlign='LEFT')
+
+    def __calc_col_widths(self, data: list[list[Paragraph]]) -> list[float]:
+        style = self.table_style
+        padding = style.left_padding + style.right_padding
+        columns = utils.get_columns(data)
+        base_width = self.table_width / len(columns)
+        col_widths: list[float] = []
+        for column in columns:
+            col_width = 0
+            for cell in column:
+                width, _ = cell.wrap(base_width, 0)
+                col_width = max(width, col_width)
+            col_widths.append(col_width + padding)
+        return col_widths
+
+    def __calc_row_heights(self,
+                           data: list[list[Paragraph]],
+                           col_widths: list[float]
+                          ) -> list[float]:
+        style = self.table_style
+        padding = style.top_padding + style.bottom_padding
+        row_heights: list[float] = []
+        for row in data:
+            row_height = 0
+            for x, cell in enumerate(row):
+                _, height = cell.wrap(col_widths[x], 0)
+                row_height = max(height, row_height)
+            row_heights.append(row_height + padding)
+        return row_heights
 
 
 class TableCell(Table):
@@ -232,14 +352,9 @@ class ValueTable(Table):
                  determinants: int=0,
                  spans: list[_TABLE_SPAN] | None=None,
                  **kwargs):
-        if measure is None:
-            if all([all([isinstance(cell, TableCell) for cell in row])
-                    for row in data]):
-                Table.__init__(self, data, **kwargs)
-                return
-            else:
-                raise SummaryGenError('Cannot create a value table without'
-                                      ' an eTRM measure object')
+        if kwargs != {}:
+            Table.__init__(self, data, **kwargs)
+            return
 
         self.data = data    
         self.measure = measure

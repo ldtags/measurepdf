@@ -142,3 +142,11 @@ def get_tkimage(light_image: str,
     return ctk.CTkImage(light_image=_light_image,
                         dark_image=_dark_image or _light_image,
                         size=size)
+
+
+def get_columns(matrix: list[list[_T]]) -> list[list[_T]]:
+    """Assumes non-ragged rows on the 2D plane of
+    the matrix
+    """
+
+    return [list(column) for column in zip(*matrix)]

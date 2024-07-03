@@ -352,7 +352,8 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              font_name='Merriweather',
                              leading=20.7,
                              font_size=18,
-                             spaceAfter=5))
+                             spaceAfter=5,
+                             keepWithNext=True))
     style_sheet.add(
         BetterParagraphStyle('h3',
                              font_name='SourceSansProB',
@@ -402,6 +403,16 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
             ('VALIGN', (0, 0), (-1, -1), 'TOP'),
             ('FONTNAME', (0, 0), (-1, -1), 'SourceSansPro'),
+            ('FONTSIZE', (0, 0), (0, -1), 13.5),
+            ('FONTSIZE', (1, 0), (-1, -1), 12),
+            ('VALIGN', (0, 0), (0, -1), 'TOP'),
+            ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
+    style_sheet.add(
+        BetterTableStyle('SummaryTable', [
+            ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
+            ('TOPPADDING', (0, 0), (0, -1), -1),
+            ('TOPPADDING', (1, 0), (1, -1), 0.25),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
             ('FONTSIZE', (0, 0), (0, -1), 13.5),
             ('FONTSIZE', (1, 0), (-1, -1), 12),
             ('VALIGN', (0, 0), (0, -1), 'TOP'),

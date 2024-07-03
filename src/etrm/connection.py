@@ -9,7 +9,8 @@ from src.etrm.models import (
     Measure,
     Reference,
     SharedLookupRef,
-    SharedValueTable
+    SharedValueTable,
+    PermutationsTable
 )
 from src.exceptions import (
     ETRMResponseError,
@@ -20,20 +21,8 @@ from src.exceptions import (
 )
 
 
-API_URL = 'https://www.caetrm.com/api/v1'
-
-
-def extract_id(_url: str) -> str | None:
-    URL_RE = re.compile(f'{API_URL}/measures/([a-zA-Z0-9]+)/')
-    re_match = re.search(URL_RE, _url)
-    if len(re_match.groups()) != 1:
-        return None
-
-    id_group = re_match.group(1)
-    if not isinstance(id_group, str):
-        return None
-
-    return id_group
+PROD_API = 'https://www.caetrm.com/api/v1'
+STAGE_API = 'https://stage.caetrm.com/api/v1'
 
 
 class ETRMCache:
@@ -139,8 +128,9 @@ class ETRMCache:
 class ETRMConnection:
     """eTRM API connection layer"""
 
-    def __init__(self, auth_token: str):
+    def __init__(self, auth_token: str, stage: bool=False):
         self.auth_token = self.__sanitize_auth_token(auth_token)
+        self.api = STAGE_API if stage else PROD_API
         self.headers = {
             'Authorization': auth_token
         }
@@ -159,19 +149,35 @@ class ETRMConnection:
 
         return f'{token_type} {api_key}'
 
+    def extract_id(self, url: str) -> str | None:
+        URL_RE = re.compile(f'{self.api}/measures/([a-zA-Z0-9]+)/')
+        re_match = re.search(URL_RE, url)
+        if len(re_match.groups()) != 1:
+            return None
+
+        id_group = re_match.group(1)
+        if not isinstance(id_group, str):
+            return None
+
+        return id_group
+
     def get(self,
-            url: str,
+            endpoint: str,
             headers: dict[str, str] | None=None,
             params: dict[str, str] | None=None,
             stream: bool=True,
             **kwargs
            ) -> requests.Response:
+        _endpoint = endpoint.replace(self.api, '')
+        if not _endpoint.startswith('/'):
+            _endpoint = '/' + _endpoint
+
         req_headers: dict[str, str] = {**self.headers}
         if headers != None:
             req_headers |= headers
 
         try:
-            response = requests.get(url,
+            response = requests.get(f'{self.api}{_endpoint}',
                                     params=params,
                                     headers=req_headers,
                                     stream=stream,
@@ -186,11 +192,11 @@ class ETRMConnection:
                 raise UnauthorizedError('Unauthorized API key:'
                                         f' {self.auth_token}')
             case 404:
-                raise NotFoundError(f'No resource found at [{url}]')
+                raise ETRMResponseError(f'No resource found at [{_endpoint}]')
             case 500:
                 raise ETRMResponseError('Server error occurred while'
                                         ' attempting to access the resource'
-                                        f' at [{url}]')
+                                        f' at [{_endpoint}]')
             case status:
                 raise ETRMResponseError('Unexpected status code received:'
                                         f' {status}')
@@ -201,8 +207,7 @@ class ETRMConnection:
             return cached_measure
 
         statewide_id, version_id = full_version_id.split('-', 1)
-        url = f'{API_URL}/measures/{statewide_id}/{version_id}'
-        response = self.get(url)
+        response = self.get(f'/measures/{statewide_id}/{version_id}')
         measure = Measure(response.json())
         self.cache.add_measure(measure)
         return measure
@@ -224,9 +229,9 @@ class ETRMConnection:
         if use_category != None:
             params['use_category'] = use_category
 
-        response = self.get(f'{API_URL}/measures', params=params)
+        response = self.get('/measures', params=params)
         response_body = MeasuresResponse(response.json())
-        measure_ids = list(map(lambda result: extract_id(result.url),
+        measure_ids = list(map(lambda result: self.extract_id(result.url),
                                response_body.results))
         count = response_body.count
         self.cache.add_ids(measure_ids=measure_ids,
@@ -248,7 +253,7 @@ class ETRMConnection:
         if cached_versions != None:
             return list(reversed(cached_versions))
 
-        response = self.get(f'{API_URL}/measures/{measure_id}/')
+        response = self.get(f'/measures/{measure_id}/')
         response_body = MeasureVersionsResponse(response.json())
         measure_versions = sorted(map(lambda result: result.version,
                                       response_body.versions))
@@ -260,7 +265,7 @@ class ETRMConnection:
         if cached_ref is not None:
             return cached_ref
 
-        response = self.get(f'{API_URL}/references/{ref_id}/')
+        response = self.get(f'/references/{ref_id}/')
         reference = Reference(response.json())
         self.cache.add_reference(ref_id, reference)
         return reference
@@ -291,7 +296,7 @@ class ETRMConnection:
                 raise ETRMRequestError(f'unknown overload args: {args}')
             table_name = args[0]
             version = f'{args[1]:03d}'
-            url = f'{API_URL}/shared-value-tables/{table_name}/{version}'
+            url = f'/shared-value-tables/{table_name}/{version}'
         else:
             raise ETRMRequestError('missing required parameters')
 
@@ -303,3 +308,54 @@ class ETRMConnection:
         value_table = SharedValueTable(response.json())
         self.cache.add_shared_value_table(table_name, version, value_table)
         return value_table
+
+    @overload
+    def get_permutations(self, measure: Measure) -> PermutationsTable:
+        ...
+
+    @overload
+    def get_permutations(self,
+                         statewide_id: str,
+                         version_id: str
+                        ) -> PermutationsTable:
+        ...
+
+    def get_permutations(self, *args) -> PermutationsTable:
+        match len(args):
+            case 1:
+                measure = args[0]
+                if not isinstance(measure, Measure):
+                    raise ETRMRequestError('Invalid arg type: measure must be'
+                                           ' a Measure object')
+
+                ids = measure.full_version_id.split('-', 1)
+                if len(ids) != 2:
+                    raise ETRMConnectionError('Invalid measure id:'
+                                              f' {measure.full_version_id}')
+
+                statewide_id = ids[0]
+                version_id = ids[1]
+            case 2:
+                statewide_id = args[0]
+                if not isinstance(statewide_id, str):
+                    raise ETRMRequestError('Invalid arg type: statewide_id'
+                                           ' must be a str object')
+
+                version_id = args[1]
+                if not isinstance(version_id, str):
+                    raise ETRMRequestError('Invalid arg type: version_id'
+                                           ' must be a str object')
+            case _:
+                raise ETRMRequestError('Unsupported arg count')
+
+        url = f'/measures/{statewide_id}/{version_id}/permutations'
+        permutations_table: PermutationsTable | None = None
+        while url is not None:
+            response = self.get(url)
+            table = PermutationsTable(response.json())
+            if permutations_table is None:
+                permutations_table = table
+            else:
+                permutations_table.join(table)
+            url = table.links.next
+        return permutations_table

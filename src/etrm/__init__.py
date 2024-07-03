@@ -1,2 +1,2 @@
-from .connection import ETRMConnection, API_URL
+from .connection import ETRMConnection
 from .models import ETRM_URL

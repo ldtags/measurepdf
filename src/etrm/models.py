@@ -1,3 +1,5 @@
+from __future__ import annotations
+import math
 import unicodedata
 from typing import Any
 
@@ -178,17 +180,18 @@ class SharedValueTable:
                 *[col.api_name for col in self.columns]
             ]
 
-            self.data: dict[str, dict[str, str | float | None]] = {}
+            self.data: dict[str, dict[str, list[str | float | None]]] = {}
             for row in self.values:
-                self.data[row[0]] = {}
+                eul_id = str(row[0])
+                id_map = self.data.get(eul_id, {})
                 for i, item in enumerate(row[1:], 1):
-                    self.data[row[0]][headers[i]] = item
+                    mapped_list = id_map.get(headers[i], [])
+                    mapped_list.append(item)
+                    id_map[headers[i]] = mapped_list
+                self.data[eul_id] = id_map
 
         except IndexError:
             raise ETRMResponseError()
-
-    def __getitem__(self, description: str) -> dict[str, str | float | None]:
-        return self.data[description]
 
 
 class Calculation:
@@ -356,3 +359,57 @@ class Reference:
             self.source_document = getc(res_json, 'source_document', str)
         except IndexError:
             raise ETRMResponseError()
+
+
+class PermutationsTable:
+    def __init__(self, res_json: dict[str, Any]):
+        self.json = res_json
+        try:
+            self.count = getc(res_json, 'count', int)
+            self.links = getc(res_json, 'links', self._Links)
+            self.headers = getc(res_json, 'headers', list[str])
+            self.results = getc(res_json, 'results', list[list[str | float | None]])
+
+            columns = [list(col) for col in zip(*self.results)]
+            self.data: dict[str, list[str | float | None]] = {}
+            for x, header in enumerate(self.headers):
+                self.data[header] = columns[x]
+
+        except IndexError:
+            raise ETRMResponseError()
+
+    class _Links:
+        def __init__(self, links: dict[str, str | None]):
+            self.next = links.get('next', None)
+            self.previous = links.get('previous', None)
+
+    def join(self, table: PermutationsTable):
+        if self.headers != table.headers:
+            raise ETRMResponseError()
+        self.results.extend(table.results)
+
+    def average(self, column_name: str) -> float | None:
+        column = self.data.get(column_name, None)
+        if column == None:
+            return None
+
+        if not all([type(item) is float for item in column]):
+            return None
+
+        return sum(column) / len(column)
+
+    def get_first_baseline(self) -> float:
+        baseline_avgs = [
+            self.average('UnitkW1stBaseline') or 0,
+            self.average('UnitkWh1stBaseline') or 0,
+            self.average('UnitTherm1stBaseline') or 0,
+        ]
+        return math.fsum(baseline_avgs) / len(baseline_avgs)
+
+    def get_second_baseline(self) -> float:
+        baseline_avgs = [
+            self.average('UnitkW2ndBaseline') or 0,
+            self.average('UnitkWh2ndBaseline') or 0,
+            self.average('UnitTherm2ndBaseline') or 0,
+        ]
+        return math.fsum(baseline_avgs) / len(baseline_avgs)

@@ -1,6 +1,12 @@
 from __future__ import annotations
 import math
-from reportlab.platypus import Flowable, Table, KeepTogether
+from reportlab.platypus import (
+    Flowable,
+    KeepTogether,
+    ListFlowable,
+    Spacer,
+    Paragraph
+)
 
 from src.exceptions import WidthExceededError, ElementJoinError
 from src.summarygen.models import ParagraphElement, ElemType
@@ -93,33 +99,50 @@ class ElementLine:
 
 
 class Story:
-    def __init__(self):
-        self.contents: list[Flowable] = []
-        self.height: float = 0
-        self.page_height: float = 0
+    def __init__(self,
+                 inner_height: float=INNER_HEIGHT,
+                 inner_width: float=INNER_WIDTH):
+        self.inner_height = inner_height
+        self.inner_width = inner_width
+        self.__contents: list[Flowable] = []
 
-    def add(self, flowables: Flowable | list[Flowable]):
-        if isinstance(flowables, Flowable):
-            flowables = [flowables]
+    @property
+    def contents(self) -> list[Flowable]:
+        current_height = 0.0
+        _contents: list[Flowable] = []
+        for flowable in self.__contents:
+            height = self.get_height(flowable)
+            if (current_height + height > self.inner_height
+                    or current_height == 0):
+                if isinstance(flowable, Spacer):
+                    continue
+                current_height = 0.0
+            current_height += height
+            _contents.append(flowable)
+
+        # trim any trailing space
+        i = len(_contents) - 1
+        while isinstance(_contents[i], Spacer):
+            _contents.pop()
+            i -= 1
+
+        return _contents
+
+    def get_height(self, flowable: Flowable) -> float:
+        if isinstance(flowable, KeepTogether | ListFlowable):
+            height = 0
+            for item in flowable._content:
+                height += self.get_height(item)
+        elif isinstance(flowable, Paragraph):
+            _, height = flowable.wrap(INNER_WIDTH, 0)
+        else:
+            _, height = flowable.wrap(0, 0)
+        return height
+
+    def add(self, *flowables: Flowable):
         for flowable in flowables:
-            self.contents.append(flowable)
-            if isinstance(flowable, Table):
-                height = math.fsum(flowable._rowHeights)
-            else:
-                height = flowable._fixedHeight
-            self.height += height
-            if isinstance(flowable, KeepTogether):
-                if self.page_height + height > INNER_HEIGHT:
-                    self.page_height = height
-                else:
-                    self.page_height += height
-            elif self.page_height + height > INNER_HEIGHT:
-                margin = INNER_HEIGHT - self.page_height
-                self.page_height = height - margin
-            else:
-                self.page_height += height
+            self.__contents.append(flowable)
 
     def clear(self):
         self.contents = []
-        self.height = 0
-        self.page_height = 0
+        self.current_height = 0
