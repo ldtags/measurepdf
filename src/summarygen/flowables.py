@@ -593,7 +593,7 @@ class ValueTable(Table):
                  determinants: int=0,
                  spans: list[_TABLE_SPAN] | None=None,
                  **kwargs):
-        if kwargs != {}:
+        if kwargs.get('normalizedData', None) is not None:
             Table.__init__(self, data, **kwargs)
             return
 
