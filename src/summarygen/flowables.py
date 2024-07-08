@@ -61,22 +61,34 @@ class CustomTable(TableBaseClass):
 
     def __init__(self,
                  data: list[list | tuple],
-                 col_widths: list[float],
-                 row_heights: list[float],
-                 style: BetterTableStyle,
+                 col_widths: list[float] | float | None=None,
+                 row_heights: list[float] | float | None=None,
+                 style: BetterTableStyle | None=None,
                  **kwargs):
+        if kwargs.get('normalizedData', None) is not None:
+            TableBaseClass.__init__(self, data, **kwargs)
+            return
+
         if data == []:
             data = [[]]
 
-        for row in data:
-            assert len(col_widths) == len(row)
-            for cell in row:
-                assert cell != 0
+        if col_widths is not None:
+            if isinstance(col_widths, float | int):
+                col_widths = [col_widths]
 
-        for column in [list(col) for col in zip(*data)]:
-            assert len(row_heights) == len(column)
-            for cell in column:
-                assert cell != 0
+            for row in data:
+                assert len(col_widths) == len(row)
+                for cell in row:
+                    assert cell != 0
+
+        if row_heights is not None:
+            if isinstance(row_heights, float | int):
+                row_heights = [row_heights]
+            
+            for column in [list(col) for col in zip(*data)]:
+                assert len(row_heights) == len(column)
+                for cell in column:
+                    assert cell != 0
 
         TableBaseClass.__init__(self,
                                 data=data,
@@ -194,6 +206,51 @@ class TitleSection(Flowable):
         else:
             self.__draw_text(w, h)
             self.__draw_rectangle(w, h)
+
+
+class TitleSectionSubContainer(CustomTable):
+    def __init__(self,
+                 sections: list[TitleSection],
+                 side: Literal['left', 'right']='left',
+                 **kwargs):
+        col_widths: list[float] = []
+        row_heights: list[float] = []
+        for section in sections:
+            width, height = section.wrap()
+            col_widths.append(width)
+            row_heights.append(height)
+        offset_cells = [''] * len(sections)
+        offset_heights = [25] * len(sections)
+        sections_zip = zip(sections, offset_cells)
+        heights_zip = zip(row_heights, offset_heights)
+        _sections = [item for pair in sections_zip for item in pair]
+        _heights = [item for pair in heights_zip for item in pair]
+        if side == 'left':
+            style = TSTYLES['TitleSectionLeft']
+        else:
+            style = TSTYLES['TitleSectionRight']
+        CustomTable.__init__(self,
+                             [[section] for section in _sections],
+                             col_widths=max(col_widths),
+                             row_heights=_heights,
+                             style=style,
+                             hAlign='left',
+                             **kwargs)
+
+
+class TitleSectionContainer(CustomTable):
+    def __init__(self, sections: list[list[TitleSection]], **kwargs):
+        if len(sections) != 2:
+            raise SummaryGenError('Cannot generate a title section container'
+                                  f' with {len(sections)} column(s)')
+
+        left_container = TitleSectionSubContainer(sections[0], 'left')
+        right_container = TitleSectionSubContainer(sections[1], 'right')
+        CustomTable.__init__(self,
+                             [[left_container, right_container]],
+                             col_widths=[INNER_WIDTH / 2] * 2,
+                             style=TSTYLES['TitleSectionContainer'],
+                             **kwargs)
 
 
 class Reference(Flowable):

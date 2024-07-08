@@ -36,7 +36,8 @@ from src.summarygen.flowables import (
     NEWLINE,
     SummaryTable,
     Spacer,
-    TitleSection
+    TitleSection,
+    TitleSectionContainer
 )
 from src.summarygen.rlobjects import Story
 from src.exceptions import (
@@ -241,6 +242,46 @@ class MeasureSummary:
                              col_widths=(2.25*inch, 3.03*inch))
         self.story.add(table, NEWLINE)
 
+    def __build_sections_container(self,
+                                   measure: Measure
+                                  ) -> TitleSectionContainer:
+        use_category = measure.use_category.upper()
+        uc_title = lookups.USE_CATEGORIES[use_category]
+        uc_section = TitleSection('USE CATEGORY',
+                                  f'{use_category} - {uc_title}',
+                                  side='left')
+
+        pa_section = TitleSection('PA LEAD',
+                                  measure.pa_lead,
+                                  side='left')
+
+        version_section = TitleSection('VERSION',
+                                       measure.full_version_id,
+                                       side='left')
+
+        start_section = TitleSection('EFFECTIVE START DATE',
+                                     measure.effective_start_date,
+                                     side='right')
+
+        end_section = TitleSection('END DATE',
+                                   measure.sunset_date or '',
+                                   side='right')
+
+        if _SYSTEM == 'Windows':
+            fmt = '#'
+        else:
+            fmt = '-'
+        download_date = _NOW.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
+        download_section = TitleSection('DOWLOADED',
+                                          download_date,
+                                          side='right')        
+
+        sections = [
+            [uc_section, pa_section, version_section],
+            [start_section, end_section, download_section]
+        ]
+        return TitleSectionContainer(sections)
+
     def add_title_page(self):
         if self.__cur_measure is None:
             return
@@ -261,55 +302,9 @@ class MeasureSummary:
         link = self.__cur_measure.link
         link_xml = f'<link href=\"{link}\">{link}/</link>'
         self.story.add(Paragraph(link_xml, style=PSTYLES['TitleLink']))
-        self.story.add(Spacer(1, 0.25 * inch))
+        self.story.add(Spacer(1, 1 * inch))
 
-        use_category = self.__cur_measure.use_category.upper()
-        uc_title = lookups.USE_CATEGORIES[use_category]
-        uc_section = TitleSection('USE CATEGORY',
-                                  f'{use_category} - {uc_title}',
-                                  side='left')
-
-        pa_section = TitleSection('PA LEAD',
-                                  self.__cur_measure.pa_lead,
-                                  side='left')
-
-        start_section = TitleSection('EFFECTIVE START DATE',
-                                     self.__cur_measure.effective_start_date,
-                                     side='right')
-
-        end_section = TitleSection('END DATE',
-                                   self.__cur_measure.sunset_date or '',
-                                   side='right')
-
-        left_sections = [uc_section, pa_section]
-        left_widths: list[float] = []
-        left_heights: list[float] = []
-        for section in left_sections:
-            width, height = section.wrap()
-            left_widths.append(width)
-            left_heights.append(height + 20)
-        left_container = Table([[section] for section in left_sections],
-                               colWidths=max(left_widths),
-                               rowHeights=left_heights,
-                               hAlign='LEFT',
-                               style=TSTYLES['TitleSectionLeft'])
-
-        right_sections = [start_section, end_section]
-        right_widths: list[float] = []
-        right_heights: list[float] = []
-        for section in right_sections:
-            width, height = section.wrap()
-            right_widths.append(width)
-            right_heights.append(height + 20)
-        right_container = Table([[section] for section in right_sections],
-                                colWidths=max(right_widths),
-                                rowHeights=right_heights,
-                                hAlign='RIGHT',
-                                style=TSTYLES['TitleSectionRight'])
-
-        container = Table([[left_container, right_container]],
-                          colWidths=[INNER_WIDTH / 2] * 2,
-                          style=TSTYLES['TitleSectionContainer'])
+        container = self.__build_sections_container(self.__cur_measure)
         self.story.add(container)
 
         self.story.add(PageBreak())
