@@ -1,4 +1,16 @@
 import os
+import platform
+from datetime import datetime
+
+
+match platform.system():
+    case 'Linux' | 'Darwin' | 'Windows' as system:
+        _SYSTEM = system
+    case other:
+        raise RuntimeError(f'Unknown platform: {other}')
+
+
+_NOW = datetime.now()
 
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))

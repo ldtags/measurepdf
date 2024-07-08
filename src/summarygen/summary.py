@@ -16,7 +16,7 @@ from reportlab.platypus import (
 )
 from reportlab.platypus.frames import Frame
 
-from src import lookups
+from src import lookups, utils, _SYSTEM, _NOW
 from src.etrm import ETRM_URL, ETRMConnection
 from src.etrm.models import Measure
 from src.exceptions import SummaryGenError
@@ -32,7 +32,12 @@ from src.summarygen.styling import (
     INNER_HEIGHT,
     INNER_WIDTH
 )
-from src.summarygen.flowables import NEWLINE, SummaryTable
+from src.summarygen.flowables import (
+    NEWLINE,
+    SummaryTable,
+    Spacer,
+    TitleSection
+)
 from src.summarygen.rlobjects import Story
 from src.exceptions import (
     ETRMConnectionError,
@@ -98,16 +103,12 @@ class SummaryPageTemplate(PageTemplate):
                     doc: SummaryDocTemplate,
                     draw_page_num: bool=False
                    ) -> None:
-            """Used to draw a custom footer depending on the current state
-            of the doc template.
-            """
-
             canv.saveState()
 
             style = PSTYLES['SmallParagraph'].bold
             id_footer = Paragraph(self.measure_id, style=style)
             _, h = id_footer.wrap(INNER_WIDTH, Y_MARGIN)
-            x = h * 1.5
+            x = X_MARGIN / 1.5
             y = h * 1.5
             id_footer.drawOn(canvas=canv, x=x, y=y)
             id_width = stringWidth(self.measure_id,
@@ -128,8 +129,28 @@ class SummaryPageTemplate(PageTemplate):
 
             canv.restoreState()
 
+    def draw_header(self,
+                    canv: Canvas,
+                    doc: SummaryDocTemplate
+                   ) -> None:
+        canv.saveState()
+
+        if _SYSTEM == 'Windows':
+            fmt = '#'
+        else:
+            fmt = '-'
+        cur_dt = _NOW.strftime(rf'%{fmt}m/%{fmt}d/%y, %{fmt}I:%M%p')
+        style = PSTYLES['Base']
+        time_header = Paragraph(cur_dt, style=style)
+        _, h = time_header.wrap(INNER_WIDTH + X_MARGIN, Y_MARGIN)
+        y = PAGESIZE[1] - Y_MARGIN / 2 + h / 2
+        time_header.drawOn(canv, x=X_MARGIN / 1.5, y=y)
+
+        canv.restoreState()
+
     def afterDrawPage(self, canv: Canvas, doc: SummaryDocTemplate):
         self.draw_footer(canv, doc)
+        self.draw_header(canv, doc)
 
 
 def calc_row_heights(data: list[list[str | Paragraph]],
@@ -219,6 +240,79 @@ class MeasureSummary:
                              body_style=PSTYLES['SummaryTableItem'],
                              col_widths=(2.25*inch, 3.03*inch))
         self.story.add(table, NEWLINE)
+
+    def add_title_page(self):
+        if self.__cur_measure is None:
+            return
+
+        img_path = utils.asset_path('etrm.png', 'images')
+        img = utils.get_rlimage(img_path, INNER_WIDTH / 9, hAlign='LEFT')
+        self.story.add(img)
+        self.story.add(Spacer(1, 1.5 * inch))
+
+        self.story.add(Paragraph('MEASURE CHARACTERIZATION',
+                                 style=PSTYLES['TitlePageSubtitle']))
+        self.story.add(Spacer(1, 0.15 * inch))
+
+        self.story.add(Paragraph(self.__cur_measure.name,
+                                 style=PSTYLES['TitlePageTitle']))
+        self.story.add(NEWLINE)
+
+        link = self.__cur_measure.link
+        link_xml = f'<link href=\"{link}\">{link}/</link>'
+        self.story.add(Paragraph(link_xml, style=PSTYLES['TitleLink']))
+        self.story.add(Spacer(1, 0.25 * inch))
+
+        use_category = self.__cur_measure.use_category.upper()
+        uc_title = lookups.USE_CATEGORIES[use_category]
+        uc_section = TitleSection('USE CATEGORY',
+                                  f'{use_category} - {uc_title}',
+                                  side='left')
+
+        pa_section = TitleSection('PA LEAD',
+                                  self.__cur_measure.pa_lead,
+                                  side='left')
+
+        start_section = TitleSection('EFFECTIVE START DATE',
+                                     self.__cur_measure.effective_start_date,
+                                     side='right')
+
+        end_section = TitleSection('END DATE',
+                                   self.__cur_measure.sunset_date or '',
+                                   side='right')
+
+        left_sections = [uc_section, pa_section]
+        left_widths: list[float] = []
+        left_heights: list[float] = []
+        for section in left_sections:
+            width, height = section.wrap()
+            left_widths.append(width)
+            left_heights.append(height + 20)
+        left_container = Table([[section] for section in left_sections],
+                               colWidths=max(left_widths),
+                               rowHeights=left_heights,
+                               hAlign='LEFT',
+                               style=TSTYLES['TitleSectionLeft'])
+
+        right_sections = [start_section, end_section]
+        right_widths: list[float] = []
+        right_heights: list[float] = []
+        for section in right_sections:
+            width, height = section.wrap()
+            right_widths.append(width)
+            right_heights.append(height + 20)
+        right_container = Table([[section] for section in right_sections],
+                                colWidths=max(right_widths),
+                                rowHeights=right_heights,
+                                hAlign='RIGHT',
+                                style=TSTYLES['TitleSectionRight'])
+
+        container = Table([[left_container, right_container]],
+                          colWidths=[INNER_WIDTH / 2] * 2,
+                          style=TSTYLES['TitleSectionContainer'])
+        self.story.add(container)
+
+        self.story.add(PageBreak())
 
     def add_tech_summary(self):
         header = Paragraph('Technology Summary', PSTYLES['h2'])
@@ -513,6 +607,7 @@ class MeasureSummary:
         self.story.add(NextPageTemplate(measure_id))
         if self.measures.index(measure) != 0:
             self.story.add(PageBreak())
+        self.add_title_page()
         self.add_measure_details_table()
         self.add_tech_summary()
         self.add_parameters_table()

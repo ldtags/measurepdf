@@ -86,6 +86,116 @@ class CustomTable(TableBaseClass):
                                 **kwargs)
 
 
+class TitleSection(Flowable):
+    def __init__(self,
+                 title: str,
+                 content: str | None=None,
+                 side: Literal['left', 'right']='left'):
+        self.title = title
+        self.content = content
+        self.side = side
+        self.indent = 7
+        self.rect_width = 3.5
+
+    def wrap(self, *args) -> tuple[float, float]:
+        title_style = PSTYLES['TitleSectionTitle']
+        title_width = stringWidth(self.title,
+                                  title_style.font_name,
+                                  title_style.font_size)
+        offset = title_style.leading - title_style.font_size
+        height = title_style.leading + offset * 2
+
+        if self.content is not None:
+            content_style = PSTYLES['TitleSectionContent']
+            content_width = stringWidth(self.content,
+                                        content_style.font_name,
+                                        content_style.font_size)
+            offset = content_style.leading - content_style.font_size
+            height += content_style.leading + offset * 2
+        else:
+            content_width = 0
+
+        text_width = max(title_width, content_width)
+        width = text_width + self.indent + self.rect_width
+        return (width, height)
+
+    def __draw_rectangle(self, width: float, height: float):
+        canvas = self.canv
+        if not isinstance(canvas, Canvas):
+            return
+
+        canvas.saveState()
+        try:
+            if self.side == 'left':
+                x = 0
+            else:
+                x = width - self.rect_width
+            canvas.setFillColor(COLORS['LightBrown'])
+            canvas.rect(x=x,
+                        y=0,
+                        width=self.rect_width,
+                        height=height,
+                        stroke=0,
+                        fill=1)
+        finally:
+            canvas.restoreState()
+
+    def __draw_text(self, width: float, height: float):
+        canvas = self.canv
+        if not isinstance(canvas, Canvas):
+            return
+        
+        canvas.saveState()
+        try:
+            title_style = PSTYLES['TitleSectionTitle']
+            if self.side == 'left':
+                x = self.rect_width + self.indent
+            else:
+                title_width = stringWidth(self.title,
+                                          title_style.font_name,
+                                          title_style.font_size)
+                x = width - self.rect_width - self.indent - title_width
+            y = height - title_style.leading
+            text_obj = canvas.beginText(x=x, y=y)
+            text_obj.setFillColor(title_style.text_color)
+            text_obj.setFont(title_style.font_name,
+                             title_style.font_size,
+                             title_style.leading)
+            text_obj.textOut(self.title)
+            canvas.drawText(text_obj)
+
+            if self.content is not None:
+                canvas.restoreState()
+                canvas.saveState()
+                content_style = PSTYLES['TitleSectionContent']
+                if self.side == 'left':
+                    x = self.rect_width + self.indent
+                else:
+                    content_width = stringWidth(self.content,
+                                                content_style.font_name,
+                                                content_style.font_size)
+                    offset = self.rect_width + self.indent
+                    x = width - offset - content_width
+                y -= content_style.leading + 4
+                text_obj = canvas.beginText(x=x, y=y)
+                text_obj.setFont(content_style.font_name,
+                                 content_style.font_size,
+                                 content_style.leading)
+                text_obj.textOut(self.content)
+                canvas.drawText(text_obj)
+        finally:
+            canvas.restoreState()
+
+    def draw(self):
+        w, h = self.wrap()
+        if self.side == 'left':
+            self.__draw_rectangle(w, h)
+            self.__draw_text(w, h)
+        else:
+            self.__draw_text(w, h)
+            self.__draw_rectangle(w, h)
+
+
 class Reference(Flowable):
     def __init__(self,
                  text: str,

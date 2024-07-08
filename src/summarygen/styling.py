@@ -19,7 +19,7 @@ _U = TypeVar('_U')
 
 PAGESIZE = letter
 X_MARGIN = 0.5 * inch
-Y_MARGIN = 0.5 * inch
+Y_MARGIN = 1 * inch
 INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2
 INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
 
@@ -86,7 +86,10 @@ COLORS = {
     'ValueTableRowAltLight': rgb_color(230, 230, 230),
     'ValueTableRowDark': rgb_color(230, 230, 230),
     'ValueTableRowAltDark': rgb_color(217, 217, 217),
-    'ReferenceTagBG': rgb_color(100, 162, 68)
+    'ReferenceTagBG': rgb_color(100, 162, 68),
+    'LightBrown': rgb_color(173, 140, 99),
+    'DarkBrown': rgb_color(153, 121, 80),
+    'Green': rgb_color(100, 163, 69)
 }
 
 
@@ -320,6 +323,25 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              font_name='SourceSansProB',
                              font_size=10))
     style_sheet.add(
+        BetterParagraphStyle('TitlePageSubtitle',
+                             font_name='SourceSansProB',
+                             font_size=17,
+                             text_color=COLORS['LightBrown']))
+    style_sheet.add(
+        BetterParagraphStyle('TitlePageTitle',
+                             font_name='SourceSansPro',
+                             font_size=34,
+                             leftIndent=2))
+    style_sheet.add(
+        BetterParagraphStyle('TitleSectionTitle',
+                             font_name='SourceSansProB',
+                             font_size=10,
+                             text_color=COLORS['LightBrown']))
+    style_sheet.add(
+        BetterParagraphStyle('TitleSectionContent',
+                             font_name='SourceSansPro',
+                             font_size=12))
+    style_sheet.add(
         BetterParagraphStyle('Test',
                              parent=style_sheet['Paragraph'],
                              borderWidth=1,
@@ -376,6 +398,11 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              linkUnderline=1,
                              underlineWidth=0.25,
                              text_color=colors.green))
+    style_sheet.add(
+        BetterParagraphStyle('TitleLink',
+                             font_name='SourceSansPro',
+                             font_size=16,
+                             text_color=COLORS['Green']))
     style_sheet.add(
         BetterParagraphStyle('h6Link',
                              linkUnderline=1,
@@ -444,6 +471,31 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('TOPPADDING', (0, 0), (-1, -1), 0),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
             ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
+    style_sheet.add(
+        BetterTableStyle(
+            'TitleSectionLeft',
+            [
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT')
+            ]
+        )
+    )
+    style_sheet.add(
+        BetterTableStyle(
+            'TitleSectionRight',
+            [
+                ('ALIGN', (0, 0), (-1, -1), 'RIGHT')
+            ]
+        )
+    )
+    style_sheet.add(
+        BetterTableStyle(
+            'TitleSectionContainer',
+            [
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (1, -1), 'RIGHT')
+            ]
+        )
+    )
 
     return style_sheet
 

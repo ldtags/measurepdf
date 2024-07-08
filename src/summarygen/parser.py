@@ -22,7 +22,7 @@ from reportlab.platypus import (
     XPreformatted
 )
 
-from src import _ROOT
+from src import _ROOT, utils
 from src.etrm import ETRM_URL, ETRMConnection
 from src.etrm.models import Measure
 from src.exceptions import (
@@ -225,21 +225,13 @@ def get_image(_url: str, max_width=INNER_WIDTH) -> Image:
     response = requests.get(_url, stream=True)
     if response.status_code != 200:
         return []
-    tmp_dir = os.path.join(_ROOT, 'assets', 'images', 'tmp')
-    if not os.path.exists(tmp_dir):
-        os.mkdir(tmp_dir)
-    tmp_path = f'{tmp_dir}/{img_name}'
+    if not os.path.exists(TMP_DIR):
+        os.mkdir(TMP_DIR)
+    tmp_path = f'{TMP_DIR}/{img_name}'
     with open(tmp_path, 'wb+') as out_file:
         shutil.copyfileobj(response.raw, out_file)
     del response
-    img = Image(tmp_path)
-    img_width = img.imageWidth
-    img_height = img.imageHeight
-    if img.imageWidth > max_width:
-        aspect = img_height / float(img_width)
-        del img
-        img = Image(tmp_path, width=max_width, height=max_width * aspect)
-    return img
+    return utils.get_rlimage(tmp_path, max_width)
 
 
 class CharacterizationParser:

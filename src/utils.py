@@ -2,6 +2,7 @@ import PIL.Image as Image
 import customtkinter as ctk
 from typing import Type, TypeVar, overload, NewType, get_args, get_origin, Any
 from types import UnionType, NoneType
+from reportlab.platypus import Image as RLImage
 
 from src import asset_path
 
@@ -142,6 +143,20 @@ def get_tkimage(light_image: str,
     return ctk.CTkImage(light_image=_light_image,
                         dark_image=_dark_image or _light_image,
                         size=size)
+
+
+def get_rlimage(img_path: str, max_width: float, **kwargs) -> RLImage:
+    img = RLImage(img_path, **kwargs)
+    img_width = img.imageWidth
+    img_height = img.imageHeight
+    if img.imageWidth > max_width:
+        aspect = img_height / float(img_width)
+        del img
+        img = RLImage(img_path,
+                      width=max_width,
+                      height=max_width * aspect,
+                      **kwargs)
+    return img
 
 
 def get_columns(matrix: list[list[_T]]) -> list[list[_T]]:
