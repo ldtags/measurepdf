@@ -104,7 +104,7 @@ class SummaryPageTemplate(PageTemplate):
 
             canv.saveState()
 
-            style = PSTYLES['SmallParagraphBold']
+            style = PSTYLES['SmallParagraph'].bold
             id_footer = Paragraph(self.measure_id, style=style)
             _, h = id_footer.wrap(INNER_WIDTH, Y_MARGIN)
             x = h * 1.5
@@ -206,31 +206,18 @@ class MeasureSummary:
             return
 
         measure = self.__cur_measure
-        pstyle = PSTYLES['SmallParagraph']
         data: list[tuple[str, Paragraph]] = [
-            ['Statewide Measure Id', Paragraph(measure.full_version_id,
-                                               pstyle)],
-            ['Measure Name', Paragraph(measure.name,
-                                       pstyle)],
-            ['Effective Date', Paragraph(measure.effective_start_date,
-                                         pstyle)],
-            ['End Date', Paragraph(measure.sunset_date or '',
-                                   pstyle)],
-            ['PA Lead', Paragraph(measure.pa_lead, pstyle)]
+            ('Statewide Measure Id', measure.full_version_id),
+            ('Measure Name', measure.name),
+            ('Effective Date', measure.effective_start_date),
+            ('End Date', measure.sunset_date or ''),
+            ('PA Lead', measure.pa_lead)
         ]
-        style = TSTYLES['DetailsTable']
-        col_widths = (2.25*inch, 3.03*inch)
-        base_height = 0.24*inch + style.top_padding + style.bottom_padding
-        row_heights = calc_row_heights(data,
-                                       style,
-                                       pstyle,
-                                       base_height,
-                                       col_widths)
-        table = Table(data,
-                      colWidths=col_widths,
-                      rowHeights=row_heights,
-                      style=style,
-                      hAlign='LEFT')
+        table = SummaryTable(data,
+                             header_orient='left',
+                             header_style=PSTYLES['SummaryTableHeader'].bold,
+                             body_style=PSTYLES['SummaryTableItem'],
+                             col_widths=(2.25*inch, 3.03*inch))
         self.story.add(table, NEWLINE)
 
     def add_tech_summary(self):

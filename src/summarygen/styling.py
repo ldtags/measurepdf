@@ -312,29 +312,21 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              font_size=9,
                              parent=style_sheet['Paragraph']))
     style_sheet.add(
-        BetterParagraphStyle('SmallParagraphBold',
+        BetterParagraphStyle('SummaryTableItem',
+                             font_name='SourceSansPro',
+                             font_size=9))
+    style_sheet.add(
+        BetterParagraphStyle('SummaryTableHeader',
                              font_name='SourceSansProB',
-                             parent=style_sheet['SmallParagraph']))
+                             font_size=10))
     style_sheet.add(
         BetterParagraphStyle('Test',
                              parent=style_sheet['Paragraph'],
                              borderWidth=1,
                              borderColor=colors.black))
     style_sheet.add(
-        BetterParagraphStyle('ParagraphBold',
-                             font_name='SourceSansProB',
-                             parent=style_sheet['Paragraph']))
-    style_sheet.add(
-        BetterParagraphStyle('ParagraphItalic',
-                             font_name='SourceSansProI',
-                             parent=style_sheet['Paragraph']))
-    style_sheet.add(
-        BetterParagraphStyle('ParagraphBoldItalic',
-                             font_name='SourceSansProBI',
-                             parent=style_sheet['Paragraph']))
-    style_sheet.add(
         BetterParagraphStyle('ReferenceTag',
-                             parent=style_sheet['ParagraphBold'],
+                             parent=style_sheet['Paragraph'].bold,
                              text_color=colors.white,
                              backColor=COLORS['ReferenceTagBG'],
                              leading=13.5 * 1.2))
@@ -421,13 +413,9 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
     style_sheet.add(
         BetterTableStyle('SummaryTable', [
             ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-            ('TOPPADDING', (0, 0), (0, -1), -1),
-            ('TOPPADDING', (1, 0), (1, -1), 0.25),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('FONTSIZE', (0, 0), (0, -1), 13.5),
-            ('FONTSIZE', (1, 0), (-1, -1), 12),
-            ('VALIGN', (0, 0), (0, -1), 'TOP'),
-            ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
+            ('TOPPADDING', (0, 0), (-1, -1), 1),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+            ('VALIGN', (0, 0), (1, -1), 'MIDDLE')]))
     style_sheet.add(
         BetterTableStyle('SectionsTable', [
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),

@@ -323,9 +323,15 @@ class SummaryTable(CustomTable):
                 if len(row) != row_len:
                     raise SummaryGenError('All summary table rows must have'
                                           ' the same length')
+                if col_widths is not None and len(row) != len(col_widths):
+                    raise SummaryGenError('Incorrect amount of column widths:'
+                                          f' got {len(col_widths)}, but',
+                                          f' expected {len(row)}')
 
+        self.style_matrix: list[list[BetterParagraphStyle]] = []
         data: list[list[Paragraph]] = []
         for y, row in enumerate(elements):
+            style_row: list[BetterParagraphStyle] = []
             data_row: list[Paragraph] = []
             for x, cell in enumerate(row):
                 if (y == 0 and header_orient == 'top'
@@ -333,7 +339,9 @@ class SummaryTable(CustomTable):
                     style = header_style
                 else:
                     style = body_style
+                style_row.append(style)
                 data_row.append(Paragraph(cell, style=style))
+            self.style_matrix.append(style_row)
             data.append(data_row)
 
         col_widths = col_widths or self.__calc_col_widths(data)
@@ -366,10 +374,11 @@ class SummaryTable(CustomTable):
         style = self.table_style
         padding = style.top_padding + style.bottom_padding
         row_heights: list[float] = []
-        for row in data:
+        for y, row in enumerate(data):
             row_height = 0
             for x, cell in enumerate(row):
                 _, height = cell.wrap(col_widths[x], 0)
+                style = self.style_matrix[y][x]
                 row_height = max(height, row_height)
             row_heights.append(row_height + padding)
         return row_heights
