@@ -84,7 +84,7 @@ class CustomTable(TableBaseClass):
         if row_heights is not None:
             if isinstance(row_heights, float | int):
                 row_heights = [row_heights]
-            
+
             for column in [list(col) for col in zip(*data)]:
                 assert len(row_heights) == len(column)
                 for cell in column:
