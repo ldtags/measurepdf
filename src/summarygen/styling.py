@@ -18,8 +18,8 @@ _U = TypeVar('_U')
 
 
 PAGESIZE = letter
-X_MARGIN = 1 * inch
-Y_MARGIN = 1 * inch
+X_MARGIN = 0.5 * inch
+Y_MARGIN = 0.5 * inch
 INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2
 INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
 
@@ -112,6 +112,7 @@ class BetterParagraphStyle(ParagraphStyle):
                  leading: float | None=None,
                  sub_size: float | None=None,
                  sup_size: float | None=None,
+                 text_color: colors.Color | None=None,
                  parent: BetterParagraphStyle | None=None,
                  **kwargs):
         self.font_name = get_style_param('font_name',
@@ -144,12 +145,21 @@ class BetterParagraphStyle(ParagraphStyle):
                                         self.font_size * (2 / 3))
         kwargs['superscriptSize'] = self.sup_size
 
+        self.text_color = get_style_param('text_color',
+                                          text_color,
+                                          parent,
+                                          colors.black)
+        kwargs['textColor'] = self.text_color
+
         self.attrs = kwargs
         self.parent = parent
         super().__init__(name, parent, **kwargs)
         self.font_name = kwargs['fontName']
         self.font_size = kwargs['fontSize']
         self.leading = kwargs['leading']
+        self.sup_size = kwargs['superscriptSize']
+        self.sub_size = kwargs['subscriptSize']
+        self.text_color = kwargs['textColor']
 
     @property
     def subscripted(self) -> BetterParagraphStyle:
@@ -290,15 +300,16 @@ class StyleSheet(Generic[_T]):
 def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet = StyleSheet[BetterParagraphStyle]()
     style_sheet.add(
-        BetterParagraphStyle('Paragraph',
+        BetterParagraphStyle('Base',
                              font_name='SourceSansPro',
-                             font_size=13.5,
-                             sub_size=8,
-                             sup_size=8,
-                             leading=16.2))
+                             font_size=10))
+    style_sheet.add(
+        BetterParagraphStyle('Paragraph',
+                             leading=14,
+                             parent=style_sheet['Base']))
     style_sheet.add(
         BetterParagraphStyle('SmallParagraph',
-                             font_size=12,
+                             font_size=9,
                              parent=style_sheet['Paragraph']))
     style_sheet.add(
         BetterParagraphStyle('SmallParagraphBold',
@@ -324,18 +335,18 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet.add(
         BetterParagraphStyle('ReferenceTag',
                              parent=style_sheet['ParagraphBold'],
-                             textColor=colors.white,
+                             text_color=colors.white,
                              backColor=COLORS['ReferenceTagBG'],
                              leading=13.5 * 1.2))
     style_sheet.add(
         BetterParagraphStyle('ValueTableHeaderThin',
                              parent=style_sheet['SmallParagraph'],
-                             textColor=colors.white))
+                             text_color=colors.white))
     style_sheet.add(
         BetterParagraphStyle('ValueTableHeader',
                              font_name='SourceSansProB',
                              parent=style_sheet['SmallParagraph'],
-                             textColor=colors.white))
+                             text_color=colors.white))
     style_sheet.add(
         BetterParagraphStyle('ValueTableDeterminant',
                              parent=style_sheet['SmallParagraph']))
@@ -372,12 +383,12 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
                              font_size=13.5,
                              linkUnderline=1,
                              underlineWidth=0.25,
-                             textColor=colors.green))
+                             text_color=colors.green))
     style_sheet.add(
         BetterParagraphStyle('h6Link',
                              linkUnderline=1,
                              underlineWidth=0.75,
-                             textColor=colors.green,
+                             text_color=colors.green,
                              parent=style_sheet['h6']))
 
     return style_sheet
@@ -390,7 +401,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
             ('TOPPADDING', (0, 0), (-1, -1), 0.1),
             ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
             ('FONTNAME', (0, 0), (0, -1), 'SourceSansProB'),
             ('FONTNAME', (1, 0), (-1, -1), 'SourceSansPro'),
             ('FONTSIZE', (0, 0), (0, -1), 13.5),

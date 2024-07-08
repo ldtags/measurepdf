@@ -511,7 +511,7 @@ class MeasureSummary:
         frame = Frame(x1=X_MARGIN,
                       y1=Y_MARGIN,
                       width=INNER_WIDTH,
-                      height=INNER_HEIGHT + 12,
+                      height=INNER_HEIGHT,
                       id='normal')
         template = SummaryPageTemplate(measure_id=measure.full_version_id,
                                        measure_name=measure.name,

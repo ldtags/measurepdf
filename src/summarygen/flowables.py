@@ -2,6 +2,8 @@ from __future__ import annotations
 import math
 from typing import Literal
 from reportlab.lib.pagesizes import inch
+from reportlab.pdfgen.canvas import Canvas
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
     Paragraph,
@@ -26,6 +28,7 @@ from src.summarygen.styling import (
     DEF_PSTYLE,
     TSTYLES,
     INNER_WIDTH,
+    COLORS,
     get_table_style
 )
 from src.summarygen.rlobjects import ElementLine
@@ -83,15 +86,74 @@ class CustomTable(TableBaseClass):
                                 **kwargs)
 
 
-class Reference(XPreformatted):
-    def __init__(self, text: str, link: str | None=None):
-        if link != None:
-            ref_text = f'<link href=\"{link}\">{text}</link>'
-        else:
-            ref_text = text
-        XPreformatted.__init__(self,
-                               text=ref_text,
-                               style=PSTYLES['ReferenceTag'])
+class Reference(Flowable):
+    def __init__(self,
+                 text: str,
+                 link: str | None=None,
+                 x_padding: float=5,
+                 y_padding: float=2):
+        self.text = text
+        self.link = link
+        self.x_padding = x_padding
+        self.y_padding = y_padding
+        self.base_style = PSTYLES['ReferenceTag']
+        self.style = self.base_style.superscripted
+        text_width =  stringWidth(self.text,
+                                  self.style.font_name,
+                                  self.style.font_size)
+        self.__width = text_width + self.x_padding
+        self.__height = self.base_style.font_size + self.y_padding
+
+    def wrap(self, *args) -> tuple[float, float]:
+        return (self.__width, self.__height)
+
+    def draw(self):
+        canvas = self.canv
+        if not isinstance(canvas, Canvas):
+            return
+
+        bg_color = COLORS['ReferenceTagBG']
+        y = self.__height - self.style.font_size - self.y_padding
+
+        canvas.saveState()
+        try:
+            canvas.setFillColor(bg_color)
+
+            tri_path = canvas.beginPath()
+            tri_path.moveTo(x=0, y=y)
+            tri_path.lineTo(x=self.__width / 2, y=y)
+            tri_path.lineTo(x=self.__width / 4, y=0)
+            canvas.drawPath(tri_path, stroke=0, fill=1)
+
+            canvas.rect(x=0,
+                        y=y,
+                        width=self.__width,
+                        height=self.style.font_size + self.y_padding,
+                        stroke=0,
+                        fill=1)
+
+            canvas.restoreState()
+            canvas.saveState()
+
+            text_obj = canvas.beginText(x=self.x_padding / 2,
+                                        y=y + 1.5 + self.y_padding / 2)
+            text_obj.setFont(self.style.font_name,
+                             self.style.font_size,
+                             self.style.leading)
+            text_obj.setFillColor(self.style.text_color)
+            text_obj.textOut(self.text)
+            canvas.drawText(text_obj)
+
+            if self.link is not None:
+                area = (0,
+                        0,
+                        self.__width - self.x_padding / 2,
+                        self.__height)
+                canvas.linkURL(url=self.link,
+                               rect=area,
+                               relative=1)
+        finally:
+            canvas.restoreState()
 
 
 class ParagraphLine(Table):
@@ -134,7 +196,7 @@ class ParagraphLine(Table):
         _flowables: list[Flowable] = []
         for element in self.element_line:
             if element.type == ElemType.REF:
-                _flowables.append(Reference(element.text_xml, self.ref_link))
+                _flowables.append(Reference(element.text, self.ref_link))
             else:
                 _flowables.append(XPreformatted(text=element.text_xml,
                                                 style=element.style))
