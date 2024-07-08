@@ -597,7 +597,7 @@ class ValueTable(Table):
             Table.__init__(self, data, **kwargs)
             return
 
-        self.data = data    
+        self.data = data
         self.measure = measure
         self.spans = spans or []
         self.style = get_table_style(data, headers, determinants, self.spans)
