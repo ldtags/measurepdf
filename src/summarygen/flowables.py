@@ -529,7 +529,10 @@ class SummaryTable(CustomTable):
         for column in columns:
             col_width = 0
             for cell in column:
-                width, _ = cell.wrap(base_width, 0)
+                cell.wrap(base_width, 0)
+                width = cell._width_max
+                offset = base_width - width
+                width += offset / 2
                 col_width = max(width, col_width)
             col_widths.append(col_width + padding)
         return col_widths

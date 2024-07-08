@@ -311,6 +311,13 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     )
     style_sheet.add(
         BetterParagraphStyle(
+            'SmallBase',
+            font_size=9,
+            parent=style_sheet['Base']
+        )
+    )
+    style_sheet.add(
+        BetterParagraphStyle(
             'Paragraph',
             leading=14,
             parent=style_sheet['Base']
@@ -481,23 +488,6 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
 
 def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
     style_sheet = StyleSheet[BetterTableStyle]()
-    style_sheet.add(
-        BetterTableStyle(
-            'ParametersTable',
-            [
-                ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-                ('TOPPADDING', (0, 0), (0, -1), -1),
-                ('TOPPADDING', (1, 0), (1, -1), 0.25),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('FONTNAME', (0, 0), (-1, -1), 'SourceSansPro'),
-                ('FONTSIZE', (0, 0), (0, -1), 13.5),
-                ('FONTSIZE', (1, 0), (-1, -1), 12),
-                ('VALIGN', (0, 0), (0, -1), 'TOP'),
-                ('VALIGN', (1, 0), (1, -1), 'MIDDLE')
-            ]
-        )
-    )
     style_sheet.add(
         BetterTableStyle(
             'SummaryTable', 

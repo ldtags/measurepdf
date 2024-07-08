@@ -360,28 +360,11 @@ class MeasureSummary:
                                            column=column_name,
                                            measure=self.__cur_measure)
             data.append((label, impact))
-
-        style = PSTYLES['SmallParagraph']
-        formatted_data: list[tuple[Paragraph, Paragraph]] = []
-        for label, item in data:
-            label_para = Paragraph(label, style=PSTYLES['Paragraph'])
-            item_para = Paragraph(item, PSTYLES['SmallParagraph'])
-            formatted_data.append((label_para, item_para))
-
-        style = TSTYLES['ParametersTable']
-        para_styles = (PSTYLES['Paragraph'], PSTYLES['SmallParagraph'])
-        col_widths = (2.26*inch, 3.98*inch)
-        base_height = 0.24*inch + style.top_padding + style.bottom_padding
-        row_heights = calc_row_heights(formatted_data,
-                                       style,
-                                       para_styles,
-                                       base_height,
-                                       col_widths)
-        return Table(formatted_data,
-                     colWidths=col_widths,
-                     rowHeights=row_heights,
-                     style=TSTYLES['ParametersTable'],
-                     hAlign='LEFT')
+        
+        return SummaryTable(data,
+                            header_orient='left',
+                            header_style=PSTYLES['Paragraph'],
+                            body_style=PSTYLES['SmallBase'])
 
     def add_parameters_table(self):
         if self.__cur_measure is None:
