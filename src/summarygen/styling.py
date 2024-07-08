@@ -483,21 +483,6 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
     style_sheet = StyleSheet[BetterTableStyle]()
     style_sheet.add(
         BetterTableStyle(
-            'DetailsTable',
-            [
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-                ('TOPPADDING', (0, 0), (-1, -1), 0.1),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-                ('FONTNAME', (0, 0), (0, -1), 'SourceSansProB'),
-                ('FONTNAME', (1, 0), (-1, -1), 'SourceSansPro'),
-                ('FONTSIZE', (0, 0), (0, -1), 13.5),
-                ('FONTSIZE', (1, 0), (-1, -1), 12)
-            ]
-        )
-    )
-    style_sheet.add(
-        BetterTableStyle(
             'ParametersTable',
             [
                 ('GRID', (0, 0), (-1, -1), 0.25, colors.black),

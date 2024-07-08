@@ -223,25 +223,6 @@ class MeasureSummary:
                                   f' in {dir_path}')
         self.summary = SummaryDocTemplate(self.file_path)
 
-    def add_measure_details_table(self):
-        if self.__cur_measure is None:
-            return
-
-        measure = self.__cur_measure
-        data: list[tuple[str, Paragraph]] = [
-            ('Statewide Measure Id', measure.full_version_id),
-            ('Measure Name', measure.name),
-            ('Effective Date', measure.effective_start_date),
-            ('End Date', measure.sunset_date or ''),
-            ('PA Lead', measure.pa_lead)
-        ]
-        table = SummaryTable(data,
-                             header_orient='left',
-                             header_style=PSTYLES['SummaryTableHeader'].bold,
-                             body_style=PSTYLES['SummaryTableItem'],
-                             col_widths=(2.25*inch, 3.03*inch))
-        self.story.add(table, NEWLINE)
-
     def __build_sections_container(self,
                                    measure: Measure
                                   ) -> TitleSectionContainer:
@@ -603,7 +584,6 @@ class MeasureSummary:
         if self.measures.index(measure) != 0:
             self.story.add(PageBreak())
         self.add_title_page()
-        self.add_measure_details_table()
         self.add_tech_summary()
         self.add_parameters_table()
         self.add_impact_table()
