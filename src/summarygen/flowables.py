@@ -156,7 +156,7 @@ class TitleSection(Flowable):
         canvas = self.canv
         if not isinstance(canvas, Canvas):
             return
-        
+
         canvas.saveState()
         try:
             title_style = PSTYLES['TitleSectionTitle']
