@@ -303,112 +303,178 @@ class StyleSheet(Generic[_T]):
 def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet = StyleSheet[BetterParagraphStyle]()
     style_sheet.add(
-        BetterParagraphStyle('Base',
-                             font_name='SourceSansPro',
-                             font_size=10))
+        BetterParagraphStyle(
+            'Base',
+            font_name='SourceSansPro',
+            font_size=10
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('Paragraph',
-                             leading=14,
-                             parent=style_sheet['Base']))
+        BetterParagraphStyle(
+            'Paragraph',
+            leading=14,
+            parent=style_sheet['Base']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('SmallParagraph',
-                             font_size=9,
-                             parent=style_sheet['Paragraph']))
+        BetterParagraphStyle(
+            'SmallParagraph',
+            font_size=9,
+            parent=style_sheet['Paragraph']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('SummaryTableItem',
-                             font_name='SourceSansPro',
-                             font_size=9))
+        BetterParagraphStyle(
+            'SummaryTableItem',
+            font_name='SourceSansPro',
+            font_size=9
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('SummaryTableHeader',
-                             font_name='SourceSansProB',
-                             font_size=10))
+        BetterParagraphStyle(
+            'SummaryTableHeader',
+            font_name='SourceSansProB',
+            font_size=10
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('TitlePageSubtitle',
-                             font_name='SourceSansProB',
-                             font_size=17,
-                             text_color=COLORS['LightBrown']))
+        BetterParagraphStyle(
+            'TitlePageSubtitle',
+            font_name='SourceSansProB',
+            font_size=17,
+            text_color=COLORS['LightBrown']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('TitlePageTitle',
-                             font_name='SourceSansPro',
-                             font_size=34,
-                             leftIndent=2))
+        BetterParagraphStyle(
+            'TitlePageTitle',
+            font_name='SourceSansPro',
+            font_size=34,
+            leftIndent=2
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('TitleSectionTitle',
-                             font_name='SourceSansProB',
-                             font_size=10,
-                             text_color=COLORS['LightBrown']))
+        BetterParagraphStyle(
+            'TitleSectionTitle',
+            font_name='SourceSansProB',
+            font_size=10,
+            text_color=COLORS['LightBrown']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('TitleSectionContent',
-                             font_name='SourceSansPro',
-                             font_size=12))
+        BetterParagraphStyle(
+            'TitleSectionContent',
+            font_name='SourceSansPro',
+            font_size=12
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('Test',
-                             parent=style_sheet['Paragraph'],
-                             borderWidth=1,
-                             borderColor=colors.black))
+        BetterParagraphStyle(
+            'Test',
+            parent=style_sheet['Paragraph'],
+            borderWidth=1,
+            borderColor=colors.black
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('ReferenceTag',
-                             parent=style_sheet['Paragraph'].bold,
-                             text_color=colors.white,
-                             backColor=COLORS['ReferenceTagBG'],
-                             leading=13.5 * 1.2))
+        BetterParagraphStyle(
+            'ReferenceTag',
+            parent=style_sheet['Paragraph'].bold,
+            text_color=colors.white,
+            backColor=COLORS['ReferenceTagBG'],
+            leading=13.5 * 1.2
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('ValueTableHeaderThin',
-                             parent=style_sheet['SmallParagraph'],
-                             text_color=colors.white))
+        BetterParagraphStyle(
+            'ValueTableHeaderThin',
+            parent=style_sheet['SmallParagraph'],
+            text_color=colors.white
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('ValueTableHeader',
-                             font_name='SourceSansProB',
-                             parent=style_sheet['SmallParagraph'],
-                             text_color=colors.white))
+        BetterParagraphStyle(
+            'ValueTableHeader',
+            font_name='SourceSansProB',
+            parent=style_sheet['SmallParagraph'],
+            text_color=colors.white
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('ValueTableDeterminant',
-                             parent=style_sheet['SmallParagraph']))
+        BetterParagraphStyle(
+            'ValueTableDeterminant',
+            parent=style_sheet['SmallParagraph']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('ValueTableItem',
-                             font_name='SourceSansProB',
-                             parent=style_sheet['SmallParagraph']))
+        BetterParagraphStyle(
+            'ValueTableItem',
+            font_name='SourceSansProB',
+            parent=style_sheet['SmallParagraph']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('TableHeader',
-                             font_name='SourceSansProB',
-                             font_size=13.5))
+        BetterParagraphStyle(
+            'TableHeader',
+            font_name='SourceSansProB',
+            font_size=13.5
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('h2',
-                             font_name='Merriweather',
-                             leading=20.7,
-                             font_size=18,
-                             spaceAfter=5,
-                             keepWithNext=True))
+        BetterParagraphStyle(
+            'h2',
+            font_name='Merriweather',
+            leading=20.7,
+            font_size=18,
+            spaceAfter=5,
+            keepWithNext=True
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('h3',
-                             font_name='SourceSansProB',
-                             font_size=18,
-                             spaceAfter=5))
+        BetterParagraphStyle(
+            'h3',
+            font_name='SourceSansProB',
+            font_size=18,
+            spaceAfter=5
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('h6',
-                             font_name='Merriweather',
-                             leading=15,
-                             font_size=15,
-                             spaceAfter=5))
+        BetterParagraphStyle(
+            'h6',
+            font_name='Merriweather',
+            leading=15,
+            font_size=15,
+            spaceAfter=5
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('Link',
-                             font_name='SourceSansPro',
-                             leading=18.5,
-                             font_size=13.5,
-                             linkUnderline=1,
-                             underlineWidth=0.25,
-                             text_color=colors.green))
+        BetterParagraphStyle(
+            'Link',
+            font_name='SourceSansPro',
+            leading=18.5,
+            font_size=13.5,
+            linkUnderline=1,
+            underlineWidth=0.25,
+            text_color=COLORS['Green']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('TitleLink',
-                             font_name='SourceSansPro',
-                             font_size=16,
-                             text_color=COLORS['Green']))
+        BetterParagraphStyle(
+            'TitleLink',
+            font_name='SourceSansPro',
+            font_size=16,
+            text_color=COLORS['Green']
+        )
+    )
     style_sheet.add(
-        BetterParagraphStyle('h6Link',
-                             linkUnderline=1,
-                             underlineWidth=0.75,
-                             text_color=colors.green,
-                             parent=style_sheet['h6']))
+        BetterParagraphStyle(
+            'h6Link',
+            linkUnderline=1,
+            underlineWidth=0.75,
+            text_color=COLORS['Green'],
+            parent=style_sheet['h6']
+        )
+    )
 
     return style_sheet
 
@@ -416,61 +482,91 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
 def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
     style_sheet = StyleSheet[BetterTableStyle]()
     style_sheet.add(
-        BetterTableStyle('DetailsTable', [
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('TOPPADDING', (0, 0), (-1, -1), 0.1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('FONTNAME', (0, 0), (0, -1), 'SourceSansProB'),
-            ('FONTNAME', (1, 0), (-1, -1), 'SourceSansPro'),
-            ('FONTSIZE', (0, 0), (0, -1), 13.5),
-            ('FONTSIZE', (1, 0), (-1, -1), 12)]))
+        BetterTableStyle(
+            'DetailsTable',
+            [
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('TOPPADDING', (0, 0), (-1, -1), 0.1),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('FONTNAME', (0, 0), (0, -1), 'SourceSansProB'),
+                ('FONTNAME', (1, 0), (-1, -1), 'SourceSansPro'),
+                ('FONTSIZE', (0, 0), (0, -1), 13.5),
+                ('FONTSIZE', (1, 0), (-1, -1), 12)
+            ]
+        )
+    )
     style_sheet.add(
-        BetterTableStyle('ParametersTable', [
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-            ('TOPPADDING', (0, 0), (0, -1), -1),
-            ('TOPPADDING', (1, 0), (1, -1), 0.25),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-            ('FONTNAME', (0, 0), (-1, -1), 'SourceSansPro'),
-            ('FONTSIZE', (0, 0), (0, -1), 13.5),
-            ('FONTSIZE', (1, 0), (-1, -1), 12),
-            ('VALIGN', (0, 0), (0, -1), 'TOP'),
-            ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
+        BetterTableStyle(
+            'ParametersTable',
+            [
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
+                ('TOPPADDING', (0, 0), (0, -1), -1),
+                ('TOPPADDING', (1, 0), (1, -1), 0.25),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('FONTNAME', (0, 0), (-1, -1), 'SourceSansPro'),
+                ('FONTSIZE', (0, 0), (0, -1), 13.5),
+                ('FONTSIZE', (1, 0), (-1, -1), 12),
+                ('VALIGN', (0, 0), (0, -1), 'TOP'),
+                ('VALIGN', (1, 0), (1, -1), 'MIDDLE')
+            ]
+        )
+    )
     style_sheet.add(
-        BetterTableStyle('SummaryTable', [
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-            ('TOPPADDING', (0, 0), (-1, -1), 1),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
-            ('VALIGN', (0, 0), (1, -1), 'MIDDLE')]))
+        BetterTableStyle(
+            'SummaryTable', 
+            [
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
+                ('TOPPADDING', (0, 0), (-1, -1), 1),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+                ('VALIGN', (0, 0), (1, -1), 'MIDDLE')
+            ]
+        )
+    )
     style_sheet.add(
-        BetterTableStyle('SectionsTable', [
-            ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-            ('SPAN', (0, 0), (0, 2)),
-            ('SPAN', (0, 3), (0, 6)),
-            ('SPAN', (0, 7), (0, 9)),
-            ('SPAN', (0, 10), (0, 13)),
-            ('SPAN', (0, 14), (0, 17)),
-            ('TOPPADDING', (0, 0), (-1, -1), 5),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-            ('VALIGN', (0, 0), (0, -1), 'TOP'),
-            ('VALIGN', (1, 0), (1, -1), 'MIDDLE')]))
+        BetterTableStyle(
+            'SectionsTable',
+            [
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('SPAN', (0, 0), (0, 2)),
+                ('SPAN', (0, 3), (0, 6)),
+                ('SPAN', (0, 7), (0, 9)),
+                ('SPAN', (0, 10), (0, 13)),
+                ('SPAN', (0, 14), (0, 17)),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('VALIGN', (0, 0), (0, -1), 'TOP'),
+                ('VALIGN', (1, 0), (1, -1), 'MIDDLE')
+            ]
+        )
+    )
     style_sheet.add(
-        BetterTableStyle('ValueTable', [
-            ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
-            ('LEFTPADDING', (0, 0), (-1, -1), 9),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 9),
-            ('TOPPADDING', (0, 0), (-1, -1), 9),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
-            ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)]))
+        BetterTableStyle(
+            'ValueTable',
+            [
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 9),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 9),
+                ('TOPPADDING', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)
+            ]
+        )
+    )
     style_sheet.add(
-        BetterTableStyle('ElementLine', [
-            ('LEFTPADDING', (0, 0), (-1, -1), 0),
-            ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-            ('TOPPADDING', (0, 0), (-1, -1), 0),
-            ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')]))
+        BetterTableStyle(
+            'ElementLine',
+            [
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+            ]
+        )
+    )
     style_sheet.add(
         BetterTableStyle(
             'TitleSectionLeft',
