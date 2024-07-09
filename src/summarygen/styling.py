@@ -1,7 +1,8 @@
 from __future__ import annotations
 import os
 import copy
-from typing import Any, TypeVar, Generic
+from enum import Enum
+from typing import Any, TypeVar, Generic, overload
 from reportlab.lib import colors
 from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
 from reportlab.lib.pagesizes import inch, letter
@@ -24,16 +25,28 @@ INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2
 INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
 
 
+class FontType(Enum):
+    Regular = ''
+    Italic = 'I'
+    Bold = 'B'
+    BoldItalic = 'BI'
+    SemiBold = 'SB'
+    SemiBoldItalic = 'SBI'
+    Light = 'L'
+    LightItalic = 'LI'
+    ExtraLight = 'EL'
+    ExtraLightItalic = 'ELI'
+    Black = 'Bl'
+    BlackItalic = 'BlI'
+
+
 class Font:
     """Registerable font for the reportlab library
-    
+
     Fonts must be stored in the `assets` directory as a directory named
     `asset_dir` that contains all font files
 
     Each font file must follow the name format `name`-`style`.ttf
-
-    Supported (and required) font styles: `Regular`, `Bold`, `Italic`,
-    `BoldItalic`
 
     Font styles are case specific
     """
@@ -41,38 +54,52 @@ class Font:
     def __init__(self, name: str, font_dir: str):
         self.name = name
         self.path = asset_path(font_dir, 'fonts')
-        self.regular = TTFont(
-            f'{name}',
-            os.path.join(self.path, f'{name}-Regular.ttf'))
 
-        self.bold = TTFont(
-            f'{name}B',
-            os.path.join(self.path, f'{name}-Bold.ttf'))
+    @overload
+    def register(self, font_type: FontType) -> TTFont:
+        ...
 
-        self.italic = TTFont(
-            f'{name}I',
-            os.path.join(self.path, f'{name}-Italic.ttf'))
+    @overload
+    def register(self, *font_types: FontType) -> list[TTFont]:
+        ...
 
-        self.bold_italic = TTFont(
-            f'{name}BI',
-            os.path.join(self.path, f'{name}-BoldItalic.ttf'))
+    def register(self, *font_types: FontType) -> TTFont | list[TTFont]:
+        fonts: list[TTFont] = []
+        for font_type in font_types:
+            font = TTFont(
+                f'{self.name}{font_type.value}',
+                os.path.join(self.path, f'{self.name}-{font_type.name}.ttf')
+            )
+            fonts.append(font)
+            pdfmetrics.registerFont(font)
+        if len(fonts) == 1:
+            return fonts[0]
+        return fonts
 
-    def register(self):
-        pdfmetrics.registerFont(self.regular)
-        pdfmetrics.registerFont(self.bold)
-        pdfmetrics.registerFont(self.italic)
-        pdfmetrics.registerFont(self.bold_italic)
+    def register_family(self):
+        regular = self.register(FontType.Regular)
+        bold = self.register(FontType.Bold)
+        italic = self.register(FontType.Italic)
+        bold_italic = self.register(FontType.BoldItalic)
         registerFontFamily(self.name,
-                           normal=self.name,
-                           bold=f'{self.name}B',
-                           italic=f'{self.name}I',
-                           boldItalic=f'{self.name}BI')
+                           normal=regular.fontName,
+                           bold=bold.fontName,
+                           italic=italic.fontName,
+                           boldItalic=bold_italic.fontName)
 
 
-Font('SourceSansPro', 'source-sans-pro').register()
-Font('Merriweather', 'merriweather').register()
-Font('Helvetica', 'helvetica').register()
-Font('Arial', 'arial').register()
+__SourceSansPro = Font('SourceSansPro', 'source-sans-pro')
+__SourceSansPro.register_family()
+
+__Merriweather = Font('Merriweather', 'merriweather')
+__Merriweather.register_family()
+__Merriweather.register(FontType.Light, FontType.LightItalic)
+
+__Helvetica = Font('Helvetica', 'helvetica')
+__Helvetica.register_family()
+
+__Arial = Font('Arial', 'arial')
+__Arial.register_family()
 
 
 def rgb_color(red: float, green: float, blue: float) -> colors.Color:
@@ -355,7 +382,7 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet.add(
         BetterParagraphStyle(
             'TitlePageTitle',
-            font_name='SourceSansPro',
+            font_name='MerriweatherL',
             font_size=34,
             leftIndent=2
         )
