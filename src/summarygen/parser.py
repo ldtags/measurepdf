@@ -49,7 +49,8 @@ from src.summarygen.flowables import (
     EmbeddedValueTable,
     SummaryParagraph,
     NEWLINE,
-    Spacer
+    Spacer,
+    BulletList
 )
 
 
@@ -314,15 +315,13 @@ class CharacterizationParser:
                                    spans=spans)]
 
     def handle_ul(self, tag: Tag) -> list[Flowable]:
-        list_items: list[ListItem] = []
+        # list_items: list[ListItem] = []
+        elements: list[list[ParagraphElement]] = []
         li_list: ResultSet[Tag] = tag.find_all('li')
         for li in li_list:
             items = convert_element(li)
-            element = SummaryParagraph(items, self.measure)
-            if element != None:
-                list_item = ListItem(element, bulletColor=colors.black)
-                list_items.append(list_item)
-        return [ListFlowable(list_items, bulletType='bullet')]
+            elements.append(items)
+        return [BulletList(elements, self.measure)]
 
     def parse_contents(self, tag: Tag) -> list[Flowable]:
         flowables: list[Flowable] = []

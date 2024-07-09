@@ -21,7 +21,7 @@ _U = TypeVar('_U')
 PAGESIZE = letter
 X_MARGIN = 0.45 * inch
 Y_MARGIN = 1 * inch
-INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2
+INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2 - 12
 INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
 
 
@@ -518,6 +518,13 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
             parent=style_sheet['h6']
         )
     )
+    style_sheet.add(
+        BetterParagraphStyle(
+            'BulletPoint',
+            font_name='SourceSansPro',
+            font_size=18
+        )
+    )
 
     return style_sheet
 
@@ -601,6 +608,17 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             [
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
                 ('ALIGN', (1, 0), (1, -1), 'RIGHT')
+            ]
+        )
+    )
+    style_sheet.add(
+        BetterTableStyle(
+            'SummaryList',
+            [
+                ('LEFTPADDING', (0, 0), (2, -1), 0),
+                ('RIGHTPADDING', (0, 0), (2, -1), 0),
+                ('TOPPADDING', (0, 0), (2, -1), -10),
+                ('VALIGN', (1, 0), (1, -1), 'TOP')
             ]
         )
     )
