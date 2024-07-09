@@ -296,7 +296,7 @@ class MeasureSummary:
                                         connection=self.connection,
                                         name='technology_summary')
         flowables = parser.parse()
-        self.story.add(header, *flowables, NEWLINE)
+        self.story.add(header, NEWLINE, *flowables, NEWLINE)
 
     def __get_shared_avg(self,
                          param_name: str,

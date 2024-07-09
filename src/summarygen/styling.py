@@ -19,7 +19,7 @@ _U = TypeVar('_U')
 
 
 PAGESIZE = letter
-X_MARGIN = 0.5 * inch
+X_MARGIN = 0.45 * inch
 Y_MARGIN = 1 * inch
 INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2
 INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
@@ -90,6 +90,7 @@ class Font:
 
 __SourceSansPro = Font('SourceSansPro', 'source-sans-pro')
 __SourceSansPro.register_family()
+__SourceSansPro.register(FontType.Black, FontType.BlackItalic)
 
 __Merriweather = Font('Merriweather', 'merriweather')
 __Merriweather.register_family()
@@ -327,20 +328,31 @@ class StyleSheet(Generic[_T]):
         self.styles[alias or style.name] = style
 
 
+_DEF_FONT_SIZE = 10
+_DEF_FONT_NAME = 'SourceSansPro'
+
+
 def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet = StyleSheet[BetterParagraphStyle]()
     style_sheet.add(
         BetterParagraphStyle(
             'Base',
-            font_name='SourceSansPro',
-            font_size=10
+            font_name=_DEF_FONT_NAME,
+            font_size=_DEF_FONT_SIZE
         )
     )
     style_sheet.add(
         BetterParagraphStyle(
             'SmallBase',
-            font_size=9,
-            parent=style_sheet['Base']
+            font_name=_DEF_FONT_NAME,
+            font_size=_DEF_FONT_SIZE - 1
+        )
+    )
+    style_sheet.add(
+        BetterParagraphStyle(
+            'SmallerBase',
+            font_name=_DEF_FONT_NAME,
+            font_size=_DEF_FONT_SIZE - 2
         )
     )
     style_sheet.add(
@@ -353,7 +365,7 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet.add(
         BetterParagraphStyle(
             'SmallParagraph',
-            font_size=9,
+            font_size=_DEF_FONT_SIZE - 1,
             parent=style_sheet['Paragraph']
         )
     )
@@ -422,45 +434,43 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet.add(
         BetterParagraphStyle(
             'ValueTableHeaderThin',
-            parent=style_sheet['SmallParagraph'],
-            text_color=colors.white
+            text_color=colors.white,
+            leading=10,
+            parent=style_sheet['SmallerBase']
         )
     )
     style_sheet.add(
         BetterParagraphStyle(
             'ValueTableHeader',
-            font_name='SourceSansProB',
-            parent=style_sheet['SmallParagraph'],
-            text_color=colors.white
+            font_name=f'{_DEF_FONT_NAME}B',
+            parent=style_sheet['ValueTableHeaderThin']
         )
     )
     style_sheet.add(
         BetterParagraphStyle(
             'ValueTableDeterminant',
-            parent=style_sheet['SmallParagraph']
+            parent=style_sheet['SmallBase']
         )
     )
     style_sheet.add(
         BetterParagraphStyle(
             'ValueTableItem',
-            font_name='SourceSansProB',
-            parent=style_sheet['SmallParagraph']
+            font_name=f'{_DEF_FONT_NAME}B',
+            parent=style_sheet['SmallBase']
         )
     )
     style_sheet.add(
         BetterParagraphStyle(
             'TableHeader',
-            font_name='SourceSansProB',
-            font_size=13.5
+            font_name=f'{_DEF_FONT_NAME}B',
+            font_size=_DEF_FONT_SIZE + 3.5
         )
     )
     style_sheet.add(
         BetterParagraphStyle(
             'h2',
             font_name='Merriweather',
-            leading=20.7,
-            font_size=18,
-            spaceAfter=5,
+            font_size=19,
             keepWithNext=True
         )
     )
@@ -476,9 +486,8 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
         BetterParagraphStyle(
             'h6',
             font_name='Merriweather',
-            leading=15,
-            font_size=15,
-            spaceAfter=5
+            font_size=11,
+            spaceAfter=8
         )
     )
     style_sheet.add(

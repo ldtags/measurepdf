@@ -479,7 +479,7 @@ class SummaryTable(Table):
                  elements: list[list[str]],
                  header_orient: Literal['top', 'left']='top',
                  header_style: BetterParagraphStyle=PSTYLES['TableHeader'],
-                 body_style: BetterParagraphStyle=PSTYLES['Paragraph'],
+                 body_style: BetterParagraphStyle=PSTYLES['Base'],
                  table_style: BetterTableStyle=TSTYLES['SummaryTable'],
                  col_widths: list[float] | None=None,
                  **kwargs):
@@ -827,17 +827,20 @@ class EmbeddedValueTable(KeepTogether):
         headers: list[ElementLine] = []
         for api_name in self.value_table.determinants:
             determinant = self.measure.get_determinant(api_name)
-            element_line = ElementLine(max_width=None,
+            if determinant is None:
+                continue
+            element_line = ElementLine(max_width=None)
+            text = determinant.name.upper()
+            element = ParagraphElement(text=text,
                                        style=PSTYLES['ValueTableHeader'])
-            element = ParagraphElement(text=determinant.name)
             element_line.add(element)
             headers.append(element_line)
         for column in self.value_table.columns:
             element_line = ElementLine(max_width=None)
-            text = f'{column.name} ({column.unit})'
-            text_element = ParagraphElement(text=text,
-                                            style=PSTYLES['ValueTableHeader'])
-            element_line.add(text_element)
+            text = f'{column.name} ({column.unit})'.upper()
+            element = ParagraphElement(text=text,
+                                       style=PSTYLES['ValueTableHeader'])
+            element_line.add(element)
             for ref in column.reference_refs:
                 ref_element = ParagraphElement(text=ref, type=ElemType.REF)
                 element_line.add(ref_element)
