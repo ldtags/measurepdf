@@ -523,7 +523,7 @@ class SummaryTable(CustomTable):
     def __calc_col_widths(self, data: list[list[Paragraph]]) -> list[float]:
         style = self.table_style
         padding = style.left_padding + style.right_padding
-        columns = utils.get_columns(data)
+        columns = utils.rotate_matrix(data)
         base_width = self.table_width / len(columns)
         col_widths: list[float] = []
         for column in columns:
@@ -848,4 +848,13 @@ class EmbeddedValueTable(KeepTogether):
         return body
 
     def __get_content(self) -> list[list[ElementLine]]:
-        return [self.__get_headers(), *self.__get_body()]
+        headers = self.__get_headers()
+        body = self.__get_body()
+        sanitized_headers: list[ElementLine] = []
+        sanitized_cols: list[list[ElementLine]] = []
+        for x, col in enumerate(utils.rotate_matrix(body)):
+            if not all([elem.text == '' for elem in col]):
+                sanitized_cols.append(col)
+                sanitized_headers.append(headers[x])
+        sanitized_cols = utils.rotate_matrix(sanitized_cols)
+        return [sanitized_headers, *sanitized_cols]
