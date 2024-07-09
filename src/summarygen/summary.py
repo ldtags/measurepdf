@@ -253,7 +253,7 @@ class MeasureSummary:
         else:
             fmt = '-'
         download_date = _NOW.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
-        download_section = TitleSection('DOWLOADED',
+        download_section = TitleSection('DOWNLOADED',
                                           download_date,
                                           side='right')        
 
