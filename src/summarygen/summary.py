@@ -141,7 +141,7 @@ class SummaryPageTemplate(PageTemplate):
         else:
             fmt = '-'
         cur_dt = _NOW.strftime(rf'%{fmt}m/%{fmt}d/%y, %{fmt}I:%M%p')
-        style = PSTYLES['Base']
+        style = PSTYLES['SmallBase']
         time_header = Paragraph(cur_dt, style=style)
         _, h = time_header.wrap(INNER_WIDTH + X_MARGIN, Y_MARGIN)
         y = PAGESIZE[1] - Y_MARGIN / 2 + h / 2
