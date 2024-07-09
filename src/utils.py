@@ -159,9 +159,9 @@ def get_rlimage(img_path: str, max_width: float, **kwargs) -> RLImage:
     return img
 
 
-def get_columns(matrix: list[list[_T]]) -> list[list[_T]]:
+def rotate_matrix(matrix: list[list[_T]]) -> list[list[_T]]:
     """Assumes non-ragged rows on the 2D plane of
     the matrix
     """
 
-    return [list(column) for column in zip(*matrix)]
+    return [list(elems) for elems in zip(*matrix)]
