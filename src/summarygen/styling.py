@@ -548,7 +548,8 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
             'ValueTable',
             [
                 ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
                 ('LEFTPADDING', (0, 0), (-1, -1), 9),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 9),
                 ('TOPPADDING', (0, 0), (-1, -1), 9),
