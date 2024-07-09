@@ -328,7 +328,12 @@ class ParagraphLine(Table):
 
     def __init__(self,
                  element_line: ElementLine,
-                 measure: Measure | None=None):
+                 measure: Measure | None=None,
+                 **kwargs):
+        if kwargs.get('normalizedData', None) is not None:
+            Table.__init__(self, element_line, **kwargs)
+            return
+
         self.element_line = element_line
         self.measure = measure
         if self.measure != None:
@@ -451,7 +456,7 @@ class SummaryParagraph(Table):
                  elements: list[ParagraphElement],
                  measure: Measure | None=None,
                  **kwargs):
-        if kwargs != {}:
+        if kwargs.get('normalizedData', None) is not None:
             Table.__init__(self, elements, **kwargs)
             return
 
@@ -469,17 +474,22 @@ class SummaryParagraph(Table):
                        hAlign='LEFT')
 
 
-class SummaryTable(CustomTable):
+class SummaryTable(Table):
     def __init__(self,
                  elements: list[list[str]],
                  header_orient: Literal['top', 'left']='top',
                  header_style: BetterParagraphStyle=PSTYLES['TableHeader'],
                  body_style: BetterParagraphStyle=PSTYLES['Paragraph'],
                  table_style: BetterTableStyle=TSTYLES['SummaryTable'],
-                 col_widths: list[float] | None=None):
+                 col_widths: list[float] | None=None,
+                 **kwargs):
         """Custom flowable for tables that are directly placed onto
         the summary PDF
         """
+
+        if kwargs.get('normalizedData', None) is not None:
+            Table.__init__(self, elements, **kwargs)
+            return
 
         self.table_style = table_style
         self.table_width = INNER_WIDTH
@@ -513,12 +523,12 @@ class SummaryTable(CustomTable):
 
         col_widths = col_widths or self.__calc_col_widths(data)
         row_heights = self.__calc_row_heights(data, col_widths)
-        CustomTable.__init__(self,
-                             data=data,
-                             col_widths=col_widths,
-                             row_heights=row_heights,
-                             style=table_style,
-                             hAlign='LEFT')
+        Table.__init__(self,
+                       data=data,
+                       colWidths=col_widths,
+                       rowHeights=row_heights,
+                       style=table_style,
+                       hAlign='LEFT')
 
     def __calc_col_widths(self, data: list[list[Paragraph]]) -> list[float]:
         style = self.table_style
@@ -557,8 +567,13 @@ class SummaryTable(CustomTable):
 class TableCell(Table):
     def __init__(self,
                  elements: list[ParagraphLine],
-                 width: float,
-                 style: BetterParagraphStyle | None=None,):
+                 width: float=INNER_WIDTH,
+                 style: BetterParagraphStyle | None=None,
+                 **kwargs):
+        if kwargs.get('normalizedData', None) is not None:
+            Table.__init__(self, elements, **kwargs)
+            return
+
         self.elements = elements
         self.max_width = width
         self.pstyle = style
