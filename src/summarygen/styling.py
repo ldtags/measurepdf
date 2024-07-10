@@ -510,8 +510,7 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     style_sheet.add(
         BetterParagraphStyle(
             'h6Link',
-            linkUnderline=1,
-            underlineWidth=0.75,
+            linkUnderline=0,
             text_color=COLORS['Green'],
             parent=style_sheet['h6']
         )
