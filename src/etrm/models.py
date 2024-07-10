@@ -5,7 +5,6 @@ from typing import Any, overload
 
 from src.utils import getc
 from src.exceptions import ETRMResponseError
-from src.summarygen.models import VTObjectInfo
 
 
 ETRM_URL = 'https://www.caetrm.com'
