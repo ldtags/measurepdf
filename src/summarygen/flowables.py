@@ -418,7 +418,8 @@ def split_word(element: ParagraphElement,
 
 def wrap_elements(elements: list[ParagraphElement],
                   max_width: float=INNER_WIDTH,
-                  style: BetterParagraphStyle | None=None
+                  style: BetterParagraphStyle | None=None,
+                  strict: bool=True
                  ) -> list[ElementLine]:
     element_lines: list[ElementLine] = []
     current_line = ElementLine(max_width=max_width, style=style)
@@ -430,7 +431,7 @@ def wrap_elements(elements: list[ParagraphElement],
                 try:
                     current_line.add(elem)
                 except WidthExceededError:
-                    if elem.width > max_width:
+                    if elem.width > max_width and strict:
                         avail_width = max_width - current_line.width
                         word_frags = split_word(elem, avail_width, max_width)
                         current_line.add(word_frags[0])
@@ -443,11 +444,17 @@ def wrap_elements(elements: list[ParagraphElement],
                         else:
                             current_line = ElementLine(max_width=max_width,
                                                        style=style)
-                    else:
+                    elif elem.width <= max_width:
                         element_lines.append(current_line)
                         current_line = ElementLine(max_width=max_width,
                                                    style=style)
                         current_line.add(elem)
+                    else:
+                        current_line.max_width = None
+                        current_line.add(elem)
+                        element_lines.append(current_line)
+                        current_line = ElementLine(max_width=max_width,
+                                                   style=style)
     if len(current_line) != 0:
         element_lines.append(current_line)
     return element_lines
