@@ -886,7 +886,7 @@ class BulletList(Table):
                  element_matrix: list[list[ParagraphElement]],
                  measure: Measure | None=None,
                  bullet_indent: float=11,
-                 text_indent: float=5,
+                 text_indent: float=11,
                  item_spacing: float=20,
                  **kwargs):
         if kwargs.get('normalizedData', None) is not None:
