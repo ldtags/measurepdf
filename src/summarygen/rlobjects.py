@@ -233,9 +233,10 @@ class ElementLine:
         if len(self._elements) == 0:
             return self._elements
 
-        while self._elements[-1].type == ElemType.SPACE:
-            self._elements.pop()
-        return self._elements
+        _elements = self._elements.copy()
+        while _elements[-1].type == ElemType.SPACE:
+            _elements.pop()
+        return _elements
 
     @property
     def width(self) -> float:
