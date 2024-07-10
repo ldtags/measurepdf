@@ -1,10 +1,11 @@
 from __future__ import annotations
 import math
 import unicodedata
-from typing import Any
+from typing import Any, overload
 
 from src.utils import getc
 from src.exceptions import ETRMResponseError
+from src.summarygen.models import VTObjectInfo
 
 
 ETRM_URL = 'https://www.caetrm.com'
@@ -295,6 +296,7 @@ class Measure:
             raise ETRMResponseError()
 
         self.characterizations = self.__get_characterizations()
+        self.value_table_cache: dict[str, ValueTable] = {}
 
     def __get_characterizations(self) -> dict[str, str]:
         char_list: dict[str, str] = {}
@@ -320,12 +322,32 @@ class Measure:
                 return parameter
         return None
 
-    def get_value_table(self, name: str) -> ValueTable | None:
+    def __get_value_table(self, name: str) -> ValueTable | None:
+        table = self.value_table_cache.get(name, None)
+        if table is not None:
+            return table
+
         for table in self.value_tables:
             if (table.name.lower() == name.lower()
                     or table.api_name.lower() == name.lower()):
                 return table
         return None
+    
+    @overload
+    def get_value_table(self, name: str) -> ValueTable | None:
+        ...
+
+    @overload
+    def get_value_table(self, *names: str) -> ValueTable | None:
+        ...
+
+    def get_value_table(self, *names: str) -> ValueTable | None:
+        value_table: ValueTable | None = None
+        for name in names:
+            value_table = self.__get_value_table(name)
+            if value_table != None:
+                break
+        return value_table
 
     def get_shared_lookup(self, name: str) -> SharedLookupRef | None:
         for lookup_ref in self.shared_lookup_refs:
