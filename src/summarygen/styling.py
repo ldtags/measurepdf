@@ -427,15 +427,13 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
             'ReferenceTag',
             parent=style_sheet['Paragraph'].bold,
             text_color=colors.white,
-            backColor=COLORS['ReferenceTagBG'],
-            leading=13.5 * 1.2
+            backColor=COLORS['ReferenceTagBG']
         )
     )
     style_sheet.add(
         BetterParagraphStyle(
             'ValueTableHeaderThin',
             text_color=colors.white,
-            leading=10,
             parent=style_sheet['SmallerBase']
         )
     )
