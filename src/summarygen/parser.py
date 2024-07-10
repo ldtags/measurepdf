@@ -1,8 +1,8 @@
 from __future__ import annotations
-import requests
-import shutil
 import os
 import copy
+import shutil
+import requests
 from bs4 import (
     BeautifulSoup,
     Tag,
@@ -10,13 +10,10 @@ from bs4 import (
     ResultSet,
     PageElement
 )
-from reportlab.lib import colors
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import (
     Flowable,
     Paragraph,
-    ListFlowable,
-    ListItem,
     KeepTogether,
     Image,
     XPreformatted
@@ -30,21 +27,24 @@ from src.exceptions import (
 )
 from src.summarygen.types import _TABLE_SPAN
 from src.summarygen.models import (
-    ParagraphElement,
     ReferenceTag,
     EmbeddedValueTableTag,
-    TextStyle,
     EmbeddedImage,
-    ElemType
 )
 from src.summarygen.styling import (
     PSTYLES,
     INNER_WIDTH,
     PAGESIZE
 )
+from src.summarygen.rlobjects import (
+    ElemType,
+    TextStyle,
+    ParagraphElement
+)
 from src.summarygen.flowables import (
     Reference,
     ElementLine,
+    ValueTableHeader,
     ValueTable as ValueTableFlowable,
     EmbeddedValueTable,
     SummaryParagraph,
@@ -94,7 +94,10 @@ def convert_element(element: PageElement) -> list[ParagraphElement]:
         case 'div' | 'span':
             json_str = element.attrs.get('data-etrmreference', None)
             if json_str != None:
-                return [ReferenceTag(json_str)]
+                ref_tag = ReferenceTag(json_str)
+                ref_elem = ParagraphElement(text=ref_tag.title,
+                                            type=ElemType.REF)
+                return [ref_elem]
             return convert_elements(element.contents)
         case 'strong' | 'sup' | 'sub' | 'em':
             elements = convert_elements(element.contents)
@@ -248,33 +251,38 @@ class CharacterizationParser:
     def handle_text(self, element: NavigableString) -> list[Flowable]:
         text = element.get_text()
         if text == '\n':
-            return [KeepTogether(Spacer(letter[0], 9.2))]
+            return [Spacer(letter[0], 9.2)]
         return [Paragraph(text, PSTYLES['Paragraph'])]
 
-    def handle_embedded_tag(self, tag: Tag) -> Flowable | None:
+    def handle_embedded_tag(self, tag: Tag) -> list[Flowable]:
         json_str = tag.attrs.get('data-etrmreference', None)
         if json_str != None:
             ref_tag = ReferenceTag(json_str)
             if ref_tag.obj_deleted:
                 return None
             ref_link = f'{self.measure.link}/#references_list'
-            return Reference(ref_tag.text, ref_link)
+            return [Reference(ref_tag.title, ref_link)]
 
         json_str = tag.attrs.get('data-etrmvaluetable', None)
         if json_str != None:
             vt_tag = EmbeddedValueTableTag(json_str)
             if vt_tag.obj_deleted:
                 return None
-            return EmbeddedValueTable(table_info=vt_tag.obj_info,
+
+            header = ValueTableHeader(table_info=vt_tag.obj_info,
                                       measure=self.measure)
+            table = EmbeddedValueTable(table_info=vt_tag.obj_info,
+                                       measure=self.measure)
+            return [header, table]
 
         json_str = tag.attrs.get('data-ombuimage', None)
         if json_str != None:
             img_tag = EmbeddedImage(json_str)
             img_url = img_tag.obj_info.image_url
             _url = f'{ETRM_URL}{img_url}'
-            return get_image(_url)
-        return None
+            return [get_image(_url)]
+
+        return []
 
     def handle_h(self, header: Tag) -> list[Flowable]:
         if len(header.contents) < 1:
@@ -315,7 +323,6 @@ class CharacterizationParser:
                                    spans=spans)]
 
     def handle_ul(self, tag: Tag) -> list[Flowable]:
-        # list_items: list[ListItem] = []
         elements: list[list[ParagraphElement]] = []
         li_list: ResultSet[Tag] = tag.find_all('li')
         for li in li_list:
@@ -337,10 +344,7 @@ class CharacterizationParser:
             return []
 
         if is_embedded(element):
-            flowable = self.handle_embedded_tag(element)
-            if flowable == None:
-                return []
-            return [flowable]
+            return self.handle_embedded_tag(element)
 
         match element.name:
             case 'div' | 'span':
