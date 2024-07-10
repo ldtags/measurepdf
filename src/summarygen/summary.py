@@ -93,11 +93,19 @@ class SummaryDocTemplate(BaseDocTemplate):
 class SummaryPageTemplate(PageTemplate):
     def __init__(self,
                  measure_id: str,
-                 measure_name: str,
-                 frames: Frame | list[Frame]):
+                 measure_name: str):
         self.measure_id = measure_id
         self.measure_name = measure_name
-        PageTemplate.__init__(self, id=measure_id, frames=frames)
+        frame = Frame(x1=X_MARGIN,
+                      y1=Y_MARGIN,
+                      width=INNER_WIDTH,
+                      height=INNER_HEIGHT,
+                      leftPadding=0,
+                      rightPadding=0,
+                      topPadding=0,
+                      bottomPadding=0,
+                      id='normal')
+        PageTemplate.__init__(self, id=measure_id, frames=frame)
 
     def draw_footer(self,
                     canv: Canvas,
@@ -548,14 +556,8 @@ class MeasureSummary:
 
     def add_measure(self, measure: Measure):
         self.measures.append(measure)
-        frame = Frame(x1=X_MARGIN,
-                      y1=Y_MARGIN,
-                      width=INNER_WIDTH,
-                      height=INNER_HEIGHT,
-                      id='normal')
         template = SummaryPageTemplate(measure_id=measure.full_version_id,
-                                       measure_name=measure.name,
-                                       frames=frame)
+                                       measure_name=measure.name)
         self.summary.addPageTemplates(template)
 
     def reset(self):
