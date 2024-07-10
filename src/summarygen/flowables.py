@@ -1,7 +1,6 @@
 from __future__ import annotations
 import math
 from typing import Literal
-from reportlab.lib import colors
 from reportlab.lib.pagesizes import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -9,19 +8,18 @@ from reportlab.platypus import (
     Flowable,
     Paragraph,
     Table,
-    KeepTogether,
     XPreformatted,
     Spacer as _Spacer
 )
 
 from src import utils
-from src.etrm.models import Measure, ValueTable as ValueTableObject
-from src.summarygen.types import _TABLE_SPAN
-from src.summarygen.models import (
-    ParagraphElement,
-    ElemType,
-    VTObjectInfo
+from src.etrm.models import Measure
+from src.exceptions import (
+    WidthExceededError,
+    SummaryGenError
 )
+from src.summarygen.types import _TABLE_SPAN
+from src.summarygen.models import VTObjectInfo
 from src.summarygen.styling import (
     BetterParagraphStyle,
     BetterTableStyle,
@@ -29,12 +27,14 @@ from src.summarygen.styling import (
     DEF_PSTYLE,
     TSTYLES,
     INNER_WIDTH,
-    INNER_HEIGHT,
     COLORS,
     get_table_style
 )
-from src.summarygen.rlobjects import ElementLine
-from src.exceptions import WidthExceededError, SummaryGenError
+from src.summarygen.rlobjects import (
+    ElemType,
+    ParagraphElement,
+    ElementLine
+)
 
 
 class Spacer(_Spacer):
@@ -615,7 +615,11 @@ class ValueTable(Table):
             Table.__init__(self, data, **kwargs)
             return
 
+        assert headers > -1
+        assert determinants > -1
+
         self.data = data
+        self.headers = self.data[0:headers]
         self.measure = measure
         self.spans = spans or []
         self.style = get_table_style(data, headers, determinants, self.spans)
@@ -627,14 +631,15 @@ class ValueTable(Table):
                        style=self.style,
                        colWidths=self.col_widths,
                        rowHeights=self.row_heights,
-                       hAlign='LEFT')
+                       hAlign='LEFT',
+                       repeatRows=headers)
 
     @property
     def col_widths(self) -> list[float]:
         try:
             return self.__col_widths
         except AttributeError:
-            _col_widths = self.__calc_col_widths()
+            _col_widths = self.__calc_col_widths(self.data)
             widths_len = len(_col_widths)
             for y, row in enumerate(self.data):
                 try:
@@ -652,7 +657,7 @@ class ValueTable(Table):
         try:
             return self.__row_heights
         except AttributeError:
-            _row_heights = self.__calc_row_heights()
+            _row_heights = self.__calc_row_heights(self.data)
             rows = [row for row in zip(*self.data)]
             heights_len = len(_row_heights)
             for x, col in enumerate(rows):
@@ -666,12 +671,13 @@ class ValueTable(Table):
             self.__row_heights = _row_heights
             return self.__row_heights
 
-    def __calc_col_widths(self) -> list[float]:
-        headers = self.data[0]
-        base_width = INNER_WIDTH / len(headers)
+    def __calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
+        h_padding = self.style.left_padding + self.style.right_padding
+        header_lengths = [len(row) for row in self.headers]
+        base_width = INNER_WIDTH / max(header_lengths) - h_padding
         width_matrix: list[list[float]] = []
         skip = 0
-        for y, row in enumerate(self.data):
+        for y, row in enumerate(data):
             matrix_row: list[float] = []
             for x in range(len(row)):
                 if skip != 0:
@@ -694,18 +700,40 @@ class ValueTable(Table):
                     matrix_row.append(width)
             width_matrix.append(matrix_row)
 
+        # set consistent column widths for each row span
         for (y, x), (row_span, _) in self.spans:
             if row_span > 1:
-                width = max([widths for widths in zip(*width_matrix)][x])
+                columns = utils.rotate_matrix(width_matrix)
+                width = max(columns[x])
                 for i in range(y, y + row_span):
                     width_matrix[i][x] = width
 
-        return [max(widths) for widths in zip(*width_matrix)]
+        # append any extra page width to wrapped columns
+        col_widths = [max(matrix_column)
+                        for matrix_column
+                        in utils.rotate_matrix(width_matrix)]
+        data_columns = utils.rotate_matrix(data)
+        wrapped_col_indices: list[int] = []
+        for x, column in enumerate(data_columns):
+            if max([elem.width for elem in column]) > col_widths[x]:
+                wrapped_col_indices.append(x)
+        rem_width = INNER_WIDTH - math.fsum(col_widths)
+        add_width = rem_width / len(wrapped_col_indices)
+        for x in wrapped_col_indices:
+            col_widths[x] += add_width
 
-    def __calc_row_heights(self) -> list[float]:
+        return col_widths
+
+    def __calc_row_heights(self,
+                           data: list[list[ElementLine]],
+                           col_widths: list[float] | None=None
+                          ) -> list[float]:
+        _col_widths = col_widths or self.col_widths
+        h_padding = self.style.left_padding + self.style.right_padding
         height_matrix: list[list[float]] = []
         skip = 0
-        for y, row in enumerate(self.data):
+        for y, row in enumerate(data):
+            assert len(row) == len(_col_widths)
             matrix_row: list[float] = []
             for x in range(len(row)):
                 if skip != 0:
@@ -713,10 +741,10 @@ class ValueTable(Table):
                     continue
                 _, col_span = self.span_dict.get(str((y, x)), (0, 0))
                 if col_span > 1:
-                    col_width = sum(self.col_widths[x:x + col_span - 1])
+                    col_width = sum(_col_widths[x:x + col_span - 1])
                 else:
-                    col_width = self.col_widths[x]
-                frags = wrap_elements(row[x].elements, col_width)
+                    col_width = _col_widths[x]
+                frags = wrap_elements(row[x].elements, col_width - h_padding)
                 height = row[x].height * len(frags)
                 if col_span > 1:
                     height_frags = [height] * col_span
@@ -758,6 +786,7 @@ class ValueTable(Table):
         return frags
 
     def __convert_data(self) -> list[list[TableCell | str]]:
+        h_padding = self.style.left_padding + self.style.right_padding
         frags = self.__wrap_data()
         table_cells: list[list[TableCell | str]] = []
         for y, frag_line in enumerate(frags):
@@ -776,6 +805,7 @@ class ValueTable(Table):
                         col_width = sum(self.col_widths[x:x + col_span - 1])
                     else:
                         col_width = self.col_widths[x]
+                    col_width -= h_padding
                     cell = TableCell(cell_lines, width=col_width)
                 cells.append(cell)
             table_cells.append(cells)
@@ -783,48 +813,39 @@ class ValueTable(Table):
 
 
 class ValueTableHeader(Paragraph):
-    def __init__(self, text: str, link: str | None=None):
-        header_text = text
-        if link != None:
-            header_text = f'<link href=\"{link}\">{header_text}</link>'
-            style = PSTYLES['h6Link']
-        else:
-            style = PSTYLES['h6']
-        Paragraph.__init__(self, header_text, style=style)
-
-
-class EmbeddedValueTable(KeepTogether):
     def __init__(self, table_info: VTObjectInfo, measure: Measure):
-        self.info = table_info
+        value_table = measure.get_value_table(*table_info.possible_names)
+        if value_table is None:
+            raise SummaryGenError(f'Invalid value table info: {table_info}')
+
+        change_id = table_info.change_url.split('/')[4]
+        link = f'{measure.link}/value-table/{change_id}/'
+        text = f'<link href=\"{link}\">{value_table.name}</link>'
+        Paragraph.__init__(self, text, style=PSTYLES['h6Link'])
+
+
+class EmbeddedValueTable(ValueTable):
+    def __init__(self,
+                 table_info: VTObjectInfo,
+                 measure: Measure | None=None,
+                 **kwargs):
+        if kwargs.get('normalizedData', None) is not None:
+            Table.__init__(self, table_info, **kwargs)
+            return
+
+        if measure is None:
+            raise SummaryGenError('Cannot generate a value table without'
+                                  ' an eTRM measure')
+
         self.measure = measure
-        self.value_table = self.__get_table()
-        table = ValueTable(data=self.__get_content(),
-                           measure=self.measure,
-                           determinants=len(self.value_table.determinants))
-        change_id = self.info.change_url.split('/')[4]
-        table_link = f'{self.measure.link}/value-table/{change_id}/'
-        header = ValueTableHeader(self.value_table.name, table_link)
-        KeepTogether.__init__(self, [header, table])
+        self.value_table = measure.get_value_table(*table_info.possible_names)
+        if self.value_table is None:
+            raise SummaryGenError(f'Invalid value table info: {table_info}')
 
-    def __get_table(self) -> ValueTableObject:
-        possible_names = [
-            self.info.api_name_unique,
-            self.info.title,
-            self.info.verbose_name
-        ]
-
-        value_table: ValueTableObject | None = None
-        for name in possible_names:
-            value_table = self.measure.get_value_table(name)
-            if value_table != None:
-                break
-
-        if value_table == None:
-            raise SummaryGenError(f'value table {self.info.verbose_name}'
-                                  ' does not exist in measure'
-                                  f' {self.measure.full_version_id}')
-
-        return value_table
+        ValueTable.__init__(self,
+                            data=self.__get_content(),
+                            measure=self.measure,
+                            determinants=len(self.value_table.determinants))
 
     def __get_headers(self) -> list[ElementLine]:
         headers: list[ElementLine] = []
