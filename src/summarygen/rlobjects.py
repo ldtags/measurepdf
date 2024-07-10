@@ -125,7 +125,9 @@ class ParagraphElement:
     def width(self) -> float:
         if self.type == ElemType.NEWLINE:
             return INNER_WIDTH - 0.01
-        return stringWidth(self.text, self.font_name, self.font_size)
+        _width = stringWidth(self.text, self.font_name, self.font_size)
+        _width += self.style.x_padding
+        return _width
 
     @property
     def height(self) -> float:

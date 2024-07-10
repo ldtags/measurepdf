@@ -259,19 +259,22 @@ class Reference(Flowable):
     def __init__(self,
                  text: str,
                  link: str | None=None,
-                 x_padding: float=5,
-                 y_padding: float=2):
+                 style: BetterParagraphStyle | None=None):
         self.text = text
         self.link = link
-        self.x_padding = x_padding
-        self.y_padding = y_padding
-        self.base_style = PSTYLES['ReferenceTag']
-        self.style = self.base_style.superscripted
-        text_width =  stringWidth(self.text,
-                                  self.style.font_name,
-                                  self.style.font_size)
+        self.tri_frac = 0.25
+        self.rect_frac = 1 - self.tri_frac
+        self.base_style = style or PSTYLES['ReferenceTag']
+        self.x_padding = self.base_style.x_padding
+        self.y_padding = self.base_style.y_padding
+        self.__height = self.base_style.leading - self.y_padding
+        font_size = self.__height * self.rect_frac - self.y_padding
+        self.style = self.base_style
+        self.style.set_font_size(font_size)
+        text_width = stringWidth(self.text,
+                                 self.base_style.font_name,
+                                 self.base_style.font_size)
         self.__width = text_width + self.x_padding
-        self.__height = self.base_style.font_size + self.y_padding
 
     def wrap(self, *args) -> tuple[float, float]:
         return (self.__width, self.__height)
@@ -282,7 +285,8 @@ class Reference(Flowable):
             return
 
         bg_color = COLORS['ReferenceTagBG']
-        y = self.__height - self.style.font_size - self.y_padding
+        rect_height = self.__height * self.rect_frac
+        y = self.__height - rect_height
 
         canvas.saveState()
         try:
@@ -316,7 +320,7 @@ class Reference(Flowable):
             if self.link is not None:
                 area = (0,
                         0,
-                        self.__width - self.x_padding / 2,
+                        self.__width,
                         self.__height)
                 canvas.linkURL(url=self.link,
                                rect=area,
@@ -356,7 +360,15 @@ class ParagraphLine(Table):
 
     @property
     def width(self) -> float:
-        return self.element_line.width
+        _width = 0
+        flowables = self.flowables
+        for i, element in enumerate(self.element_line.elements):
+            if element.type == ElemType.REF:
+                w, _ = flowables[i].wrap(0, 0)
+                _width += w
+            else:
+                _width += element.width
+        return _width
 
     @property
     def height(self) -> float:
@@ -370,7 +382,9 @@ class ParagraphLine(Table):
         _flowables: list[Flowable] = []
         for element in self.element_line:
             if element.type == ElemType.REF:
-                _flowables.append(Reference(element.text, self.ref_link))
+                _flowables.append(Reference(element.text,
+                                            style=element.style,
+                                            link=self.ref_link))
             else:
                 _flowables.append(XPreformatted(text=element.text_xml,
                                                 style=element.style))
@@ -891,7 +905,9 @@ class EmbeddedValueTable(ValueTable):
                                        style=PSTYLES['ValueTableHeader'])
             element_line.add(element)
             for ref in column.reference_refs:
-                ref_element = ParagraphElement(text=ref, type=ElemType.REF)
+                ref_element = ParagraphElement(text=ref,
+                                               type=ElemType.REF,
+                                               style=PSTYLES['VTHeaderRefTag'])
                 element_line.add(ref_element)
             headers.append(element_line)
         return headers

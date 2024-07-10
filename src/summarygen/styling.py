@@ -145,6 +145,8 @@ class BetterParagraphStyle(ParagraphStyle):
                  sup_size: float | None=None,
                  text_color: colors.Color | None=None,
                  parent: BetterParagraphStyle | None=None,
+                 x_padding: float=0,
+                 y_padding: float=0,
                  **kwargs):
         self.font_name = get_style_param('font_name',
                                          font_name,
@@ -191,6 +193,8 @@ class BetterParagraphStyle(ParagraphStyle):
         self.sup_size = kwargs['superscriptSize']
         self.sub_size = kwargs['subscriptSize']
         self.text_color = kwargs['textColor']
+        self.x_padding = x_padding
+        self.y_padding = y_padding
 
     @property
     def subscripted(self) -> BetterParagraphStyle:
@@ -267,7 +271,10 @@ class BetterParagraphStyle(ParagraphStyle):
     def set_attr(self, name: str, value):
         self.attrs[name] = value
         self.parent._setKwds(**self.attrs)
-        self.refresh()
+
+    def set_font_size(self, size: float):
+        self.set_attr('fontSize', size)
+        self.font_size = size
 
 
 class BetterTableStyle(TableStyle):
@@ -427,7 +434,19 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
             'ReferenceTag',
             parent=style_sheet['Paragraph'].bold,
             text_color=colors.white,
-            backColor=COLORS['ReferenceTagBG']
+            backColor=COLORS['ReferenceTagBG'],
+            x_padding=5,
+            y_padding=3
+        )
+    )
+    style_sheet.add(
+        BetterParagraphStyle(
+            'VTHeaderRefTag',
+            parent=style_sheet['SmallerBase'].bold,
+            text_color=colors.white,
+            backColor=COLORS['Green'],
+            x_padding=2.5,
+            y_padding=1.5
         )
     )
     style_sheet.add(
@@ -575,6 +594,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         BetterTableStyle(
             'ElementLine',
             [
+                # ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ('TOPPADDING', (0, 0), (-1, -1), 0),
