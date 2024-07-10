@@ -136,6 +136,14 @@ def getc(o: dict,
 
 
 class JSONObject:
+    """Interface for converting a JSON string or object into a class.
+
+    Extend when defining a class representation of a JSON object.
+
+    Useful Methods:
+        - `get` returns the type-hinted contents of a JSON field
+    """
+
     def __init__(self, _json: str | dict[str, Any]):
         if isinstance(_json, str):
             self.json: dict[str, Any] = json.loads(_json)
