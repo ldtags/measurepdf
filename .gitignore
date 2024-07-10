@@ -12,3 +12,4 @@ eTRM_API_Documentation.pdf
 # pyinstaller
 build
 dist
+.spec
