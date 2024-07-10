@@ -1,5 +1,7 @@
 from __future__ import annotations
 import math
+from enum import Enum
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
     KeepTogether,
@@ -9,12 +11,180 @@ from reportlab.platypus import (
 )
 
 from src.exceptions import WidthExceededError, ElementJoinError
-from src.summarygen.models import ParagraphElement, ElemType
 from src.summarygen.styling import (
     INNER_WIDTH,
     INNER_HEIGHT,
+    PSTYLES,
+    DEF_PSTYLE,
     BetterParagraphStyle
 )
+
+
+class ElemType(Enum):
+    TEXT = 'text'
+    REF = 'ref'
+    SPACE = 'space'
+    NEWLINE = 'newline'
+
+
+class TextStyle(Enum):
+    NORMAL = 'normal'
+    STRONG = 'strong'
+    ITALIC = 'em'
+    SUP = 'sup'
+    SUB = 'sub'
+
+
+_TYPE_STYLES = {
+    ElemType.TEXT: [TextStyle.NORMAL],
+    ElemType.REF: [TextStyle.STRONG],
+    ElemType.SPACE: [TextStyle.NORMAL],
+    ElemType.NEWLINE: [TextStyle.NORMAL]
+}
+
+
+class ParagraphElement:
+    """Defines an element found in an HTML document."""
+
+    __DEFAULT_STYLES = [TextStyle.NORMAL]
+
+    def __init__(self,
+                 text: str,
+                 type: ElemType=ElemType.TEXT,
+                 styles: list[TextStyle] | None=None,
+                 style: BetterParagraphStyle | None=None):
+        self.text = text.replace('\n', '')
+        self.type = type
+        if styles is not None:
+            self.styles = styles
+        else:
+            self.styles = [*_TYPE_STYLES.get(type, self.__DEFAULT_STYLES)]
+        self.__style = style
+
+    @property
+    def text_xml(self) -> str:
+        text = self.text
+        cur_styles: list[TextStyle] = []
+        for style in self.styles:
+            match style:
+                case TextStyle.SUP:
+                    if TextStyle.SUB not in cur_styles:
+                        text = f'{text}'
+                case TextStyle.SUB:
+                    if TextStyle.SUP not in cur_styles:
+                        text = f'{text}'
+                case TextStyle.STRONG:
+                    text = f'<b>{text}</b>'
+                case TextStyle.ITALIC:
+                    text = f'<i>{text}</i>'
+                case TextStyle.NORMAL:
+                    pass
+                case x:
+                    raise ValueError(f'{x} is not a valid TextStyle')
+            cur_styles.append(style)
+        return text
+
+    @property
+    def style(self) -> BetterParagraphStyle:
+        if self.__style is not None:
+            return self.__style
+
+        if self.type == ElemType.REF:
+            return PSTYLES['ReferenceTag']
+
+        if self.type == ElemType.SPACE:
+            return PSTYLES['SmallParagraph']
+
+        for style in self.styles:
+            match style:
+                case TextStyle.SUP:
+                    return DEF_PSTYLE.superscripted
+                case TextStyle.SUB:
+                    return DEF_PSTYLE.subscripted
+                case TextStyle.STRONG:
+                    return DEF_PSTYLE.bold
+                case TextStyle.ITALIC:
+                    return DEF_PSTYLE.italic
+                case _:
+                    pass
+        return DEF_PSTYLE
+
+    @style.setter
+    def style(self, _style: BetterParagraphStyle):
+        self.__style = _style
+
+    @property
+    def font_size(self) -> float:
+        return self.style.font_size
+
+    @property
+    def font_name(self) -> str:
+        return self.style.font_name
+
+    @property
+    def width(self) -> float:
+        if self.type == ElemType.NEWLINE:
+            return INNER_WIDTH - 0.01
+        return stringWidth(self.text, self.font_name, self.font_size)
+
+    @property
+    def height(self) -> float:
+        return self.style.leading
+
+    def split(self) -> list[ParagraphElement]:
+        elements: list[ParagraphElement] = []
+        words = self.text.split()
+        word_count = len(words)
+        if word_count == 0:
+            return elements
+        elif word_count == 1:
+            elements.append(self)
+            return elements
+
+        if self.text == '':
+            return elements
+
+        if self.text[0] == ' ':
+            words[0] = f' {words[0]}'
+
+        if len(self.text) > 1 and self.text[-1] == ' ':
+            words[-1] = f'{words[-1]} '
+
+        if word_count == 2:
+            elements.append(self.copy(f'{words[0]} '))
+            elements.append(self.copy(words[1]))
+        else:
+            for i, word in enumerate(words):
+                if i == 0:
+                    elem_cpy = self.copy(word)
+                else:
+                    elem_cpy = self.copy(f' {word}')
+                elements.append(elem_cpy)
+        return list(filter(lambda e: e.text != '', elements))
+
+    def join(self, element: ParagraphElement):
+        if self.type == ElemType.REF or self.type == ElemType.SPACE:
+            raise ElementJoinError('Cannot join reference tags')
+
+        if self.type != element.type:
+            raise ElementJoinError('Cannot join elements with different types')
+
+        if self.styles != element.styles:
+            raise ElementJoinError('Cannot join elements with different'
+                                   ' styles')
+
+        self.text += element.text
+
+    def copy(self,
+             text: str | None=None,
+             type: ElemType | None=None,
+             styles: list[TextStyle] | None=None,
+             style: BetterParagraphStyle | None=None
+            ) -> ParagraphElement:
+        return ParagraphElement(text or self.text,
+                                type or self.type,
+                                styles or self.styles,
+                                style or self.style)
 
 
 class ElementLine:
@@ -87,12 +257,7 @@ class ElementLine:
         else:
             new_elem = element
 
-        if new_elem.type == ElemType.REF:
-            self.__add(ParagraphElement(' ', type=ElemType.SPACE))
-            self.__add(new_elem)
-            self.__add(ParagraphElement(' ', type=ElemType.SPACE))
-        else:
-            self.__add(new_elem)
+        self.__add(new_elem)
 
     def pop(self, index: int=-1) -> ParagraphElement:
         return self.elements.pop(index)
@@ -108,17 +273,19 @@ class Story:
 
     @property
     def contents(self) -> list[Flowable]:
-        current_height = 0.0
-        _contents: list[Flowable] = []
-        for flowable in self.__contents:
-            height = self.get_height(flowable)
-            if (current_height + height > self.inner_height
-                    or current_height == 0):
-                if isinstance(flowable, Spacer):
-                    continue
-                current_height = 0.0
-            current_height += height
-            _contents.append(flowable)
+        # current_height = 0.0
+        # _contents: list[Flowable] = []
+        # for flowable in self.__contents:
+        #     height = self.get_height(flowable)
+        #     if (current_height + height > self.inner_height
+        #             or current_height == 0):
+        #         if isinstance(flowable, Spacer):
+        #             continue
+        #         current_height = 0.0
+        #     current_height += height
+        #     _contents.append(flowable)
+
+        _contents = self.__contents
 
         # trim any trailing space
         i = len(_contents) - 1
