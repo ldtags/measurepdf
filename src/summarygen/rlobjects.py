@@ -185,8 +185,12 @@ class ParagraphElement:
 
     def join(self, *elements: ParagraphElement) -> None:
         for element in elements:
-            if self.type == ElemType.REF or self.type == ElemType.SPACE:
+            if self.type == ElemType.REF:
                 raise ElementJoinError('Cannot join reference tags')
+
+            if element.type == ElemType.SPACE:
+                self.text += ' '
+                continue
 
             if self.type != element.type:
                 raise ElementJoinError('Cannot join elements with'
@@ -217,12 +221,21 @@ class ElementLine:
                  style: BetterParagraphStyle | None=None):
         self.style = style
         self.max_width = max_width
-        self.elements: list[ParagraphElement] = []
+        self._elements: list[ParagraphElement] = []
         self.__index: int = 0
 
         if elements is not None:
             for element in elements:
                 self.add(element)
+
+    @property
+    def elements(self) -> list[ParagraphElement]:
+        if len(self._elements) == 0:
+            return self._elements
+
+        while self._elements[-1].type == ElemType.SPACE:
+            self._elements.pop()
+        return self._elements
 
     @property
     def width(self) -> float:
@@ -264,9 +277,9 @@ class ElementLine:
             raise WidthExceededError(f'Max width of {self.max_width} exceeded')
 
         try:
-            self.elements[-1].join(element)
+            self._elements[-1].join(element)
         except (IndexError, ElementJoinError):
-            self.elements.append(element)
+            self._elements.append(element)
 
     def add(self, element: ParagraphElement):
         if element.text == '':
@@ -280,7 +293,12 @@ class ElementLine:
         else:
             new_elem = element
 
-        self.__add(new_elem)
+        if element.type == ElemType.REF:
+            self.__add(ParagraphElement(' ', type=ElemType.SPACE))
+            self.__add(new_elem)
+            self.__add(ParagraphElement(' ', type=ElemType.SPACE))
+        else:
+            self.__add(new_elem)
 
     def get_min_width(self, size: int=1) -> float:
         split_elems: list[ParagraphElement] = []
@@ -290,7 +308,7 @@ class ElementLine:
         return max([elem.width for elem in split_elems])
 
     def pop(self, index: int=-1) -> ParagraphElement:
-        return self.elements.pop(index)
+        return self._elements.pop(index)
 
 
 class Story:
