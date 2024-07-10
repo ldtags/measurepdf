@@ -44,6 +44,10 @@ class VTObjectInfo(ObjectInfo):
         self.api_name_unique = self.get('api_name_unique', str)
         self.vtconf = self.get('vt_conf', VTConfig | None)
 
+    @property
+    def possible_names(self) -> list[str]:
+        return [self.api_name_unique, self.title, self.verbose_name]
+
 
 class EmbeddedValueTableTag(JSONObject):
     def __init__(self, _json: str | dict[str | Any]):
