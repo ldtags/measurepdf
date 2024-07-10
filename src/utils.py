@@ -1,3 +1,4 @@
+import json
 import PIL.Image as Image
 import customtkinter as ctk
 from typing import Type, TypeVar, overload, NewType, get_args, get_origin, Any
@@ -11,6 +12,26 @@ _NotDefined = NewType('_NotDefined', None)
 
 _T = TypeVar('_T')
 _U = TypeVar('_U')
+
+
+@overload
+def getc(o: dict, name: str, _type: Type[_T], /) -> _T:
+    ...
+
+
+@overload
+def getc(o: dict, name: str, _type: None, /) -> None:
+    ...
+
+
+@overload
+def getc(o: dict, name: str, _type: Type[_T], default: _U, /) -> _T | _U:
+    ...
+
+
+@overload
+def getc(o: dict, name: str, _type: None, default: _U, /) -> None | _U:
+    ...
 
 
 def getc(o: dict,
@@ -113,21 +134,36 @@ def getc(o: dict,
     else:
         raise TypeError(f'unsupported type: {_origin}')
 
-@overload
-def getc(o: dict, name: str, _type: Type[_T], /) -> _T:
-    ...
 
-@overload
-def getc(o: dict, name: str, _type: None, /) -> None:
-    ...
+class JSONObject:
+    def __init__(self, _json: str | dict[str, Any]):
+        if isinstance(_json, str):
+            self.json: dict[str, Any] = json.loads(_json)
+        else:
+            self.json = _json
 
-@overload
-def getc(o: dict, name: str, _type: Type[_T], default: _U, /) -> _T | _U:
-    ...
-    
-@overload
-def getc(o: dict, name: str, _type: None, default: _U, /) -> None | _U:
-    ...
+    @overload
+    def get(self, name: str, _type: Type[_T], /) -> _T:
+        ...
+
+    @overload
+    def get(self, name: str, _type: None, /) -> None:
+        ...
+
+    @overload
+    def get(self, name: str, _type: Type[_T], default: _U, /) -> _T | _U:
+        ...
+
+    @overload
+    def get(self, name: str, _type: None, default: _U, /) -> None | _U:
+        ...
+
+    def get(self,
+            name: str,
+            _type: Type[_T] | None,
+            default: _U | Type[_NotDefined]=_NotDefined
+           ) -> _T | _U | None:
+        return getc(self.json, name, _type, default)
 
 
 def get_tkimage(light_image: str,
