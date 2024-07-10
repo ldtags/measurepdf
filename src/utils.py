@@ -13,22 +13,6 @@ _T = TypeVar('_T')
 _U = TypeVar('_U')
 
 
-@overload
-def getc(o: dict, name: str, _type: Type[_T], /) -> _T:
-    ...
-
-@overload
-def getc(o: dict, name: str, _type: None, /) -> None:
-    ...
-
-@overload
-def getc(o: dict, name: str, _type: Type[_T], default: _U, /) -> _T | _U:
-    ...
-    
-@overload
-def getc(o: dict, name: str, _type: None, default: _U, /) -> None | _U:
-    ...
-
 def getc(o: dict,
          name: str,
          _type: Type[_T] | None,
@@ -128,6 +112,22 @@ def getc(o: dict,
                         f' to {type_union}')
     else:
         raise TypeError(f'unsupported type: {_origin}')
+
+@overload
+def getc(o: dict, name: str, _type: Type[_T], /) -> _T:
+    ...
+
+@overload
+def getc(o: dict, name: str, _type: None, /) -> None:
+    ...
+
+@overload
+def getc(o: dict, name: str, _type: Type[_T], default: _U, /) -> _T | _U:
+    ...
+    
+@overload
+def getc(o: dict, name: str, _type: None, default: _U, /) -> None | _U:
+    ...
 
 
 def get_tkimage(light_image: str,
