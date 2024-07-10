@@ -131,7 +131,7 @@ class ParagraphElement:
     def height(self) -> float:
         return self.style.leading
 
-    def split(self) -> list[ParagraphElement]:
+    def split(self, size: int=1) -> list[ParagraphElement]:
         elements: list[ParagraphElement] = []
         words = self.text.split()
         word_count = len(words)
@@ -160,20 +160,41 @@ class ParagraphElement:
                 else:
                     elem_cpy = self.copy(f' {word}')
                 elements.append(elem_cpy)
-        return list(filter(lambda e: e.text != '', elements))
 
-    def join(self, element: ParagraphElement):
-        if self.type == ElemType.REF or self.type == ElemType.SPACE:
-            raise ElementJoinError('Cannot join reference tags')
+        elem_frags = list(filter(lambda e: e.text != '', elements))
+        if size == 1 or size >= len(elem_frags):
+            return elem_frags
 
-        if self.type != element.type:
-            raise ElementJoinError('Cannot join elements with different types')
+        split_elems: list[ParagraphElement] = []
+        for i in range(0, len(elem_frags), size):
+            rem_size = len(elem_frags) - i
+            if rem_size == 1:
+                split_elems.append(elem_frags[i])
+                continue
 
-        if self.styles != element.styles:
-            raise ElementJoinError('Cannot join elements with different'
-                                   ' styles')
+            elem = elem_frags[i]
+            if rem_size < size:
+                frag_indice = -1
+            else:
+                frag_indice = i + size
+            elem.join(*elem_frags[i + 1:i + frag_indice])
+            split_elems.append(elem)
+        return split_elems
 
-        self.text += element.text
+    def join(self, *elements: ParagraphElement) -> None:
+        for element in elements:
+            if self.type == ElemType.REF or self.type == ElemType.SPACE:
+                raise ElementJoinError('Cannot join reference tags')
+
+            if self.type != element.type:
+                raise ElementJoinError('Cannot join elements with'
+                                       ' different types')
+
+            if self.styles != element.styles:
+                raise ElementJoinError('Cannot join elements with different'
+                                       ' styles')
+
+            self.text += element.text
 
     def copy(self,
              text: str | None=None,
@@ -258,6 +279,13 @@ class ElementLine:
             new_elem = element
 
         self.__add(new_elem)
+
+    def get_min_width(self, size: int=1) -> float:
+        split_elems: list[ParagraphElement] = []
+        for elem in self.elements:
+            split_elems.extend(elem.split(size))
+
+        return max([elem.width for elem in split_elems])
 
     def pop(self, index: int=-1) -> ParagraphElement:
         return self.elements.pop(index)

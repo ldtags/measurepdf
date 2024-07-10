@@ -419,7 +419,7 @@ def split_word(element: ParagraphElement,
 def wrap_elements(elements: list[ParagraphElement],
                   max_width: float=INNER_WIDTH,
                   style: BetterParagraphStyle | None=None,
-                  strict: bool=True
+                  strict: bool=False
                  ) -> list[ElementLine]:
     element_lines: list[ElementLine] = []
     current_line = ElementLine(max_width=max_width, style=style)
@@ -625,11 +625,13 @@ class ValueTable(Table):
         assert headers > -1
         assert determinants > -1
 
+        self.max_width = INNER_WIDTH
         self.data = data
         self.headers = self.data[0:headers]
         self.measure = measure
         self.spans = spans or []
         self.style = get_table_style(data, headers, determinants, self.spans)
+        self.h_padding = self.style.right_padding + self.style.left_padding
         self.span_dict = {str((y, x)): span_sizes
                             for (y, x), span_sizes in self.spans}
         self.table_cells = self.__convert_data()
@@ -678,23 +680,19 @@ class ValueTable(Table):
             self.__row_heights = _row_heights
             return self.__row_heights
 
-    def __calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
-        h_padding = self.style.left_padding + self.style.right_padding
-        header_lengths = [len(row) for row in self.headers]
-        base_width = INNER_WIDTH / max(header_lengths) - h_padding
-        width_matrix: list[list[float]] = []
-        skip = 0
+    def __calc_min_widths(self,
+                          data: list[list[ElementLine]],
+                          size: int=1
+                         ) -> list[list[float]]:
+        min_matrix: list[list[float]] = []
         for y, row in enumerate(data):
+            skip = 0
             matrix_row: list[float] = []
-            for x in range(len(row)):
-                if skip != 0:
+            for x, cell in enumerate(row):
+                if skip > 0:
                     skip -= 1
                     continue
-                frags = wrap_elements(row[x].elements, max_width=base_width)
-                if frags == []:
-                    width = 0
-                else:
-                    width = max([line.width for line in frags])
+                width = cell.get_min_width(size)
                 _, col_span = self.span_dict.get(str((y, x)), (0, 0))
                 if col_span > 1:
                     width_frags = [width / col_span] * col_span
@@ -702,34 +700,54 @@ class ValueTable(Table):
                     width_frags[-1] += self.style.right_padding
                     matrix_row.extend(width_frags)
                     skip = col_span - 1
-                else:
-                    width += self.style.left_padding + self.style.right_padding
-                    matrix_row.append(width)
-            width_matrix.append(matrix_row)
+                    continue
+                matrix_row.append(width + self.h_padding)
+            min_matrix.append(matrix_row)
 
-        # set consistent column widths for each row span
         for (y, x), (row_span, _) in self.spans:
             if row_span > 1:
-                columns = utils.rotate_matrix(width_matrix)
+                columns = utils.rotate_matrix(min_matrix)
                 width = max(columns[x])
                 for i in range(y, y + row_span):
-                    width_matrix[i][x] = width
+                    min_matrix[i][x] = width
 
-        # append any extra page width to wrapped columns
-        col_widths = [max(matrix_column)
-                        for matrix_column
-                        in utils.rotate_matrix(width_matrix)]
-        data_columns = utils.rotate_matrix(data)
-        wrapped_col_indices: list[int] = []
-        for x, column in enumerate(data_columns):
-            if max([elem.width for elem in column]) > col_widths[x]:
-                wrapped_col_indices.append(x)
-        rem_width = INNER_WIDTH - math.fsum(col_widths)
-        add_width = rem_width / len(wrapped_col_indices)
-        for x in wrapped_col_indices:
-            col_widths[x] += add_width
+        return [max(column)
+                    for column
+                    in utils.rotate_matrix(min_matrix)]
 
-        return col_widths
+    def __calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
+        size = 1
+        prev_widths = self.__calc_min_widths(data, size)
+        while math.fsum(prev_widths) <= self.max_width:
+            col_widths = self.__calc_min_widths(data, size=size + 1)
+            if col_widths == prev_widths:
+                break
+
+            if math.fsum(col_widths) > self.max_width:
+                differences: list[tuple[int, float]] = []
+                for i, width in enumerate(col_widths):
+                    differences.append((i, width - prev_widths[i]))
+                differences.sort(key=lambda t: t[1], reverse=True)
+                for difference in differences:
+                    index = difference[0]
+                    amount = difference[1]
+                    widths = prev_widths.copy()
+                    widths[index] += amount
+                    if math.fsum(widths) > self.max_width:
+                        break
+                    prev_widths[index] += amount
+                break
+
+            size += 1
+            prev_widths = col_widths
+
+        if math.fsum(prev_widths) > self.max_width:
+            raise SummaryGenError('Table is too large for the PDF')
+
+        rem_width = self.max_width - math.fsum(prev_widths)
+        add_width = rem_width / len(prev_widths)
+        prev_widths = [width + add_width for width in prev_widths]
+        return prev_widths
 
     def __calc_row_heights(self,
                            data: list[list[ElementLine]],
