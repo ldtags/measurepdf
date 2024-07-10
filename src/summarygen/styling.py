@@ -613,9 +613,9 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         BetterTableStyle(
             'SummaryList',
             [
-                ('LEFTPADDING', (0, 0), (2, -1), 0),
-                ('RIGHTPADDING', (0, 0), (2, -1), 0),
-                ('TOPPADDING', (0, 0), (2, -1), -10),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (1, 0), (1, -1), -10),
                 ('VALIGN', (1, 0), (1, -1), 'TOP')
             ]
         )
