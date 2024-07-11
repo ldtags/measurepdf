@@ -2,12 +2,10 @@ import os
 import re
 import math
 import shutil
-from typing import Callable
-from reportlab.lib.pagesizes import inch
+from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
-    Flowable,
     Table,
     Paragraph,
     PageBreak,
@@ -53,6 +51,37 @@ from src.exceptions import (
 def clean():
     if os.path.exists(TMP_DIR):
         shutil.rmtree(TMP_DIR)
+
+
+class NumberedCanvas(Canvas):
+    def __init__(self, *args, **kwargs):
+        Canvas.__init__(self, *args, **kwargs)
+        self._saved_page_states = []
+
+    def showPage(self):
+        self._saved_page_states.append(dict(self.__dict__))
+        self._startPage()
+
+    def save(self):
+        """add page info to each page (page x of y)"""
+        num_pages = len(self._saved_page_states)
+        for state in self._saved_page_states:
+            self.__dict__.update(state)
+            self.draw_page_number(num_pages)
+            Canvas.showPage(self)
+        Canvas.save(self)
+
+    def draw_page_number(self, page_count: int):
+        style = PSTYLES['SmallParagraph']
+        text = f'{self.getPageNumber()}/{page_count}'
+        page_number = Paragraph(text, style=style)
+        _, h = page_number.wrap(X_MARGIN, Y_MARGIN)
+        num_width = stringWidth(text,
+                                style.font_name,
+                                style.font_size)
+        page_number.drawOn(canvas=self,
+                           x=PAGESIZE[0] - X_MARGIN / 1.5 - num_width,
+                           y=h * 1.5)
 
 
 class SummaryDocTemplate(BaseDocTemplate):
@@ -124,8 +153,7 @@ class SummaryPageTemplate(PageTemplate):
 
     def draw_footer(self,
                     canv: Canvas,
-                    doc: SummaryDocTemplate,
-                    draw_page_num: bool=False
+                    doc: SummaryDocTemplate
                    ) -> None:
             canv.saveState()
 
@@ -142,14 +170,6 @@ class SummaryPageTemplate(PageTemplate):
                                     style=PSTYLES['SmallParagraph'])
             _, h = name_footer.wrap(INNER_WIDTH - id_width, Y_MARGIN)
             name_footer.drawOn(canvas=canv, x=x + id_width + 3, y=y)
-
-            if draw_page_num:
-                page_number = Paragraph(f'{doc.page}',
-                                        PSTYLES['SmallParagraph'])
-                _, h = page_number.wrap(X_MARGIN, Y_MARGIN)
-                page_number.drawOn(canvas=canv,
-                                   x=PAGESIZE[0] / 2,
-                                   y=h * 1.5)
 
             canv.restoreState()
 
@@ -603,5 +623,6 @@ class MeasureSummary:
             self.__cur_measure = measure
             self.__build_summary(measure)
         self.__cur_measure = None
-        self.summary.multiBuild(self.story.contents)
+        self.summary.multiBuild(self.story.contents,
+                                canvasmaker=NumberedCanvas)
         clean()
