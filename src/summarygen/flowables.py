@@ -3,6 +3,7 @@ import math
 from typing import Literal
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
+from reportlab.pdfgen.pathobject import PDFPathObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Flowable,
@@ -293,6 +294,8 @@ class Reference(Flowable):
             canvas.setFillColor(bg_color)
 
             tri_path = canvas.beginPath()
+            assert isinstance(tri_path, PDFPathObject)
+
             tri_path.moveTo(x=0, y=y)
             tri_path.lineTo(x=self.__width / 2, y=y)
             tri_path.lineTo(x=self.__width / 4, y=0)

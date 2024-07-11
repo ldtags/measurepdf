@@ -2,10 +2,12 @@ import os
 import re
 import math
 import shutil
+from typing import Callable
 from reportlab.lib.pagesizes import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
+    Flowable,
     Table,
     Paragraph,
     PageBreak,
@@ -14,6 +16,7 @@ from reportlab.platypus import (
     PageTemplate,
     NextPageTemplate
 )
+from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
 from src import lookups, utils, _SYSTEM, _NOW
@@ -82,12 +85,24 @@ class SummaryDocTemplate(BaseDocTemplate):
         self.page_height = pagesize[1]
         y_margin = self.top_margin + self.bottom_margin
         self.inner_height = self.page_height - y_margin
-        self.__page_num = 1
+        self.pt_index = -1
 
-    def afterPage(self):
-        """Called after all flowables have been drawn on a page"""
-
-        self.__page_num += 1
+    def afterPage(self) -> None:
+        try:
+            next_pt_index = self._nextPageTemplateIndex
+            if next_pt_index != self.pt_index:
+                cur_template = self.pageTemplates[next_pt_index]
+                assert isinstance(cur_template, SummaryPageTemplate)
+                key = self.canv.bookmarkPage(cur_template.id)
+                text = f'{cur_template.id} - {cur_template.measure_name}'
+                if self.page != 2:
+                    page = self.page + 1
+                else:
+                    page = self.page
+                self.notify('TOCEntry', (0, text, page))
+                self.pt_index = next_pt_index
+        except AttributeError:
+            pass
 
 
 class SummaryPageTemplate(PageTemplate):
@@ -129,7 +144,7 @@ class SummaryPageTemplate(PageTemplate):
             name_footer.drawOn(canvas=canv, x=x + id_width + 3, y=y)
 
             if draw_page_num:
-                page_number = Paragraph(f'{doc.__page_num}',
+                page_number = Paragraph(f'{doc.page}',
                                         PSTYLES['SmallParagraph'])
                 _, h = page_number.wrap(X_MARGIN, Y_MARGIN)
                 page_number.drawOn(canvas=canv,
@@ -157,7 +172,7 @@ class SummaryPageTemplate(PageTemplate):
 
         canv.restoreState()
 
-    def afterDrawPage(self, canv: Canvas, doc: SummaryDocTemplate):
+    def afterDrawPage(self, canv: Canvas, doc: SummaryDocTemplate) -> None:
         self.draw_footer(canv, doc)
         self.draw_header(canv, doc)
 
@@ -560,6 +575,10 @@ class MeasureSummary:
                                        measure_name=measure.name)
         self.summary.addPageTemplates(template)
 
+    def add_table_of_contents(self):
+        self.story.add(TableOfContents())
+        self.story.add(PageBreak())
+
     def reset(self):
         self.story.clear()
 
@@ -575,6 +594,9 @@ class MeasureSummary:
         self.add_sections_table()
 
     def build(self):
+        if len(self.measures) > 1:
+            self.add_table_of_contents()
+
         for measure in self.measures:
             self.__cur_measure = measure
             self.__build_summary(measure)
