@@ -34,11 +34,12 @@ Group 4: Use Category Version
 """
 
 
-__VRSN_ID = r'^(([A-Za-z]{4}[0-9]{2,})-([0-9]+(?:-.+)?))$'
+__VRSN_ID = r'^(([A-Za-z]{2}([A-Za-z]{2})[0-9]{2,})-([0-9]+(?:-.+)?))$'
 VERSION_ID = re.compile(__VRSN_ID)
 """eTRM Measure Version ID RegEx Pattern
 
 Group 1: Full Version ID\n
 Group 2: Statewide ID\n
-Group 3: Version ID (including optional draft version)
+Group 3: Use Category\n
+Group 4: Version ID (including optional draft version)
 """

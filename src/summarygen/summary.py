@@ -17,7 +17,7 @@ from reportlab.platypus import (
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
-from src import lookups, utils, _SYSTEM, _NOW
+from src import lookups, patterns, utils, _SYSTEM, _NOW
 from src.etrm import ETRM_URL, ETRMConnection
 from src.etrm.models import Measure
 from src.exceptions import SummaryGenError
@@ -120,15 +120,36 @@ class SummaryDocTemplate(BaseDocTemplate):
         try:
             next_pt_index = self._nextPageTemplateIndex
             if next_pt_index != self.pt_index:
+                if self.pt_index == -1:
+                    prev_template = None
+                else:
+                    prev_template = self.pageTemplates[self.pt_index]
+                    assert isinstance(prev_template, SummaryPageTemplate)
                 cur_template = self.pageTemplates[next_pt_index]
                 assert isinstance(cur_template, SummaryPageTemplate)
-                key = self.canv.bookmarkPage(cur_template.id)
-                text = f'{cur_template.id} - {cur_template.measure_name}'
                 if self.page != 2:
                     page = self.page + 1
                 else:
                     page = self.page
-                self.notify('TOCEntry', (0, text, page))
+                prev_category = ''
+                if prev_template is not None:
+                    prev_id = prev_template.id
+                    if prev_id is not None:
+                        re_match = re.search(patterns.VERSION_ID, prev_id)
+                        if re_match is not None:
+                            prev_category = str(re_match.group(3))
+                cur_id = cur_template.id
+                if cur_id is not None:
+                    re_match = re.search(patterns.VERSION_ID, cur_id)
+                    if re_match is not None:
+                        cur_category = str(re_match.group(3))
+                        if prev_category != cur_category:
+                            uc_name = lookups.USE_CATEGORIES[cur_category]
+                            text = f'{cur_category} - {uc_name}'
+                            self.notify('TOCEntry', (0, text, page))
+                key = self.canv.bookmarkPage(cur_template.id)
+                text = f'{cur_template.id} - {cur_template.measure_name}'
+                self.notify('TOCEntry', (1, text, page))
                 self.pt_index = next_pt_index
         except AttributeError:
             pass
@@ -340,6 +361,9 @@ class MeasureSummary:
                                         name='technology_summary')
         flowables = parser.parse()
         self.story.add(header, NEWLINE, *flowables, NEWLINE)
+
+    def add_use_category_page(self, use_category: str) -> None:
+        ...
 
     def __get_shared_avg(self,
                          param_name: str,
@@ -637,7 +661,11 @@ class MeasureSummary:
         if len(self.measures) > 1:
             self.add_table_of_contents()
 
+        cur_use_category: str | None = None
         for measure in self.measures:
+            if measure.use_category != cur_use_category:
+                self.add_use_category_page(measure.use_category)
+                cur_use_category = measure.use_category
             self.__cur_measure = measure
             self.__build_summary(measure)
         self.__cur_measure = None

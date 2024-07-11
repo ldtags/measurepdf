@@ -12,4 +12,5 @@ import src.resources as resources
 import src.utils as utils
 import src.exceptions as exceptions
 import src.patterns as patterns
+import src.utils as utils
 from src import _ROOT, asset_path

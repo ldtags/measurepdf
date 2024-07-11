@@ -6,7 +6,7 @@ import argparse as ap
 from typing import Literal
 from configparser import ConfigParser
 
-from context import src, etrm, summarygen, resources, exceptions, patterns
+from context import src, etrm, summarygen, resources, exceptions, patterns, utils
 
 
 MEASURES = [
@@ -57,78 +57,10 @@ class TestBuilder:
         api_key = get_api_key(role='user')
         self.connection = etrm.ETRMConnection(api_key)
         self.measures: list[etrm.models.Measure] = []
-
-        measure_versions = set(measure_version_ids)
-        measure_ids = set()
-        for use_category in use_categories:
-            print(f'getting measure ids for use category: {use_category}')
-            try:
-                uc_ids = self.connection.get_all_measure_ids(use_category=use_category)
-                for uc_id in uc_ids:
-                    measure_ids.add(uc_id)
-            except exceptions.ETRMConnectionError as err:
-                print(f'error message: {err.message}')
-
-        for measure_id in measure_ids:
-            print(f'getting versions of measure: {measure_id}')
-            try:
-                versions = self.connection.get_measure_versions(measure_id)
-            except exceptions.ETRMResponseError:
-                continue
-            versions.sort(key=self.__version_key, reverse=True)
-            for version in versions:
-                if version.count('-') == 1:
-                    measure_versions.add(version)
-                    break
-
-        measure_versions = list(measure_versions)
-        if len(measure_versions) == 0:
-            measure_versions = set(MEASURES)
-        else:
-            measure_versions.sort(key=self.__version_key, reverse=True)
-
-        for measure_id in measure_versions:
-            print(f'getting measure: {measure_id}')
-            try:
-                measure = self.connection.get_measure(measure_id)
-            except exceptions.ETRMConnectionError as err:
-                print(f'error message: {err.message}')
+        for version_id in measure_version_ids:
+            measure = self.connection.get_measure(version_id)
             self.measures.append(measure)
-
-    def __version_key(self, full_version_id: str) -> int:
-        """Sorting key for measure versions."""
-
-        re_match = re.search(patterns.VERSION_ID, full_version_id)
-        if re_match == None:
-            return -1
-
-        key = 0
-        statewide_id = re_match.group(2)
-        version_id = re_match.group(3)
-
-        re_match = re.search(patterns.STWD_ID, statewide_id)
-        if re_match == None:
-            return -1
-
-        measure_type = re_match.group(2)
-        key += sum([ord(c) * -1000 for c in measure_type])
-        use_category = re_match.group(3)
-        key += sum([ord(c) * -1000 for c in use_category])
-
-        uc_version = re_match.group(4)
-        key += int(uc_version) * -100
-
-        try:
-            version, _ = version_id.split('-', 1)
-            version = int(version)
-            draft = 0
-        except ValueError:
-            version = int(version_id)
-            draft = 1
-
-        key += version * 10
-        key += draft
-        return key
+        self.use_categories = use_categories
 
     def build_summary(self):
         dir_path = os.path.join(src._ROOT, '..', 'summaries')
@@ -140,6 +72,9 @@ class TestBuilder:
 
         for measure in self.measures:
             measure_pdf.add_measure(measure)
+
+        for use_category in self.use_categories:
+            measure_pdf.add_use_category(use_category)
 
         measure_pdf.build()
         print(f'measure summary {measure_pdf.file_name} was successfully created')
