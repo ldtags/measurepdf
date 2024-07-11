@@ -3,9 +3,8 @@ import re
 import sys
 import tkinter as tk
 import customtkinter as ctk
-import traceback
 
-from src import _ROOT, patterns, lookups
+from src import _ROOT, patterns, lookups, utils
 from src.app.views import View
 from src.app.models import Model
 from src.summarygen import MeasureSummary
@@ -169,41 +168,6 @@ class HomeController:
             filter(lambda measure: self.is_selected_measure(measure),
                    measure_ids))
 
-    def __version_key(self, full_version_id: str) -> int:
-        """Sorting key for measure versions."""
-
-        re_match = re.search(patterns.VERSION_ID, full_version_id)
-        if re_match == None:
-            return -1
-
-        key = 0
-        statewide_id = re_match.group(2)
-        version_id = re_match.group(3)
-
-        re_match = re.search(patterns.STWD_ID, statewide_id)
-        if re_match == None:
-            return -1
-
-        measure_type = re_match.group(2)
-        key += sum([ord(c) * -1000 for c in measure_type])
-        use_category = re_match.group(3)
-        key += sum([ord(c) * -1000 for c in use_category])
-
-        uc_version = re_match.group(4)
-        key += int(uc_version) * -100
-
-        try:
-            version, _ = version_id.split('-', 1)
-            version = int(version)
-            draft = 0
-        except ValueError:
-            version = int(version_id)
-            draft = 1
-
-        key += version * 10
-        key += draft
-        return key
-
     def update_measure_versions(self, versions: list[str] | None=None):
         """Sets the measure version IDs in the Home view to the versions
         of the currently selected measures.
@@ -230,7 +194,7 @@ class HomeController:
 
         measure_versions = sorted(
             self.model.home.all_versions,
-            key=self.__version_key,
+            key=utils.version_key,
             reverse=True
         )
         self.page.measure_version_list.versions = measure_versions
@@ -444,7 +408,7 @@ class HomeController:
 
         self.page.measures_selection_list.measures = sorted(
             self.model.home.selected_versions,
-            key=self.__version_key,
+            key=utils.version_key,
             reverse=True
         )
         if self.model.home.selected_versions != []:
@@ -577,7 +541,7 @@ class HomeController:
                 versions = connection.get_measure_versions(measure_id)
             except ETRMResponseError:
                 continue
-            versions.sort(key=self.__version_key, reverse=True)
+            versions.sort(key=utils.version_key, reverse=True)
             for version in versions:
                 if version.count('-') == 1:
                     self.model.home.selected_versions.append(version)

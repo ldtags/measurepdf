@@ -589,17 +589,35 @@ class MeasureSummary:
         table_header = Paragraph('Sections:', PSTYLES['h2'])
         self.story.add(KeepTogether([table_header, table]))
 
+    def add_table_of_contents(self):
+        toc_header = Paragraph('Table of Contents', style=PSTYLES['TOCHeader'])
+        self.story.add(toc_header, NEWLINE)
+        self.story.add(TableOfContents())
+        self.story.add(PageBreak())
+
     def add_measure(self, measure: Measure):
         self.measures.append(measure)
         template = SummaryPageTemplate(measure_id=measure.full_version_id,
                                        measure_name=measure.name)
         self.summary.addPageTemplates(template)
 
-    def add_table_of_contents(self):
-        toc_header = Paragraph('Table of Contents', style=PSTYLES['TOCHeader'])
-        self.story.add(toc_header, NEWLINE)
-        self.story.add(TableOfContents())
-        self.story.add(PageBreak())
+    def add_use_category(self, use_category: str) -> None:
+        measure_ids = self.connection.get_all_measure_ids(use_category)
+        versions: list[str] = []
+        for measure_id in measure_ids:
+            measure_versions = self.connection.get_measure_versions(measure_id)
+            measure_versions.sort(key=utils.version_key, reverse=True)
+            recent_version: str | None = None
+            for measure_version in measure_versions:
+                if measure_version.count('-') == 1:
+                    recent_version = measure_version
+                    break
+            if recent_version is not None:
+                versions.append(recent_version)
+
+        for version in versions:
+            measure = self.connection.get_measure(version)
+            self.add_measure(measure)
 
     def reset(self):
         self.story.clear()

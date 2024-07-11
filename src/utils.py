@@ -1,3 +1,4 @@
+import re
 import json
 import PIL.Image as Image
 import customtkinter as ctk
@@ -209,3 +210,40 @@ def rotate_matrix(matrix: list[list[_T]]) -> list[list[_T]]:
     """
 
     return [list(elems) for elems in zip(*matrix)]
+
+
+def version_key(full_version_id: str) -> int:
+    """Sorting key for measure versions."""
+
+    from src import patterns
+
+    re_match = re.search(patterns.VERSION_ID, full_version_id)
+    if re_match == None:
+        return -1
+
+    key = 0
+    statewide_id = re_match.group(2)
+    version_id = re_match.group(3)
+    re_match = re.search(patterns.STWD_ID, statewide_id)
+    if re_match == None:
+        return -1
+
+    measure_type = re_match.group(2)
+    key += sum([ord(c) * -1000 for c in measure_type])
+
+    use_category = re_match.group(3)
+    key += sum([ord(c) * -1000 for c in use_category])
+
+    uc_version = re_match.group(4)
+    key += int(uc_version) * -100
+    try:
+        version, _ = version_id.split('-', 1)
+        version = int(version)
+        draft = 0
+    except ValueError:
+        version = int(version_id)
+        draft = 1
+
+    key += version * 10
+    key += draft
+    return key
