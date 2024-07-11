@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 from typing import Literal
-from reportlab.lib.pagesizes import inch
+from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
