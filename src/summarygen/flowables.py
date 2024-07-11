@@ -503,7 +503,7 @@ class SummaryTable(Table):
                  elements: list[list[str]],
                  header_orient: Literal['top', 'left']='top',
                  header_style: BetterParagraphStyle=PSTYLES['TableHeader'],
-                 body_style: BetterParagraphStyle=PSTYLES['Base'],
+                 body_styles: tuple[BetterParagraphStyle]=PSTYLES['Base'],
                  table_style: BetterTableStyle=TSTYLES['SummaryTable'],
                  col_widths: list[float] | None=None,
                  **kwargs):
@@ -514,6 +514,9 @@ class SummaryTable(Table):
         if kwargs.get('normalizedData', None) is not None:
             Table.__init__(self, elements, **kwargs)
             return
+
+        if len(elements) == 0:
+            raise SummaryGenError('Cannot make a summary table with no data')
 
         self.table_style = table_style
         self.table_width = INNER_WIDTH
@@ -529,6 +532,19 @@ class SummaryTable(Table):
                                           f' got {len(col_widths)}, but',
                                           f' expected {len(row)}')
 
+        body_len = len(elements[0])
+        if header_orient == 'left':
+            body_len -= 1
+
+        if isinstance(body_styles, BetterParagraphStyle):
+            self.body_styles = [body_styles]
+        else:
+            self.body_styles = [*body_styles]
+        if len(self.body_styles) == 1:
+            self.body_styles *= body_len
+        else:
+            assert len(self.body_styles) == body_len
+
         self.style_matrix: list[list[BetterParagraphStyle]] = []
         data: list[list[Paragraph]] = []
         for y, row in enumerate(elements):
@@ -538,13 +554,16 @@ class SummaryTable(Table):
                 if (y == 0 and header_orient == 'top'
                         or x == 0 and header_orient == 'left'):
                     style = header_style
+                elif header_orient == 'left':
+                    style = self.body_styles[x - 1]
                 else:
-                    style = body_style
+                    style = self.body_styles[x]
                 style_row.append(style)
                 data_row.append(Paragraph(cell, style=style))
             self.style_matrix.append(style_row)
             data.append(data_row)
 
+        repeat_rows = 1 if header_orient == 'top' else 0
         col_widths = col_widths or self.__calc_col_widths(data)
         row_heights = self.__calc_row_heights(data, col_widths)
         Table.__init__(self,
@@ -552,7 +571,8 @@ class SummaryTable(Table):
                        colWidths=col_widths,
                        rowHeights=row_heights,
                        style=table_style,
-                       hAlign='LEFT')
+                       hAlign='LEFT',
+                       repeatRows=repeat_rows)
 
     def __calc_col_widths(self, data: list[list[Paragraph]]) -> list[float]:
         style = self.table_style
