@@ -4,8 +4,12 @@ import copy
 from enum import Enum
 from typing import Any, TypeVar, Generic, overload
 from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.units import inch
-from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.styles import (
+    getSampleStyleSheet,
+    ParagraphStyle
+)
 from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
@@ -540,6 +544,18 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
             'BulletPoint',
             font_name='SourceSansPro',
             font_size=18
+        )
+    )
+    style_sheet.add(
+        BetterParagraphStyle(
+            'TOCHeader',
+            font_name='MerriweatherB',
+            font_size=18,
+            leftIndent=0,
+            rightIndent=0,
+            spaceBefore=0,
+            spaceAfter=0,
+            alignment=TA_CENTER
         )
     )
 

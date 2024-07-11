@@ -576,6 +576,8 @@ class MeasureSummary:
         self.summary.addPageTemplates(template)
 
     def add_table_of_contents(self):
+        toc_header = Paragraph('Table of Contents', style=PSTYLES['TOCHeader'])
+        self.story.add(toc_header, NEWLINE)
         self.story.add(TableOfContents())
         self.story.add(PageBreak())
 
