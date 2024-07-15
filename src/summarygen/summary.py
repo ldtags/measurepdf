@@ -734,7 +734,7 @@ class MeasureSummary:
         if len(self.measures) > 1:
             self.add_table_of_contents()
 
-        for use_category in self.measures.keys():
+        for use_category in sorted(self.measures.keys()):
             self.add_use_category_page(use_category)
             for measure in self.measures[use_category]:
                 self.__build_summary(measure)
