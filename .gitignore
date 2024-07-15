@@ -13,3 +13,6 @@ eTRM_API_Documentation.pdf
 build
 dist
 .spec
+
+# logging
+.log
