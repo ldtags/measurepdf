@@ -1,33 +1,7 @@
 """Error classes for package-specific exceptions."""
 
-class ETRMConnectionError(BaseException):
-    def __init__(self, message: str | None=None):
-        self.message = message or 'An error occurred within the eTRM connection layer'
-        super().__init__()
 
-
-class ETRMRequestError(ETRMConnectionError):
-    def __init__(self, message: str | None=None):
-        self.message = message or 'Request to the eTRM database failed'
-        super().__init__(self.message)
-
-
-class ETRMResponseError(ETRMConnectionError):
-    def __init__(self, message: str | None=None):
-        self.message = message or 'Invalid response from the eTRM'
-        super().__init__(self.message)
-
-
-class UnauthorizedError(ETRMRequestError):
-    def __init__(self, message: str | None=None):
-        self.message = message or 'Unauthorized request'
-        super().__init__(self.message)
-
-
-class NotFoundError(ETRMRequestError):
-    def __init__(self, message: str | None=None):
-        self.message = message or 'Resource not found'
-        super().__init__(self.message)
+from src.etrm.exceptions import *
 
 
 class GUIError(Exception):
