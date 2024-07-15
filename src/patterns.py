@@ -23,8 +23,8 @@ Group 2: Use Category
 """
 
 
-__STWD_ID = r'^(([A-Za-z]{2})([A-Za-z]{2})([0-9]{2,}))$'
-STWD_ID = re.compile(__STWD_ID)
+__STWD_ID = r'(([A-Za-z]{2})([A-Za-z]{2})([0-9]{2,}))'
+STWD_ID = re.compile(rf'^{__STWD_ID}$')
 """eTRM Measure Statewide ID RegEx Pattern
 
 Group 1: Statewide ID
@@ -34,12 +34,14 @@ Group 4: Use Category Version
 """
 
 
-__VRSN_ID = r'^(([A-Za-z]{2}([A-Za-z]{2})[0-9]{2,})-([0-9]+(?:-.+)?))$'
-VERSION_ID = re.compile(__VRSN_ID)
+__VRSN_ID = rf'({__STWD_ID}-([0-9]+(?:-.+)?))'
+VERSION_ID = re.compile(rf'^{__VRSN_ID}$')
 """eTRM Measure Version ID RegEx Pattern
 
 Group 1: Full Version ID\n
 Group 2: Statewide ID\n
-Group 3: Use Category\n
-Group 4: Version ID (including optional draft version)
+Group 3: Measure Type\n
+Group 4: Use Category\n
+Group 5: Use Category Version\n
+Group 6: Measure Version Number (including optional draft version)
 """
