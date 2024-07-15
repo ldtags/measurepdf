@@ -277,7 +277,7 @@ class MeasureSummary:
                  file_name: str='measure_summary',
                  override: bool=True):
         clean()
-        self.measures: list[Measure] = []
+        self.measures: dict[str, list[Measure]] = {}
         self.__cur_measure: Measure | None = None
         self.connection = connection
         self.story = Story()
@@ -291,6 +291,33 @@ class MeasureSummary:
             raise FileExistsError(f'a file named {file_name} already exists'
                                   f' in {dir_path}')
         self.summary = SummaryDocTemplate(self.file_path)
+
+    def contains(self, measure: Measure) -> bool:
+        try:
+            existing_measures = self.measures[measure.use_category]
+            for existing_measure in existing_measures:
+                if measure.full_version_id == existing_measure.full_version_id:
+                    return False
+        except KeyError:
+            pass
+        return False
+
+    def is_last(self, measure: Measure) -> bool:
+        if len(self.measures) == 0:
+            return False
+
+        if not self.contains(measure):
+            return False
+
+        last_uc = sorted(self.measures.keys())[-1]
+        if measure.use_category != last_uc:
+            return False
+
+        measures = self.measures[last_uc]
+        if measures[-1].full_version_id != measure.full_version_id:
+            return False
+
+        return True
 
     def __build_sections_container(self,
                                    measure: Measure
@@ -647,7 +674,14 @@ class MeasureSummary:
         else:
             raise RuntimeError(f'Unsupported arg type: {type(arg)}')
 
-        self.measures.append(measure)
+        if self.contains(measure):
+            return
+
+        try:
+            self.measures[measure.use_category].append(measure)
+            self.measures[measure.use_category].sort(key=Measure.sorting_key)
+        except KeyError:
+            self.measures[measure.use_category] = [measure]
         template = SummaryPageTemplate(measure_id=measure.full_version_id,
                                        measure_name=measure.name)
         self.summary.addPageTemplates(template)
@@ -674,29 +708,38 @@ class MeasureSummary:
     def reset(self):
         self.story.clear()
 
-    def __build_summary(self, measure: Measure):
-        measure_id = self.__cur_measure.full_version_id
-        self.story.add(NextPageTemplate(measure_id))
-        if self.measures.index(measure) != 0:
-            self.story.add(PageBreak())
+    def __build_summary(self, measure: Measure | None=None):
+        if measure is None:
+            if self.__cur_measure is None:
+                raise RuntimeError('Missing Measure: no measure provided'
+                                        ' to build a summary with')
+            summary_measure = self.__cur_measure
+        else:
+            summary_measure = measure
+            self.__cur_measure = measure
+
+        logger.info('Building summary for measure'
+                        f' {summary_measure.full_version_id}')
+
+        self.story.add(NextPageTemplate(summary_measure.full_version_id))
         self.add_title_page()
         self.add_tech_summary()
         self.add_parameters_table()
         self.add_impact_table()
         self.add_sections_table()
 
+        self.__cur_measure = None
+
     def build(self):
         if len(self.measures) > 1:
             self.add_table_of_contents()
 
-        cur_use_category: str | None = None
-        for measure in self.measures:
-            if measure.use_category != cur_use_category:
-                self.add_use_category_page(measure.use_category)
-                cur_use_category = measure.use_category
-            self.__cur_measure = measure
-            self.__build_summary(measure)
-        self.__cur_measure = None
+        for use_category in self.measures.keys():
+            self.add_use_category_page(use_category)
+            for measure in self.measures[use_category]:
+                self.__build_summary(measure)
+                if not self.is_last(measure):
+                    self.story.add(PageBreak())
         self.summary.multiBuild(self.story.contents,
                                 canvasmaker=NumberedCanvas)
         clean()

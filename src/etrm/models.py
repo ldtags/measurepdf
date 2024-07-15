@@ -298,8 +298,9 @@ class Measure:
         self.characterizations = self.__get_characterizations()
         self.value_table_cache: dict[str, ValueTable] = {}
 
-    def key(self) -> int:
-        return utils.version_key(self.full_version_id)
+    @staticmethod
+    def sorting_key(measure: Measure) -> int:
+        return utils.version_key(measure.full_version_id)
 
     def __get_characterizations(self) -> dict[str, str]:
         char_list: dict[str, str] = {}
