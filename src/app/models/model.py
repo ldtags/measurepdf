@@ -1,4 +1,4 @@
-from src.etrm import ETRMConnection
+from src.etrm.connection import ETRMConnection
 from src.app.models.auth import AuthModel
 from src.app.models.home import HomeModel
 

@@ -1,8 +1,8 @@
 import re
 
-from src.exceptions import UnauthorizedError
 from src.app.models import Model
 from src.app.views import View
+from src.etrm.exceptions import UnauthorizedError
 
 
 class AuthController:

@@ -10,13 +10,16 @@ from reportlab.platypus import (
     Paragraph
 )
 
-from src.exceptions import WidthExceededError, ElementJoinError
 from src.summarygen.styling import (
     INNER_WIDTH,
     INNER_HEIGHT,
     PSTYLES,
     DEF_PSTYLE,
     BetterParagraphStyle
+)
+from src.summarygen.exceptions import (
+    WidthExceededError,
+    ElementJoinError
 )
 
 

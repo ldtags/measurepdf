@@ -15,10 +15,6 @@ from reportlab.platypus import (
 
 from src import utils
 from src.etrm.models import Measure
-from src.exceptions import (
-    WidthExceededError,
-    SummaryGenError
-)
 from src.summarygen.types import _TABLE_SPAN
 from src.summarygen.models import VTObjectInfo
 from src.summarygen.styling import (
@@ -35,6 +31,10 @@ from src.summarygen.rlobjects import (
     ElemType,
     ParagraphElement,
     ElementLine
+)
+from src.summarygen.exceptions import (
+    WidthExceededError,
+    SummaryGenError
 )
 
 

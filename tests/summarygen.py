@@ -6,7 +6,7 @@ import argparse as ap
 from typing import Literal
 from configparser import ConfigParser
 
-from context import src, etrm, summarygen, resources, exceptions, patterns, utils
+from context import src, etrm, summarygen, resources
 
 
 MEASURES = [
@@ -56,21 +56,24 @@ class TestBuilder:
                  use_categories: list[str]=[]):
         api_key = get_api_key(role='user')
         self.connection = etrm.ETRMConnection(api_key)
-        self.measures: list[etrm.models.Measure] = []
-        for version_id in version_ids:
-            measure = self.connection.get_measure(version_id)
-            self.measures.append(measure)
+        self.version_ids = version_ids
         self.use_categories = use_categories
 
+    def is_empty(self) -> bool:
+        return (
+            self.version_ids == []
+                and self.use_categories == []
+        )
+
     def build_summary(self):
+        if self.is_empty():
+            return
+
         dir_path = os.path.join(src._ROOT, '..', 'summaries')
         measure_pdf = summarygen.MeasureSummary(dir_path, self.connection)
         print('measure pdf object created', file=sys.stderr)
 
-        if len(self.measures) == 0:
-            return
-
-        for measure in self.measures:
+        for measure in self.version_ids:
             measure_pdf.add_measure(measure)
 
         for use_category in self.use_categories:

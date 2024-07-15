@@ -2,6 +2,8 @@ import os
 import re
 import math
 import shutil
+import logging
+from typing import overload
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -18,9 +20,13 @@ from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
 from src import lookups, patterns, utils, _SYSTEM, _NOW
-from src.etrm import ETRM_URL, ETRMConnection
-from src.etrm.models import Measure
-from src.exceptions import SummaryGenError
+from src.etrm.models import ETRM_URL, Measure
+from src.etrm.connection import ETRMConnection
+from src.etrm.exceptions import (
+    ETRMConnectionError,
+    ETRMResponseError,
+    ETRMRequestError
+)
 from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styling import (
     BetterTableStyle,
@@ -33,6 +39,7 @@ from src.summarygen.styling import (
     INNER_HEIGHT,
     INNER_WIDTH
 )
+from src.summarygen.rlobjects import Story
 from src.summarygen.flowables import (
     NEWLINE,
     SummaryTable,
@@ -40,12 +47,10 @@ from src.summarygen.flowables import (
     TitleSection,
     TitleSectionContainer
 )
-from src.summarygen.rlobjects import Story
-from src.exceptions import (
-    ETRMConnectionError,
-    ETRMResponseError,
-    ETRMRequestError
-)
+from src.summarygen.exceptions import SummaryGenError
+
+
+logger = logging.getLogger(__name__)
 
 
 def clean():
@@ -137,12 +142,12 @@ class SummaryDocTemplate(BaseDocTemplate):
                     if prev_id is not None:
                         re_match = re.search(patterns.VERSION_ID, prev_id)
                         if re_match is not None:
-                            prev_category = str(re_match.group(3))
+                            prev_category = str(re_match.group(4))
                 cur_id = cur_template.id
                 if cur_id is not None:
                     re_match = re.search(patterns.VERSION_ID, cur_id)
                     if re_match is not None:
-                        cur_category = str(re_match.group(3))
+                        cur_category = str(re_match.group(4))
                         if prev_category != cur_category:
                             uc_name = lookups.USE_CATEGORIES[cur_category]
                             text = f'{cur_category} - {uc_name}'
@@ -619,19 +624,42 @@ class MeasureSummary:
         self.story.add(TableOfContents())
         self.story.add(PageBreak())
 
-    def add_measure(self, measure_id: str):
-        measure = self.connection.get_measure(measure_id)
+    @overload
+    def add_measure(self, measure_id: str) -> None:
+        ...
+
+    @overload
+    def add_measure(self, measure: Measure) -> None:
+        ...
+
+    def add_measure(self, *args, **kwargs) -> None:
+        try:
+            arg = args[0]
+        except IndexError:
+            arg = kwargs.get('measure_id')
+            if arg is None:
+                arg = kwargs.get('measure')
+
+        if isinstance(arg, str):
+            measure = self.connection.get_measure(arg)
+        elif isinstance(arg, Measure):
+            measure = arg
+        else:
+            raise RuntimeError(f'Unsupported arg type: {type(arg)}')
+
         self.measures.append(measure)
         template = SummaryPageTemplate(measure_id=measure.full_version_id,
                                        measure_name=measure.name)
         self.summary.addPageTemplates(template)
 
     def add_use_category(self, use_category: str) -> None:
+        logger.info(f'Adding use category {use_category}')
+
         measure_ids = self.connection.get_all_measure_ids(use_category)
         versions: list[str] = []
         for measure_id in measure_ids:
             measure_versions = self.connection.get_measure_versions(measure_id)
-            measure_versions.sort(key=utils.version_key, reverse=True)
+            measure_versions.sort(key=utils.version_key)
             recent_version: str | None = None
             for measure_version in measure_versions:
                 if measure_version.count('-') == 1:
@@ -640,9 +668,8 @@ class MeasureSummary:
             if recent_version is not None:
                 versions.append(recent_version)
 
-        for version in versions:
-            measure = self.connection.get_measure(version)
-            self.add_measure(measure)
+        for version_id in versions:
+            self.add_measure(version_id)
 
     def reset(self):
         self.story.clear()

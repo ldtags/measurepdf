@@ -10,8 +10,8 @@ from src.app.views import View
 from src.app.models import Model
 from src.app.controllers.base import BaseController, etrm_request
 from src.etrm.models import Measure
+from src.etrm.exceptions import ETRMResponseError
 from src.summarygen import MeasureSummary
-from src.exceptions import ETRMResponseError
 
 
 class HomeController(BaseController):
@@ -466,7 +466,7 @@ class HomeController(BaseController):
             self.view.open_info_prompt(f'{use_category} is not a'
                                        ' valid use category.\n'
                                        'Valid use categories are:'
-                                       f' [{','.join(keys)}]')
+                                       f' [{",".join(keys)}]')
             return
         self.view.open_prompt(f'Retrieving all {verbose_name} measures...')
         measure_ids = self.get_all_measure_ids(use_category)

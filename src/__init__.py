@@ -1,6 +1,11 @@
 import os
+import logging
 import platform
 from datetime import datetime
+
+
+_LOG_FILE_NAME = 'summarygen.log'
+logging.basicConfig(filename=_LOG_FILE_NAME, level=logging.INFO)
 
 
 match platform.system():

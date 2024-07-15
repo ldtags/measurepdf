@@ -20,11 +20,8 @@ from reportlab.platypus import (
 )
 
 from src import _ROOT, utils
-from src.etrm import ETRM_URL, ETRMConnection
-from src.etrm.models import Measure
-from src.exceptions import (
-    SummaryGenError
-)
+from src.etrm.models import Measure, ETRM_URL
+from src.etrm.connection import ETRMConnection
 from src.summarygen.types import _TABLE_SPAN
 from src.summarygen.models import (
     ReferenceTag,
@@ -52,6 +49,7 @@ from src.summarygen.flowables import (
     Spacer,
     BulletList
 )
+from src.summarygen.exceptions import SummaryGenError
 
 
 TMP_DIR = os.path.join(_ROOT, 'assets', 'images', 'tmp')

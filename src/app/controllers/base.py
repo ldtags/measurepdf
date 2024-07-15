@@ -34,22 +34,22 @@ reside in a class that extends `BaseController`.
 """
 
 
-def etrm_request() -> Callable[[_DEC_ARGS], _BC_DEC_RETV]:
-    """Decorator for ensuring that the eTRM connection is present.
+# def etrm_request() -> Callable[[_DEC_ARGS], _BC_DEC_RETV]:
+#     """Decorator for ensuring that the eTRM connection is present.
 
-    Use when creating a controller method that directly interacts with
-    the eTRM API connection layer.
-    """
+#     Use when creating a controller method that directly interacts with
+#     the eTRM API connection layer.
+#     """
 
-    def decorator(func: _DEC_ARGS) -> _BC_DEC_RETV:
-        @functools.wraps
-        def wrapper(self: BaseController,
-                    *args: _P.args,
-                    **kwargs: _P.kwargs
-                   ) -> _T:
-            if self.model_root.connection is None:
-                raise UnauthorizedError()
-            value: _T = func(self, *args, **kwargs)
-            return value
-        return wrapper
-    return decorator
+def etrm_request(func: _DEC_ARGS) -> _BC_DEC_RETV:
+    @functools.wraps
+    def wrapper(self: BaseController,
+                *args: _P.args,
+                **kwargs: _P.kwargs
+               ) -> _T:
+        if self.model_root.connection is None:
+            raise UnauthorizedError()
+        value: _T = func(self, *args, **kwargs)
+        return value
+    return wrapper
+# return decorator

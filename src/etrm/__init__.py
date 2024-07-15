@@ -1,2 +1,2 @@
-from .connection import ETRMConnection
-from .models import ETRM_URL
+from src.etrm.connection import ETRMConnection
+from src.etrm.models import ETRM_URL, Measure

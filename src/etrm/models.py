@@ -3,9 +3,9 @@ import math
 import unicodedata
 from typing import Any, overload
 
-import utils
+from src import utils
 from src.utils import getc
-from src.exceptions import ETRMResponseError
+from src.etrm.exceptions import ETRMResponseError
 
 
 ETRM_URL = 'https://www.caetrm.com'
