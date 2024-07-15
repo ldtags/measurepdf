@@ -619,7 +619,8 @@ class MeasureSummary:
         self.story.add(TableOfContents())
         self.story.add(PageBreak())
 
-    def add_measure(self, measure: Measure):
+    def add_measure(self, measure_id: str):
+        measure = self.connection.get_measure(measure_id)
         self.measures.append(measure)
         template = SummaryPageTemplate(measure_id=measure.full_version_id,
                                        measure_name=measure.name)

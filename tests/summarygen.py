@@ -52,12 +52,12 @@ def get_api_key(role: Literal['user', 'admin']='user') -> str:
 
 class TestBuilder:
     def __init__(self,
-                 measure_version_ids: list[str]=[],
+                 version_ids: list[str]=[],
                  use_categories: list[str]=[]):
         api_key = get_api_key(role='user')
         self.connection = etrm.ETRMConnection(api_key)
         self.measures: list[etrm.models.Measure] = []
-        for version_id in measure_version_ids:
+        for version_id in version_ids:
             measure = self.connection.get_measure(version_id)
             self.measures.append(measure)
         self.use_categories = use_categories
