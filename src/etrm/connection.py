@@ -1,4 +1,5 @@
 import re
+import logging
 import requests
 from typing import overload
 
@@ -12,21 +13,19 @@ from src.etrm.models import (
     SharedValueTable,
     PermutationsTable
 )
-from src.exceptions import (
-    ETRMResponseError,
-    UnauthorizedError,
-    ETRMRequestError,
-    ETRMConnectionError
-)
 from src.etrm.exceptions import (
     ETRMResponseError,
     ETRMRequestError,
-    ETRMConnectionError
+    ETRMConnectionError,
+    UnauthorizedError
 )
 
 
 PROD_API = 'https://www.caetrm.com/api/v1'
 STAGE_API = 'https://stage.caetrm.com/api/v1'
+
+
+logger = logging.getLogger(__name__)
 
 
 class ETRMCache:
@@ -176,12 +175,17 @@ class ETRMConnection:
         if not _endpoint.startswith('/'):
             _endpoint = '/' + _endpoint
 
+        if not _endpoint.endswith('/'):
+            _endpoint += '/'
+
         req_headers: dict[str, str] = {**self.headers}
         if headers != None:
             req_headers |= headers
 
+        _url = f'{self.api}{_endpoint}'
+        logger.info(f'Making request to {_url}')
         try:
-            response = requests.get(f'{self.api}{_endpoint}',
+            response = requests.get(_url,
                                     params=params,
                                     headers=req_headers,
                                     stream=stream,
@@ -197,6 +201,8 @@ class ETRMConnection:
                 raise ETRMResponseError(message=msg, status=status)
 
     def get_measure(self, full_version_id: str) -> Measure:
+        logger.info(f'Retrieving measure: {full_version_id}')
+
         cached_measure = self.cache.get_measure(full_version_id)
         if cached_measure != None:
             return cached_measure
@@ -212,6 +218,8 @@ class ETRMConnection:
                         limit: int=25,
                         use_category: str | None=None
                        ) -> tuple[list[str], int]:
+        logger.info(f'Retrieving measure IDs')
+
         cache_response = self.cache.get_ids(offset, limit, use_category)
         if cache_response != None:
             return cache_response
@@ -237,6 +245,8 @@ class ETRMConnection:
         return (measure_ids, count)
 
     def get_all_measure_ids(self, use_category: str | None=None) -> list[str]:
+        logger.info('Retrieving all measure ids')
+
         _, count = self.get_measure_ids(use_category=use_category)
         measure_ids, _ = self.get_measure_ids(offset=0,
                                               limit=count,
@@ -244,6 +254,8 @@ class ETRMConnection:
         return measure_ids
 
     def get_measure_versions(self, measure_id: str) -> list[str]:
+        logger.info(f'Retrieving versions of measure {measure_id}')
+
         cached_versions = self.cache.get_versions(measure_id)
         if cached_versions != None:
             return list(reversed(cached_versions))
@@ -256,6 +268,8 @@ class ETRMConnection:
         return list(reversed(measure_versions))
 
     def get_reference(self, ref_id: str) -> Reference:
+        logger.info(f'Retrieving reference {ref_id}')
+
         cached_ref = self.cache.get_reference(ref_id)
         if cached_ref is not None:
             return cached_ref
@@ -295,6 +309,8 @@ class ETRMConnection:
         else:
             raise ETRMRequestError('missing required parameters')
 
+        logger.info(f'Retrieving shared value table {table_name}')
+
         cached_table = self.cache.get_shared_value_table(table_name, version)
         if cached_table is not None:
             return cached_table
@@ -329,21 +345,24 @@ class ETRMConnection:
                                               f' {measure.full_version_id}')
 
                 statewide_id = ids[0]
-                version_id = ids[1]
+                version = ids[1]
             case 2:
                 statewide_id = args[0]
                 if not isinstance(statewide_id, str):
                     raise ETRMRequestError('Invalid arg type: statewide_id'
                                            ' must be a str object')
 
-                version_id = args[1]
-                if not isinstance(version_id, str):
+                version = args[1]
+                if not isinstance(version, str):
                     raise ETRMRequestError('Invalid arg type: version_id'
                                            ' must be a str object')
             case _:
                 raise ETRMRequestError('Unsupported arg count')
 
-        url = f'/measures/{statewide_id}/{version_id}/permutations'
+        logger.info('Retrieving permutations of measure'
+                        f' {statewide_id}-{version}')
+
+        url = f'/measures/{statewide_id}/{version}/permutations'
         permutations_table: PermutationsTable | None = None
         while url is not None:
             response = self.get(url)
