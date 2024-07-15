@@ -15,7 +15,11 @@ from src.etrm.models import (
 from src.exceptions import (
     ETRMResponseError,
     UnauthorizedError,
-    NotFoundError,
+    ETRMRequestError,
+    ETRMConnectionError
+)
+from src.etrm.exceptions import (
+    ETRMResponseError,
     ETRMRequestError,
     ETRMConnectionError
 )
@@ -188,18 +192,9 @@ class ETRMConnection:
         match response.status_code:
             case 200:
                 return response
-            case 401:
-                raise UnauthorizedError('Unauthorized API key:'
-                                        f' {self.auth_token}')
-            case 404:
-                raise ETRMResponseError(f'No resource found at [{_endpoint}]')
-            case 500:
-                raise ETRMResponseError('Server error occurred while'
-                                        ' attempting to access the resource'
-                                        f' at [{_endpoint}]')
             case status:
-                raise ETRMResponseError('Unexpected status code received:'
-                                        f' {status}')
+                msg = response.content.decode()
+                raise ETRMResponseError(message=msg, status=status)
 
     def get_measure(self, full_version_id: str) -> Measure:
         cached_measure = self.cache.get_measure(full_version_id)

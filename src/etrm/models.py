@@ -3,6 +3,7 @@ import math
 import unicodedata
 from typing import Any, overload
 
+import utils
 from src.utils import getc
 from src.exceptions import ETRMResponseError
 
@@ -296,6 +297,9 @@ class Measure:
 
         self.characterizations = self.__get_characterizations()
         self.value_table_cache: dict[str, ValueTable] = {}
+
+    def key(self) -> int:
+        return utils.version_key(self.full_version_id)
 
     def __get_characterizations(self) -> dict[str, str]:
         char_list: dict[str, str] = {}
