@@ -1,3 +1,21 @@
+"""Module for all custom flowables.
+
+This module contains all custom flowables that are used within the 
+summary PDF generation process. When creating a new custom flowable,
+add it to this module.
+
+Extending Custom Tables:
+    ReportLab uses a weird process for constructing instances of
+    the Table class. From my testing and looking through the source
+    code, it seems that if the Table instance was constructed with both
+    strings and flowables, the constructor will be called again. This is
+    referred to as the "data normalization" process and a specific keyword
+    arg (normalizedData) will be passed as a signifier. This makes extending
+    the Table class weird, but doable. Examples of how to accommodate this
+    process can be found in the custom Table flowables below.
+"""
+
+
 from __future__ import annotations
 import math
 from typing import Literal
@@ -13,9 +31,9 @@ from reportlab.platypus import (
     Spacer as _Spacer
 )
 
-from src import utils
+from src import utils, lookups, _SYSTEM, _NOW
 from src.etrm.models import Measure
-from src.summarygen.types import _TABLE_SPAN
+from src.summarygen.types import _TABLE_SPAN, _TABLE_ORIENT
 from src.summarygen.models import VTObjectInfo
 from src.summarygen.styling import (
     BetterParagraphStyle,
@@ -24,6 +42,7 @@ from src.summarygen.styling import (
     DEF_PSTYLE,
     TSTYLES,
     INNER_WIDTH,
+    INNER_HEIGHT,
     COLORS,
     get_table_style
 )
@@ -48,60 +67,9 @@ _NL_HEIGHT = 0.3 * inch
 NEWLINE = Spacer(1, _NL_HEIGHT, isGlue=True)
 
 
-class TableBaseClass(Table):
-    """Handler for the extra `Table` constructor call made during the
-    reportlab build process
-
-    Use the `CustomTable` class for creating custom `Table` flowables
-    """
-
-    def __init__(self, data: list[list | tuple], **kwargs):
-        Table.__init__(self, data, **kwargs)
-
-
-class CustomTable(TableBaseClass):
-    """Custom flowable class for extending the reportlab `Table` class"""
-
-    def __init__(self,
-                 data: list[list | tuple],
-                 col_widths: list[float] | float | None=None,
-                 row_heights: list[float] | float | None=None,
-                 style: BetterTableStyle | None=None,
-                 **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
-            TableBaseClass.__init__(self, data, **kwargs)
-            return
-
-        if data == []:
-            data = [[]]
-
-        if col_widths is not None:
-            if isinstance(col_widths, float | int):
-                col_widths = [col_widths]
-
-            for row in data:
-                assert len(col_widths) == len(row)
-                for cell in row:
-                    assert cell != 0
-
-        if row_heights is not None:
-            if isinstance(row_heights, float | int):
-                row_heights = [row_heights]
-
-            for column in [list(col) for col in zip(*data)]:
-                assert len(row_heights) == len(column)
-                for cell in column:
-                    assert cell != 0
-
-        TableBaseClass.__init__(self,
-                                data=data,
-                                colWidths=col_widths,
-                                rowHeights=row_heights,
-                                style=style,
-                                **kwargs)
-
-
 class TitleSection(Flowable):
+    """"""
+
     def __init__(self,
                  title: str,
                  content: str | None=None,
@@ -211,49 +179,199 @@ class TitleSection(Flowable):
             self.__draw_rectangle(w, h)
 
 
-class TitleSectionSubContainer(CustomTable):
+class TitleSectionSubContainer(Table):
+    """Container for a single column of title sections."""
+
     def __init__(self,
                  sections: list[TitleSection],
                  side: Literal['left', 'right']='left',
+                 offset_height: float=25,
                  **kwargs):
-        col_widths: list[float] = []
-        row_heights: list[float] = []
-        for section in sections:
-            width, height = section.wrap()
-            col_widths.append(width)
-            row_heights.append(height)
-        offset_cells = [''] * len(sections)
-        offset_heights = [25] * len(sections)
-        sections_zip = zip(sections, offset_cells)
-        heights_zip = zip(row_heights, offset_heights)
-        _sections = [item for pair in sections_zip for item in pair]
-        _heights = [item for pair in heights_zip for item in pair]
+        self.__col_width: float | None = None
+        self.__row_heights: list[float] = []
+        self.__sections = sections
+        self.offset_height = offset_height
+
         if side == 'left':
             style = TSTYLES['TitleSectionLeft']
         else:
             style = TSTYLES['TitleSectionRight']
-        CustomTable.__init__(self,
-                             [[section] for section in _sections],
-                             col_widths=max(col_widths),
-                             row_heights=_heights,
-                             style=style,
-                             hAlign='left',
-                             **kwargs)
+
+        Table.__init__(self,
+                       data=self.sections,
+                       colWidths=self.col_width,
+                       rowHeights=self.row_heights,
+                       style=style,
+                       hAlign='left',
+                       **kwargs)
+
+    @property
+    def row_heights(self) -> list[float]:
+        if self.__row_heights == []:
+            self.__calc_sizes()
+
+        return self.__row_heights
+
+    @property
+    def col_width(self) -> float:
+        if self.__col_width is None:
+            self.__calc_sizes()
+
+        return self.__col_width
+
+    @property
+    def sections(self) -> list[list[TitleSection]]:
+        offset_cells = [''] * len(self.__sections)
+        sections_zip = zip(self.__sections, offset_cells)
+        sections = [item for pair in sections_zip for item in pair]
+        return [[section] for section in sections]
+
+    def __calc_sizes(self) -> None:
+        """Calculates the column widths and row heights required
+        for this flowable.
+
+        Sets the private instance variables accordingly.
+        """
+
+        col_widths: list[float] = []
+        row_heights: list[float] = []
+        for section in self.__sections:
+            width, height = section.wrap()
+            col_widths.append(width)
+            row_heights.append(height)
+
+        offset_heights = [self.offset_height] * len(self.__sections)
+        heights_zip = zip(row_heights, offset_heights)
+        self.__row_heights = [item for pair in heights_zip for item in pair]
+        self.__col_width = max(col_widths)
 
 
-class TitleSectionContainer(CustomTable):
+class TitleSectionContainer(Table):
+    """Container for two columns of title sections."""
+
     def __init__(self, sections: list[list[TitleSection]], **kwargs):
-        if len(sections) != 2:
-            raise SummaryGenError('Cannot generate a title section container'
-                                  f' with {len(sections)} column(s)')
+        if sections == []:
+            raise SummaryGenError('Invalid Data: at least one section'
+                                  ' column is required to generate a'
+                                  ' container.')
 
-        left_container = TitleSectionSubContainer(sections[0], 'left')
-        right_container = TitleSectionSubContainer(sections[1], 'right')
-        CustomTable.__init__(self,
-                             [[left_container, right_container]],
-                             col_widths=[INNER_WIDTH / 2] * 2,
-                             style=TSTYLES['TitleSectionContainer'],
-                             **kwargs)
+        sub_containers: list[TitleSectionSubContainer] = []
+        for i, section in enumerate(sections):
+            if i == 0:
+                side = 'left'
+            else:
+                side = 'right'
+            sub_containers.append(TitleSectionSubContainer(section, side))
+
+        self.total_height = max([
+            math.fsum(container.row_heights) for container in sub_containers
+        ])
+        col_widths = [INNER_WIDTH / len(sub_containers)] * len(sub_containers)
+        Table.__init__(self,
+                       data=[sub_containers],
+                       colWidths=col_widths,
+                       style=TSTYLES['TitleSectionContainer'],
+                       **kwargs)
+
+
+class TitlePage(Table):
+    def __init__(self, measure: Measure, **kwargs):
+        if kwargs.get('normalizedData', None) is not None:
+            Table.__init__(self, measure, **kwargs)
+            return
+
+        self.measure = measure
+        self.data: list[Flowable] = []
+        self.row_heights: list[Flowable] = []
+
+        img_path = utils.asset_path('etrm.png', 'images')
+        img = utils.get_rlimage(img_path, INNER_WIDTH / 9, hAlign='LEFT')
+        self.row_heights.append(img.drawHeight)
+        self.data.append(img)
+
+        self.add_text('MEASURE CHARACTERIZATION', PSTYLES['TitlePageSubtitle'])
+        self.add_spacer(0.15 * inch)
+        self.add_text(measure.name, PSTYLES['TitlePageTitle'])
+        self.add_spacer(_NL_HEIGHT)
+
+        link = measure.link
+        link_xml = f'<link href=\"{link}\">{link}/</link>'
+        self.add_text(link_xml, PSTYLES['TitleLink'])
+
+        self.data.append(self.sections)
+        self.row_heights.append(self.sections.total_height)
+
+        rem_height = INNER_HEIGHT - math.fsum(self.row_heights)
+        self.insert_spacer(1, rem_height / 2)
+        self.insert_spacer(-1, rem_height / 2)
+        Table.__init__(self,
+                       [[item] for item in self.data],
+                       colWidths=INNER_WIDTH,
+                       rowHeights=self.row_heights,
+                       style=TSTYLES['TitlePage'])
+
+    @property
+    def sections(self) -> TitleSectionContainer:
+        try:
+            return self.__sections
+        except AttributeError:
+            self.__sections = self.__build_sections_container(self.measure)
+            return self.__sections
+
+    def add_text(self, text: str, style: BetterParagraphStyle) -> None:
+        used_height = math.fsum(self.row_heights) - self.sections.total_height
+        para = Paragraph(text, style)
+        _, h = para.wrap(INNER_WIDTH, INNER_HEIGHT - used_height)
+        self.data.append(para)
+        self.row_heights.append(h)
+
+    def add_spacer(self, height: float) -> None:
+        self.data.append(Spacer(1, height))
+        self.row_heights.append(height)
+
+    def insert_spacer(self, index: int, height: float) -> None:
+        self.data.insert(index, Spacer(1, height))
+        self.row_heights.insert(index, height)
+
+    def __build_sections_container(self,
+                                   measure: Measure
+                                  ) -> TitleSectionContainer:
+        use_category = measure.use_category.upper()
+        uc_title = lookups.USE_CATEGORIES[use_category]
+        uc_section = TitleSection('USE CATEGORY',
+                                  f'{use_category} - {uc_title}',
+                                  side='left')
+
+        pa_section = TitleSection('PA LEAD',
+                                  measure.pa_lead,
+                                  side='left')
+
+        version_section = TitleSection('VERSION',
+                                       measure.full_version_id,
+                                       side='left')
+
+        start_section = TitleSection('EFFECTIVE START DATE',
+                                     measure.effective_start_date,
+                                     side='right')
+
+        end_section = TitleSection('END DATE',
+                                   measure.sunset_date or '',
+                                   side='right')
+
+        if _SYSTEM == 'Windows':
+            fmt = '#'
+        else:
+            fmt = '-'
+        download_date = _NOW.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
+        download_section = TitleSection('DOWNLOADED',
+                                          download_date,
+                                          side='right')        
+
+        sections = [
+            [uc_section, pa_section, version_section],
+            [start_section, end_section, download_section]
+        ]
+        return TitleSectionContainer(sections)
 
 
 class Reference(Flowable):
@@ -501,116 +619,6 @@ class SummaryParagraph(Table):
                        hAlign='LEFT')
 
 
-class SummaryTable(Table):
-    def __init__(self,
-                 elements: list[list[str]],
-                 header_orient: Literal['top', 'left']='top',
-                 header_style: BetterParagraphStyle=PSTYLES['TableHeader'],
-                 body_styles: tuple[BetterParagraphStyle]=PSTYLES['Base'],
-                 table_style: BetterTableStyle=TSTYLES['SummaryTable'],
-                 col_widths: list[float] | None=None,
-                 **kwargs):
-        """Custom flowable for tables that are directly placed onto
-        the summary PDF
-        """
-
-        if kwargs.get('normalizedData', None) is not None:
-            Table.__init__(self, elements, **kwargs)
-            return
-
-        if len(elements) == 0:
-            raise SummaryGenError('Cannot make a summary table with no data')
-
-        self.table_style = table_style
-        self.table_width = INNER_WIDTH
-
-        if len(elements) > 1:
-            row_len = len(elements[0])
-            for row in elements[1:]:
-                if len(row) != row_len:
-                    raise SummaryGenError('All summary table rows must have'
-                                          ' the same length')
-                if col_widths is not None and len(row) != len(col_widths):
-                    raise SummaryGenError('Incorrect amount of column widths:'
-                                          f' got {len(col_widths)}, but',
-                                          f' expected {len(row)}')
-
-        body_len = len(elements[0])
-        if header_orient == 'left':
-            body_len -= 1
-
-        if isinstance(body_styles, BetterParagraphStyle):
-            self.body_styles = [body_styles]
-        else:
-            self.body_styles = [*body_styles]
-        if len(self.body_styles) == 1:
-            self.body_styles *= body_len
-        else:
-            assert len(self.body_styles) == body_len
-
-        self.style_matrix: list[list[BetterParagraphStyle]] = []
-        data: list[list[Paragraph]] = []
-        for y, row in enumerate(elements):
-            style_row: list[BetterParagraphStyle] = []
-            data_row: list[Paragraph] = []
-            for x, cell in enumerate(row):
-                if (y == 0 and header_orient == 'top'
-                        or x == 0 and header_orient == 'left'):
-                    style = header_style
-                elif header_orient == 'left':
-                    style = self.body_styles[x - 1]
-                else:
-                    style = self.body_styles[x]
-                style_row.append(style)
-                data_row.append(Paragraph(cell, style=style))
-            self.style_matrix.append(style_row)
-            data.append(data_row)
-
-        repeat_rows = 1 if header_orient == 'top' else 0
-        col_widths = col_widths or self.__calc_col_widths(data)
-        row_heights = self.__calc_row_heights(data, col_widths)
-        Table.__init__(self,
-                       data=data,
-                       colWidths=col_widths,
-                       rowHeights=row_heights,
-                       style=table_style,
-                       hAlign='LEFT',
-                       repeatRows=repeat_rows)
-
-    def __calc_col_widths(self, data: list[list[Paragraph]]) -> list[float]:
-        style = self.table_style
-        padding = style.left_padding + style.right_padding
-        columns = utils.rotate_matrix(data)
-        base_width = self.table_width / len(columns)
-        col_widths: list[float] = []
-        for column in columns:
-            col_width = 0
-            for cell in column:
-                cell.wrap(base_width, 0)
-                width = cell._width_max
-                offset = base_width - width
-                width += offset / 2
-                col_width = max(width, col_width)
-            col_widths.append(col_width + padding)
-        return col_widths
-
-    def __calc_row_heights(self,
-                           data: list[list[Paragraph]],
-                           col_widths: list[float]
-                          ) -> list[float]:
-        style = self.table_style
-        padding = style.top_padding + style.bottom_padding
-        row_heights: list[float] = []
-        for y, row in enumerate(data):
-            row_height = 0
-            for x, cell in enumerate(row):
-                _, height = cell.wrap(col_widths[x], 0)
-                style = self.style_matrix[y][x]
-                row_height = max(height, row_height)
-            row_heights.append(row_height + padding)
-        return row_heights
-
-
 class TableCell(Table):
     def __init__(self,
                  elements: list[ParagraphLine],
@@ -625,7 +633,7 @@ class TableCell(Table):
         self.max_width = width
         self.pstyle = style
         if elements == []:
-            elem_line = ElementLine([ParagraphElement('')], style=style)
+            elem_line = ElementLine(string='', style=style)
             self.elements.append(ParagraphLine(elem_line))
         Table.__init__(self,
                        self.line_matrix,
@@ -647,75 +655,160 @@ class TableCell(Table):
         return [elem.height for elem in self.elements]
 
 
-class ValueTable(Table):
+_TABLE_STYLES = list[BetterParagraphStyle] | BetterParagraphStyle
+
+
+class BasicTable(Table):
+    """Base class for tables in the summary PDF.
+
+    Use when creating a new table or extend to create a new
+    table class.
+
+    Do not use when creating a new class that will extend the
+    `Table` class, but will not be a genuine table.
+
+    Apologies for the __init__ weirdness here, but we must appease
+    the ReportLab gods.
+    """
+
     def __init__(self,
-                 data: list[list[ElementLine]],
-                 measure: Measure | None=None,
+                 data: list[list[str | ElementLine]],
                  headers: int=1,
-                 determinants: int=0,
+                 measure: Measure | None=None,
                  spans: list[_TABLE_SPAN] | None=None,
+                 header_orient: _TABLE_ORIENT='top',
+                 header_styles: _TABLE_STYLES=PSTYLES['ValueTableHeader'],
+                 body_styles: _TABLE_STYLES=PSTYLES['ValueTableDeterminant'],
+                 table_style: BetterTableStyle | None=None,
+                 col_widths: list[float] | float | None=None,
+                 row_heights: list[float] | float | None=None,
+                 h_align: Literal['left', 'center', 'right']='left',
+                 repeat_rows: bool=True,
                  **kwargs):
         if kwargs.get('normalizedData', None) is not None:
             Table.__init__(self, data, **kwargs)
             return
 
-        assert headers > -1
-        assert determinants > -1
+        assert data != []
+        row_len: float | None = None
+        for row in data:
+            if row_len is None:
+                row_len = len(row)
+            else:
+                assert len(row) == row_len
+        assert row_len is not None
 
-        self.max_width = INNER_WIDTH
-        self.data = data
-        self.headers = self.data[0:headers]
+        self.header_orient = header_orient
         self.measure = measure
+        self.max_width = INNER_WIDTH
         self.spans = spans or []
-        self.style = get_table_style(data, headers, determinants, self.spans)
-        self.h_padding = self.style.right_padding + self.style.left_padding
         self.span_dict = {str((y, x)): span_sizes
                             for (y, x), span_sizes in self.spans}
-        self.table_cells = self.__convert_data()
+
+        self.style = table_style or get_table_style(data=data,
+                                                    headers=headers,
+                                                    determinants=row_len,
+                                                    spans=self.spans)
+        self.h_padding = self.style.left_padding + self.style.right_padding
+        self.v_padding = self.style.top_padding + self.style.bottom_padding
+
+        style_count = row_len if header_orient == 'top' else len(data)
+        if isinstance(header_styles, BetterParagraphStyle):
+            self.header_styles = [header_styles] * style_count
+        else:
+            assert len(header_styles) == headers
+            self.header_styles = header_styles
+
+        if isinstance(body_styles, BetterParagraphStyle):
+            self.body_styles = [body_styles] * style_count
+        else:
+            assert len(body_styles) == style_count
+            self.body_styles = body_styles
+
+        assert headers > -1
+        self.header_count = headers
+        self.data = self.__sanitize_data(data)
+
+        if isinstance(col_widths, float):
+            self.__col_widths = [col_widths] * row_len
+        else:
+            if col_widths is not None:
+                assert row_len == len(col_widths)
+            self.__col_widths = col_widths
+
+        if isinstance(row_heights, float):
+            self.__row_heights = [row_heights] * len(data)
+        else:
+            if row_heights is not None:
+                assert len(data) == len(row_heights)
+            self.__row_heights = row_heights
+
+        self.table_cells = self.__convert_data(self.data)
+        if header_orient == 'left':
+            columns = utils.rotate_matrix(self.table_cells)
+            self.headers = columns[0:headers]
+        else:
+            self.headers = self.table_cells[0:headers]
+
         Table.__init__(self,
                        data=self.table_cells,
-                       style=self.style,
                        colWidths=self.col_widths,
                        rowHeights=self.row_heights,
-                       hAlign='LEFT',
-                       repeatRows=headers)
+                       style=self.style,
+                       hAlign=h_align.upper(),
+                       repeatRows=repeat_rows,
+                       **kwargs)
 
     @property
     def col_widths(self) -> list[float]:
-        try:
+        if self.__col_widths is not None:
             return self.__col_widths
-        except AttributeError:
-            _col_widths = self.__calc_col_widths(self.data)
-            widths_len = len(_col_widths)
-            for y, row in enumerate(self.data):
-                try:
-                    assert len(row) == widths_len
-                except AssertionError as err:
-                    raise SummaryGenError(
-                        f'the number of column widths {widths_len} does not'
-                        f' match the amount of columns in row {y}'
-                    ) from err
-            self.__col_widths = _col_widths
-            return self.__col_widths
+
+        col_widths = self.__calc_col_widths(self.data)
+        widths_len = len(col_widths)
+        for y, row in enumerate(self.data):
+            try:
+                assert len(row) == widths_len
+            except AssertionError as err:
+                raise SummaryGenError(
+                    f'the number of column widths {widths_len} does not'
+                    f' match the amount of columns in row {y}'
+                ) from err
+        self.__col_widths = col_widths
+        return self.__col_widths
 
     @property
     def row_heights(self) -> list[float]:
-        try:
+        if self.__row_heights is not None:
             return self.__row_heights
-        except AttributeError:
-            _row_heights = self.__calc_row_heights(self.data)
-            rows = [row for row in zip(*self.data)]
-            heights_len = len(_row_heights)
-            for x, col in enumerate(rows):
-                try:
-                    assert len(col) == heights_len
-                except AssertionError as err:
-                    raise SummaryGenError(
-                        f'the number of row heights {heights_len} does not'
-                        f' match the amount of rows in column {x}'
-                    ) from err
-            self.__row_heights = _row_heights
-            return self.__row_heights
+
+        row_heights = self.__calc_row_heights(self.data)
+        rows = [row for row in zip(*self.data)]
+        heights_len = len(row_heights)
+        for x, col in enumerate(rows):
+            try:
+                assert len(col) == heights_len
+            except AssertionError as err:
+                raise SummaryGenError(
+                    f'the number of row heights {heights_len} does not'
+                    f' match the amount of rows in column {x}'
+                ) from err
+        self.__row_heights = row_heights
+        return self.__row_heights
+
+    def get_style(self, x: int, y: int) -> BetterParagraphStyle:
+        if self.header_orient == 'left':
+            is_header = x < self.header_count
+            head_axis = x
+            body_off = self.header_count
+        else:
+            is_header = y < self.header_count
+            head_axis = y
+            body_off = 0
+
+        if is_header:
+            return self.header_styles[head_axis]
+        return self.body_styles[x - body_off]
 
     def __calc_min_widths(self,
                           data: list[list[ElementLine]],
@@ -753,6 +846,15 @@ class ValueTable(Table):
                     in utils.rotate_matrix(min_matrix)]
 
     def __calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
+        """Returns the list of column widths for this table.
+
+        Column widths are calculated by unwrapping data until it cannot
+        unwrap without exceeding the max width.
+
+        This method directly joins previously split elements, avoiding the
+        costly `wrap_elements` method.
+        """
+
         size = 1
         prev_widths = self.__calc_min_widths(data, size)
         while math.fsum(prev_widths) <= self.max_width:
@@ -829,12 +931,30 @@ class ValueTable(Table):
 
         return [max(heights) for heights in height_matrix]
 
-    def __wrap_data(self) -> list[list[list[ElementLine]]]:
+    def __sanitize_data(self,
+                        data: list[list[ElementLine | str]]
+                       ) -> list[list[ElementLine]]:
+        sanitized_data: list[list[ElementLine]] = []
+        for y, row in enumerate(data):
+            sanitized_row: list[ElementLine] = []
+            for x, cell in enumerate(row):
+                if isinstance(cell, str):
+                    style = self.get_style(x, y)
+                    elem = ElementLine(string=cell, style=style)
+                else:
+                    elem = cell
+                sanitized_row.append(elem)
+            sanitized_data.append(sanitized_row)
+        return sanitized_data
+
+    def __wrap_data(self,
+                    data: list[list[ElementLine]]
+                   ) -> list[list[list[ElementLine]]]:
         h_padding = self.style.left_padding + self.style.right_padding
         cell_widths = [math.ceil(width - h_padding)
                         for width in self.col_widths]
         frags: list[list[list[ElementLine]]] = []
-        for y, table_row in enumerate(self.data):
+        for y, table_row in enumerate(data):
             frag_line: list[list[ElementLine]] = []
             for x, elem_line in enumerate(table_row):
                 _, col_span = self.span_dict.get(str((y, x)), (0, 0))
@@ -842,14 +962,19 @@ class ValueTable(Table):
                     cell_width = sum(cell_widths[x:x + col_span - 1])
                 else:
                     cell_width = cell_widths[x]
+                elements = elem_line.elements
+                for element in elements:
+                    if not element.is_styled():
+                        element.style = self.get_style(x, y)
                 frag_line.append(wrap_elements(elem_line.elements,
                                                max_width=cell_width))
             frags.append(frag_line)
         return frags
 
-    def __convert_data(self) -> list[list[TableCell | str]]:
-        h_padding = self.style.left_padding + self.style.right_padding
-        frags = self.__wrap_data()
+    def __convert_data(self,
+                       data: list[list[ElementLine]]
+                      ) -> list[list[TableCell | str]]:
+        frags = self.__wrap_data(data)
         table_cells: list[list[TableCell | str]] = []
         for y, frag_line in enumerate(frags):
             cells: list[TableCell | str] = []
@@ -867,11 +992,36 @@ class ValueTable(Table):
                         col_width = sum(self.col_widths[x:x + col_span - 1])
                     else:
                         col_width = self.col_widths[x]
-                    col_width -= h_padding
+                    col_width -= self.h_padding
                     cell = TableCell(cell_lines, width=col_width)
                 cells.append(cell)
             table_cells.append(cells)
         return table_cells
+
+
+class ValueTable(BasicTable):
+    def __init__(self,
+                 data: list[list[ElementLine]],
+                 measure: Measure | None=None,
+                 headers: int=1,
+                 determinants: int=0,
+                 spans: list[_TABLE_SPAN] | None=None,
+                 **kwargs):
+        if kwargs.get('normalizedData', None) is not None:
+            Table.__init__(self, data, **kwargs)
+            return
+
+        style = get_table_style(data=data,
+                                headers=headers,
+                                determinants=determinants,
+                                spans=spans or [])
+
+        BasicTable.__init__(self,
+                            data=data,
+                            headers=headers,
+                            measure=measure,
+                            spans=spans,
+                            table_style=style)
 
 
 class ValueTableHeader(Paragraph):

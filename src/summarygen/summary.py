@@ -42,10 +42,8 @@ from src.summarygen.styling import (
 from src.summarygen.rlobjects import Story
 from src.summarygen.flowables import (
     NEWLINE,
-    SummaryTable,
-    Spacer,
-    TitleSection,
-    TitleSectionContainer
+    BasicTable,
+    TitlePage
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -132,6 +130,8 @@ class SummaryDocTemplate(BaseDocTemplate):
                     assert isinstance(prev_template, SummaryPageTemplate)
                 cur_template = self.pageTemplates[next_pt_index]
                 assert isinstance(cur_template, SummaryPageTemplate)
+                if cur_template.id == 'TOC':
+                    return
                 if self.page != 2:
                     page = self.page + 1
                 else:
@@ -162,9 +162,9 @@ class SummaryDocTemplate(BaseDocTemplate):
 
 class SummaryPageTemplate(PageTemplate):
     def __init__(self,
-                 measure_id: str,
-                 measure_name: str):
-        self.measure_id = measure_id
+                 id: str,
+                 measure_name: str | None=None):
+        self.id = id
         self.measure_name = measure_name
         frame = Frame(x1=X_MARGIN,
                       y1=Y_MARGIN,
@@ -175,21 +175,24 @@ class SummaryPageTemplate(PageTemplate):
                       topPadding=0,
                       bottomPadding=0,
                       id='normal')
-        PageTemplate.__init__(self, id=measure_id, frames=frame)
+        PageTemplate.__init__(self, id=id, frames=frame)
 
     def draw_footer(self,
                     canv: Canvas,
                     doc: SummaryDocTemplate
                    ) -> None:
+            if self.measure_name is None:
+                return
+
             canv.saveState()
 
             style = PSTYLES['SmallParagraph'].bold
-            id_footer = Paragraph(self.measure_id, style=style)
+            id_footer = Paragraph(self.id, style=style)
             _, h = id_footer.wrap(INNER_WIDTH, Y_MARGIN)
             x = X_MARGIN / 1.5
             y = h * 1.5
             id_footer.drawOn(canvas=canv, x=x, y=y)
-            id_width = stringWidth(self.measure_id,
+            id_width = stringWidth(self.id,
                                    style.font_name, 
                                    style.font_size)
             name_footer = Paragraph(self.measure_name,
@@ -297,7 +300,7 @@ class MeasureSummary:
             existing_measures = self.measures[measure.use_category]
             for existing_measure in existing_measures:
                 if measure.full_version_id == existing_measure.full_version_id:
-                    return False
+                    return True
         except KeyError:
             pass
         return False
@@ -314,76 +317,39 @@ class MeasureSummary:
             return False
 
         measures = self.measures[last_uc]
+        if len(measures) == 0:
+            return False
+
         if measures[-1].full_version_id != measure.full_version_id:
             return False
 
         return True
 
-    def __build_sections_container(self,
-                                   measure: Measure
-                                  ) -> TitleSectionContainer:
-        use_category = measure.use_category.upper()
-        uc_title = lookups.USE_CATEGORIES[use_category]
-        uc_section = TitleSection('USE CATEGORY',
-                                  f'{use_category} - {uc_title}',
-                                  side='left')
+    def is_first(self, measure: Measure) -> bool:
+        if len(self.measures) == 0:
+            return False
 
-        pa_section = TitleSection('PA LEAD',
-                                  measure.pa_lead,
-                                  side='left')
+        if not self.contains(measure):
+            return False
 
-        version_section = TitleSection('VERSION',
-                                       measure.full_version_id,
-                                       side='left')
+        first_uc = sorted(self.measures.keys())[0]
+        if measure.use_category != first_uc:
+            return False
 
-        start_section = TitleSection('EFFECTIVE START DATE',
-                                     measure.effective_start_date,
-                                     side='right')
+        measures = self.measures[first_uc]
+        if len(measures) == 0:
+            return False
 
-        end_section = TitleSection('END DATE',
-                                   measure.sunset_date or '',
-                                   side='right')
+        if measures[0].full_version_id != measure.full_version_id:
+            return False
 
-        if _SYSTEM == 'Windows':
-            fmt = '#'
-        else:
-            fmt = '-'
-        download_date = _NOW.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
-        download_section = TitleSection('DOWNLOADED',
-                                          download_date,
-                                          side='right')        
-
-        sections = [
-            [uc_section, pa_section, version_section],
-            [start_section, end_section, download_section]
-        ]
-        return TitleSectionContainer(sections)
+        return True
 
     def add_title_page(self):
         if self.__cur_measure is None:
             return
 
-        img_path = utils.asset_path('etrm.png', 'images')
-        img = utils.get_rlimage(img_path, INNER_WIDTH / 9, hAlign='LEFT')
-        self.story.add(img)
-        self.story.add(Spacer(1, 1.5 * inch))
-
-        self.story.add(Paragraph('MEASURE CHARACTERIZATION',
-                                 style=PSTYLES['TitlePageSubtitle']))
-        self.story.add(Spacer(1, 0.15 * inch))
-
-        self.story.add(Paragraph(self.__cur_measure.name,
-                                 style=PSTYLES['TitlePageTitle']))
-        self.story.add(NEWLINE)
-
-        link = self.__cur_measure.link
-        link_xml = f'<link href=\"{link}\">{link}/</link>'
-        self.story.add(Paragraph(link_xml, style=PSTYLES['TitleLink']))
-        self.story.add(Spacer(1, 1 * inch))
-
-        container = self.__build_sections_container(self.__cur_measure)
-        self.story.add(container)
-
+        self.story.add(TitlePage(self.__cur_measure))
         self.story.add(PageBreak())
 
     def add_tech_summary(self):
@@ -445,7 +411,7 @@ class MeasureSummary:
                                  params: list[tuple[str, str]],
                                  impacts: list[tuple[str, str]]=[]
                                 ) -> Table:
-        data: list[tuple[str, str]] = []
+        data: list[tuple[str, str]] = [('Parameters', 'Labels')]
         for label, api_name in params:
             param = self.__cur_measure.get_shared_parameter(api_name)
             if param == None:
@@ -460,10 +426,7 @@ class MeasureSummary:
                                            measure=self.__cur_measure)
             data.append((label, impact))
         
-        return SummaryTable(data,
-                            header_orient='left',
-                            header_style=PSTYLES['Paragraph'],
-                            body_style=PSTYLES['SmallBase'])
+        return BasicTable(data)
 
     def add_parameters_table(self):
         if self.__cur_measure is None:
@@ -486,7 +449,7 @@ class MeasureSummary:
             ('Remaining Useful Life (Years)', 'EULID', 'RUL_Yrs')
         ]
         table = self.__build_parameters_table(params, impacts)
-        table_header = Paragraph('Parameters:', PSTYLES['h2'])
+        table_header = Paragraph('Parameters:', PSTYLES['h6'])
         self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
     def add_impact_table(self):
@@ -494,39 +457,24 @@ class MeasureSummary:
             return
 
         permutations = self.connection.get_permutations(self.__cur_measure)
-        first_baseline = permutations.get_first_baseline()
-        second_baseline = permutations.get_second_baseline()
-        first_mtc = permutations.average('UnitMeaCost1stBaseline')
-        second_mtc = permutations.average('UnitMeaCost2ndBaseline')
-        mat_param = self.__cur_measure.get_shared_parameter('MeasAppType')
-        if mat_param != None:
-            if all(x in mat_param.active_labels for x in [['NC', 'NR']]):
-                standard = first_baseline
-                pre_existing = 0.0
-                inc_cost = first_mtc
-                full_cost = 0.0
-            elif 'AR' in mat_param.active_labels:
-                standard = second_baseline
-                pre_existing = first_baseline
-                inc_cost = second_mtc
-                full_cost = first_mtc
-            else:
-                standard = 0.0
-                pre_existing = first_baseline
-                inc_cost = 0.0
-                full_cost = first_mtc
+        std_costs = permutations.get_standard_costs()
+        pre_costs = permutations.get_pre_existing_costs()
+        inc_cost = permutations.get_incremental_cost()
+        tot_cost = permutations.get_total_cost()
 
-        data: list[tuple[str, str]] = [
-            ('Standard', f'{standard:.2f}'),
-            ('Pre-Existing', f'{pre_existing:.2f}'),
-            ('Incremental Cost', f'{inc_cost:.2f}'),
-            ('Full Measure Cost', f'{full_cost:.2f}')
+        data = [
+            ['', 'Peak Demand Reduction', 'Electric Savings', 'Gas Savings'],
+            ['Standard', *[f'{cost:.2f}' for cost in std_costs]],
+            ['Pre-Existing', *[f'{cost:.2f}' for cost in pre_costs]],
+            ['Incremental Cost', f'{inc_cost:.2f}', '', ''],
+            ['Total Cost', f'{tot_cost:.2f}', '', '']
         ]
-        table = SummaryTable(data,
-                             header_orient='left',
-                             header_style=PSTYLES['Paragraph'],
-                             body_style=PSTYLES['SmallParagraph'])
-        header = Paragraph('Impact:', style=PSTYLES['h2'])
+        spans = [
+            ((3, 1), (0, 3)),
+            ((4, 1), (0, 3))
+        ]
+        table = BasicTable(data, spans=spans)
+        header = Paragraph('Impact:', style=PSTYLES['h6'])
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
     def __build_sections_table(self,
@@ -646,6 +594,7 @@ class MeasureSummary:
         self.story.add(KeepTogether([table_header, table]))
 
     def add_table_of_contents(self):
+        self.story.add(NextPageTemplate('TOC'))
         toc_header = Paragraph('Table of Contents', style=PSTYLES['TOCHeader'])
         self.story.add(toc_header, NEWLINE)
         self.story.add(TableOfContents())
@@ -682,7 +631,7 @@ class MeasureSummary:
             self.measures[measure.use_category].sort(key=Measure.sorting_key)
         except KeyError:
             self.measures[measure.use_category] = [measure]
-        template = SummaryPageTemplate(measure_id=measure.full_version_id,
+        template = SummaryPageTemplate(id=measure.full_version_id,
                                        measure_name=measure.name)
         self.summary.addPageTemplates(template)
 
@@ -722,6 +671,8 @@ class MeasureSummary:
                         f' {summary_measure.full_version_id}')
 
         self.story.add(NextPageTemplate(summary_measure.full_version_id))
+        if not self.is_first(measure):
+            self.story.add(PageBreak())
         self.add_title_page()
         self.add_tech_summary()
         self.add_parameters_table()
@@ -731,15 +682,13 @@ class MeasureSummary:
         self.__cur_measure = None
 
     def build(self):
-        if len(self.measures) > 1:
-            self.add_table_of_contents()
+        # if len(self.measures) > 1:
+        #     self.add_table_of_contents()
 
         for use_category in sorted(self.measures.keys()):
             self.add_use_category_page(use_category)
             for measure in self.measures[use_category]:
                 self.__build_summary(measure)
-                if not self.is_last(measure):
-                    self.story.add(PageBreak())
         self.summary.multiBuild(self.story.contents,
                                 canvasmaker=NumberedCanvas)
         clean()

@@ -211,7 +211,7 @@ def convert_spanned_table(content: list[ResultSet[Tag]],
             style = PSTYLES['ValueTableDeterminant']
         for cell in row:
             if cell is None:
-                element = ElementLine([ParagraphElement('')], style=style)
+                element = ElementLine(string='', style=style)
             else:
                 cell_elements = convert_element(cell)
                 element = ElementLine(elements=cell_elements,

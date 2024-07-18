@@ -1,5 +1,6 @@
 from __future__ import annotations
 import os
+import sys
 import copy
 from enum import Enum
 from typing import Any, TypeVar, Generic, overload
@@ -17,7 +18,7 @@ from reportlab.pdfbase.pdfmetrics import registerFontFamily
 from reportlab.platypus import TableStyle
 
 from src import asset_path
-from src.summarygen.types import _TABLE_SPAN
+from src.summarygen.types import _TABLE_SPAN, _TABLE_ORIENT
 
 
 _U = TypeVar('_U')
@@ -28,6 +29,8 @@ X_MARGIN = 0.45 * inch
 Y_MARGIN = 1 * inch
 INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2 - 12
 INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
+_DEF_FONT_SIZE = 10
+_DEF_FONT_NAME = 'SourceSansPro'
 
 
 class FontType(Enum):
@@ -283,34 +286,173 @@ class BetterParagraphStyle(ParagraphStyle):
 
 
 class BetterTableStyle(TableStyle):
+    DEFAULTS_NAME_MAP = {
+        'FONTNAME': 'font_name',
+        'FACE': 'font_name',
+        'FONTSIZE': 'font_size',
+        'SIZE': 'font_size',
+        'LEADING': 'leading',
+        'TEXTCOLOR': 'color',
+        'ALIGNMENT': 'alignment',
+        'ALIGN': 'alignment',
+        'LEFTPADDING': 'left_padding',
+        'RIGHTPADDING': 'right_padding',
+        'TOPPADDING': 'top_padding',
+        'BOTTOMPADDING': 'bottom_padding',
+        'BACKGROUND': 'background',
+        'VALIGN': 'valign',
+        'SPAN': 'span'
+    }
+
+    DEFAULTS = {
+        'font_name': _DEF_FONT_NAME,
+        'font_size': 10,
+        'leading': 12,
+        'left_padding': 6,
+        'right_padding': 6,
+        'top_padding': 3,
+        'bottom_padding': 3,
+        'first_line_indent': 0,
+        'color': colors.black,
+        'alignment': 'LEFT',
+        'background': colors.white,
+        'valign': 'BOTTOM',
+        'span': None
+    }
+
     def __init__(self,
                  name: str,
                  cmds: Any | None=None,
                  parent: Any | None=None,
                  **kwargs):
         super().__init__(cmds, parent, **kwargs)
-
         self.name = name
-        self.font_size: float = 12
-        self.font_name: str = 'Helvetica'
-        self.top_padding: float = 6
-        self.bottom_padding: float = 6
-        self.left_padding: float = 6
-        self.right_padding: float = 6
+
+    def is_within(self,
+                  coords: tuple[int, int],
+                  init_coords: tuple[int, int],
+                  end_coords: tuple[int, int]
+                 ) -> bool:
+        x, y = coords
+        init_x, init_y = init_coords
+        end_x, end_y = end_coords
+
+        if x < init_x or y < init_y:
+            return False
+
+        if end_x == -1:
+            end_x = sys.maxsize
+
+        if end_y == -1:
+            end_y = sys.maxsize
+
+        if x > end_x or y > end_y:
+            return False
+
+        return True
+
+    def get_default(self, name: str) -> tuple | None:
+        cmd_name = name.upper()
+        def_name = self.DEFAULTS_NAME_MAP.get(cmd_name)
+        if def_name is None:
+            return None
+
+        default = self.DEFAULTS.get(def_name)
+        if default is None:
+            return None
+
+        return (cmd_name, (0, 0), (-1, -1), default)
+
+
+    def get_styles(self,
+                   name: str,
+                   coords: tuple[int, int] | None=None
+                  ) -> list:
+        cmd_name = name.upper()
+        cmds = [cmd for cmd in self.getCommands() if cmd[0] == cmd_name]
+        if cmds == []:
+            default = self.get_default(cmd_name)
+            if default is None:
+                return []
+            return [default]
+
+        if coords is None:
+            return cmds
+
+        coord_cmds = []
         for cmd in cmds:
-            match cmd[0]:
-                case 'FONTSIZE' | 'SIZE':
-                    self.font_size = float(cmd[3])
-                case 'FONTNAME':
-                    self.font_name = str(cmd[3])
-                case 'TOPPADDING':
-                    self.top_padding = float(cmd[3])
-                case 'BOTTOMPADDING':
-                    self.bottom_padding = float(cmd[3])
-                case 'LEFTPADDING':
-                    self.left_padding = float(cmd[3])
-                case 'RIGHTPADDING':
-                    self.right_padding = float(cmd[3])
+            try:
+                init_coords = cmd[1]
+                end_coords = cmd[2]
+            except IndexError:
+                continue
+            
+            if self.is_within(coords, init_coords, end_coords):
+                coord_cmds.append(cmd)
+
+        if coord_cmds == []:
+            default = self.get_default(cmd_name)
+            if default is None:
+                return []
+            return [default]
+
+        return coord_cmds
+
+    def __get_stnd_style(self, name: str) -> Any | None:
+        cmd_name = name.upper()
+        cmds = self.get_styles(cmd_name)
+        if cmds == []:
+            def_name = self.DEFAULTS_NAME_MAP.get(cmd_name)
+            if def_name is None:
+                return None
+
+            default = self.DEFAULTS.get(def_name)
+            return default
+        return cmds[0][3]
+
+    @property
+    def font_name(self) -> str:
+        return self.__get_stnd_style('FONTNAME')
+
+    @property
+    def font_size(self) -> float:
+        return self.__get_stnd_style('FONTSIZE')
+
+    @property
+    def leading(self) -> float:
+        return self.__get_stnd_style('LEADING')
+
+    @property
+    def right_padding(self) -> float:
+        return self.__get_stnd_style('RIGHTPADDING')
+
+    @property
+    def left_padding(self) -> float:
+        return self.__get_stnd_style('LEFTPADDING')
+
+    @property
+    def top_padding(self) -> float:
+        return self.__get_stnd_style('TOPPADDING')
+
+    @property
+    def bottom_padding(self) -> float:
+        return self.__get_stnd_style('BOTTOMPADDING')
+
+    @property
+    def text_color(self) -> colors.Color:
+        return self.__get_stnd_style('TEXTCOLOR')
+
+    @property
+    def alignment(self) -> str:
+        return self.__get_stnd_style('ALIGNMENT')
+
+    @property
+    def background(self) -> colors.Color:
+        return self.__get_stnd_style('BACKGROUND')
+
+    @property
+    def valign(self) -> str:
+        return self.__get_stnd_style('VALIGN')
 
     def get_pstyle(self) -> BetterParagraphStyle:
         return BetterParagraphStyle(
@@ -338,10 +480,6 @@ class StyleSheet(Generic[_T]):
 
     def add(self, style: _T, alias: str | None=None):
         self.styles[alias or style.name] = style
-
-
-_DEF_FONT_SIZE = 10
-_DEF_FONT_NAME = 'SourceSansPro'
 
 
 def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
@@ -647,6 +785,19 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
     )
     style_sheet.add(
         BetterTableStyle(
+            'TitlePage',
+            [
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('VALIGN', (0, 0), (0, 0), 'TOP'),
+                ('VALIGN', (-1, -1), (-1, -1), 'BOTTOM')
+            ]
+        )
+    )
+    style_sheet.add(
+        BetterTableStyle(
             'SummaryList',
             [
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -671,7 +822,8 @@ DEF_PSTYLE = PSTYLES['Paragraph']
 def get_table_style(data: list[list],
                     headers: int=1,
                     determinants: int=0,
-                    spans: list[_TABLE_SPAN]=[]
+                    spans: list[_TABLE_SPAN]=[],
+                    orient: _TABLE_ORIENT='top'
                    ) -> BetterTableStyle:
     table_style = copy.deepcopy(TSTYLES['ValueTable'])
     table_styles = table_style.getCommands()
@@ -688,26 +840,79 @@ def get_table_style(data: list[list],
                                  (-1, i),
                                  COLORS['ValueTableHeaderDark']))
 
+    top_styles: list[tuple] = []
+    left_styles: list[tuple] = []
+    if determinants > 0:
+        top_styles.append((
+            'BACKGROUND',
+            (0, 0),
+            (determinants - 1, headers - 1),
+            COLORS['ValueTableHeaderLight']
+        ))
+        left_styles.append((
+            'BACKGROUND',
+            (0, 0),
+            (headers - 1, determinants - 1),
+            COLORS['ValueTableHeaderLight']
+        ))
+    if len(data) > 0 and len(data[0]) > determinants:
+        top_styles.append((
+            'BACKGROUND',
+            (determinants, 0),
+            (-1, headers - 1),
+            COLORS['ValueTableHeaderDark']
+        ))
+        left_styles.append((
+            'BACKGROUND',
+            (0, determinants),
+            (headers - 1, -1),
+            COLORS['ValueTableHeaderDark']
+        ))
+
     for i in range(headers, len(data)):
         if determinants > 0:
             if i % 2 == 1:
                 color = COLORS['ValueTableRowLight']
             else:
                 color = COLORS['ValueTableRowAltLight']
-            table_styles.append(('BACKGROUND',
-                                 (0, i),
-                                 (determinants - 1, i),
-                                 color))
+            top_styles.append((
+                'BACKGROUND',
+                (0, i),
+                (determinants - 1, i),
+                color
+            ))
+            left_styles.append((
+                'BACKGROUND',
+                (i, 0),
+                (i, determinants - 1),
+                color
+            ))
 
         if len(data[i]) > determinants:
             if i % 2 == 1:
                 color = COLORS['ValueTableRowDark']
             else:
                 color = COLORS['ValueTableRowAltDark']
-            table_styles.append(('BACKGROUND',
-                                 (determinants, i),
-                                 (-1, i),
-                                 color))
+            top_styles.append((
+                'BACKGROUND',
+                (determinants, i),
+                (-1, i),
+                color
+            ))
+            left_styles.append((
+                'BACKGROUND',
+                (i, determinants),
+                (i, -1),
+                color
+            ))
+
+    if orient == 'left':
+        table_styles.extend(left_styles)
+    elif orient == 'top':
+        table_styles.extend(top_styles)
+    elif orient == 'top-left':
+        table_styles.extend(top_styles)
+        table_styles.extend(left_styles)
 
     for span in spans:
         y, x = span[0]

@@ -136,6 +136,13 @@ class ParagraphElement:
     def height(self) -> float:
         return self.style.leading
 
+    def is_styled(self) -> bool:
+        """Returns `True` if this element has a custom styling, otherwise
+        (if the element uses the default styling) returns `False`.
+        """
+
+        return self.__style is not None
+
     def split(self, size: int=1) -> list[ParagraphElement]:
         elements: list[ParagraphElement] = []
         words = self.text.split()
@@ -219,6 +226,7 @@ class ParagraphElement:
 
 class ElementLine:
     def __init__(self,
+                 string: str | None=None,
                  elements: list[ParagraphElement] | None=None,
                  max_width: float | None=INNER_WIDTH,
                  style: BetterParagraphStyle | None=None):
@@ -226,6 +234,10 @@ class ElementLine:
         self.max_width = max_width
         self._elements: list[ParagraphElement] = []
         self.__index: int = 0
+
+        if string is not None:
+            element = ParagraphElement(string, style=self.style)
+            self.add(element)
 
         if elements is not None:
             for element in elements:
@@ -308,6 +320,9 @@ class ElementLine:
         split_elems: list[ParagraphElement] = []
         for elem in self.elements:
             split_elems.extend(elem.split(size))
+
+        if split_elems == []:
+            return self.width
 
         return max([elem.width for elem in split_elems])
 
