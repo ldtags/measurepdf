@@ -34,6 +34,12 @@ _T = TypeVar('_T')
 
 _DEC_TYPE = Callable[..., _T | None]
 def etrm_cache_request(func: _DEC_TYPE) -> _DEC_TYPE:
+    """Decorator for eTRM cache request methods.
+
+    Adds additional functionality that should be consistent with
+    every eTRM cache request method.    
+    """
+
     @functools.wraps
     def wrapper(*args, **kwargs) -> _T | None:
         value = func(*args, **kwargs)
