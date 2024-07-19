@@ -20,7 +20,6 @@ from __future__ import annotations
 import math
 from typing import Literal
 from reportlab.lib.units import inch
-from reportlab.platypus import CellStyle
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfgen.pathobject import PDFPathObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -38,7 +37,7 @@ from src.summarygen.types import _TABLE_SPAN, _TABLE_ORIENT
 from src.summarygen.models import VTObjectInfo
 from src.summarygen.styling import (
     BetterParagraphStyle,
-    BetterTableStyle,
+    TableStyle,
     PSTYLES,
     DEF_PSTYLE,
     TSTYLES,
@@ -698,7 +697,7 @@ class BasicTable(Table):
                  header_orient: _TABLE_ORIENT='top',
                  header_styles: _TABLE_STYLES=PSTYLES['ValueTableHeader'],
                  body_styles: _TABLE_STYLES=PSTYLES['ValueTableDeterminant'],
-                 table_style: BetterTableStyle | None=None,
+                 table_style: TableStyle | None=None,
                  col_widths: list[float] | float | None=None,
                  row_heights: list[float] | float | None=None,
                  h_align: Literal['left', 'center', 'right']='left',

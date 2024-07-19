@@ -15,7 +15,7 @@ from reportlab.lib.pagesizes import letter
 from reportlab.pdfbase import pdfmetrics
 from reportlab.pdfbase.ttfonts import TTFont
 from reportlab.pdfbase.pdfmetrics import registerFontFamily
-from reportlab.platypus import TableStyle
+from reportlab.platypus import TableStyle as _TableStyle
 
 from src import asset_path
 from src.summarygen.types import _TABLE_SPAN, _TABLE_ORIENT
@@ -285,7 +285,7 @@ class BetterParagraphStyle(ParagraphStyle):
         self.font_size = size
 
 
-class BetterTableStyle(TableStyle):
+class TableStyle(_TableStyle):
     DEFAULTS_NAME_MAP = {
         'FONTNAME': 'font_name',
         'FACE': 'font_name',
@@ -465,7 +465,7 @@ class BetterTableStyle(TableStyle):
         self._cmds.append(cmd)
 
 
-_T = TypeVar('_T', BetterTableStyle, BetterParagraphStyle)
+_T = TypeVar('_T', TableStyle, BetterParagraphStyle)
 
 
 class StyleSheet(Generic[_T]):
@@ -700,10 +700,10 @@ def __gen_pstyles() -> StyleSheet[BetterParagraphStyle]:
     return style_sheet
 
 
-def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
-    style_sheet = StyleSheet[BetterTableStyle]()
+def __gen_tstyles() -> StyleSheet[TableStyle]:
+    style_sheet = StyleSheet[TableStyle]()
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'SummaryTable', 
             [
                 ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
@@ -714,7 +714,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'SectionsTable',
             [
                 ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
@@ -731,7 +731,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'ValueTable',
             [
                 ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
@@ -746,7 +746,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'ElementLine',
             [
                 # ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
@@ -759,7 +759,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'TitleSectionLeft',
             [
                 ('ALIGN', (0, 0), (-1, -1), 'LEFT')
@@ -767,7 +767,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'TitleSectionRight',
             [
                 ('ALIGN', (0, 0), (-1, -1), 'RIGHT')
@@ -775,7 +775,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'TitleSectionContainer',
             [
                 ('ALIGN', (0, 0), (0, -1), 'LEFT'),
@@ -784,7 +784,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'TitlePage',
             [
                 ('TOPPADDING', (0, 0), (-1, -1), 0),
@@ -797,7 +797,7 @@ def __gen_tstyles() -> StyleSheet[BetterTableStyle]:
         )
     )
     style_sheet.add(
-        BetterTableStyle(
+        TableStyle(
             'SummaryList',
             [
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
@@ -824,7 +824,7 @@ def get_table_style(data: list[list],
                     determinants: int=0,
                     spans: list[_TABLE_SPAN]=[],
                     orient: _TABLE_ORIENT='top'
-                   ) -> BetterTableStyle:
+                   ) -> TableStyle:
     table_style = copy.deepcopy(TSTYLES['ValueTable'])
     table_styles = table_style.getCommands()
 
@@ -924,4 +924,4 @@ def get_table_style(data: list[list],
         span_style = ('SPAN', (x, y), (x + col_span, y + row_span))
         table_styles.append(span_style)
 
-    return BetterTableStyle(table_style.name, table_styles)
+    return TableStyle(table_style.name, cmds=table_styles)

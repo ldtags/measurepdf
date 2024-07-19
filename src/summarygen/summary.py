@@ -29,7 +29,7 @@ from src.etrm.exceptions import (
 )
 from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styling import (
-    BetterTableStyle,
+    TableStyle,
     BetterParagraphStyle,
     PAGESIZE,
     X_MARGIN,
@@ -227,7 +227,7 @@ class SummaryPageTemplate(PageTemplate):
 
 
 def calc_row_heights(data: list[list[str | Paragraph]],
-                     table_style: BetterTableStyle,
+                     table_style: TableStyle,
                      para_styles: tuple[BetterParagraphStyle, ...],
                      base_height: float,
                      base_widths: tuple[float, ...]
