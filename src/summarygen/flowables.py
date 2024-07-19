@@ -20,6 +20,7 @@ from __future__ import annotations
 import math
 from typing import Literal
 from reportlab.lib.units import inch
+from reportlab.platypus import CellStyle
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfgen.pathobject import PDFPathObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -58,6 +59,10 @@ from src.summarygen.exceptions import (
 
 
 class Spacer(_Spacer):
+    """Overwrites the ReportLab `Spacer` class to shrink in order
+    to not exceed frame heights.
+    """
+
     def wrap(self, availWidth, availHeight):
         height = min(self.height, availHeight - 1e-8)
         return (availWidth, height)
@@ -68,7 +73,11 @@ NEWLINE = Spacer(1, _NL_HEIGHT, isGlue=True)
 
 
 class TitleSection(Flowable):
-    """"""
+    """Custom flowable for an object with 1-2 lines of text that has
+    an orange-brown rectangle to its left/right.
+
+    Used on the measure title pages.
+    """
 
     def __init__(self,
                  title: str,
@@ -247,7 +256,7 @@ class TitleSectionSubContainer(Table):
 
 
 class TitleSectionContainer(Table):
-    """Container for two columns of title sections."""
+    """Container for one or more columns of title sections."""
 
     def __init__(self, sections: list[list[TitleSection]], **kwargs):
         if sections == []:
@@ -275,6 +284,14 @@ class TitleSectionContainer(Table):
 
 
 class TitlePage(Table):
+    """A measure title page.
+
+    Each measure within the summary should be preceded by a
+    title page.
+
+    Guaranteed to take up a full page.
+    """
+
     def __init__(self, measure: Measure, **kwargs):
         if kwargs.get('normalizedData', None) is not None:
             Table.__init__(self, measure, **kwargs)
@@ -375,6 +392,8 @@ class TitlePage(Table):
 
 
 class Reference(Flowable):
+    """A custom flowable that draws an eTRM reference tag."""
+
     def __init__(self,
                  text: str,
                  link: str | None=None,
@@ -451,7 +470,7 @@ class Reference(Flowable):
 
 
 class ParagraphLine(Table):
-    """Conversion of an `ElementLine` to an inline `Flowable`"""
+    """Conversion of an `ElementLine` to an inline `Flowable`."""
 
     def __init__(self,
                  element_line: ElementLine,
@@ -513,9 +532,9 @@ class ParagraphLine(Table):
 
     @property
     def line_matrix(self) -> list[list[Flowable]]:
-        """Formats flowables so that the `Table` can read them
+        """Formats flowables so that the `Table` can read them.
         
-        Should only have one line within the outer array
+        Should only have one line within the outer array.
         """
 
         return [self.flowables]
@@ -683,9 +702,57 @@ class BasicTable(Table):
                  col_widths: list[float] | float | None=None,
                  row_heights: list[float] | float | None=None,
                  h_align: Literal['left', 'center', 'right']='left',
-                 repeat_rows: bool=True,
+                 repeat_rows: int=1,
                  **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
+        """Constructs a ReportLab `Table` with the provided data.
+        
+        Parameters:
+            `data` - A 2D matrix of strings or `ElementLine` objects that
+            define the table data.
+
+            `headers` - A non-negative integer representing the number of
+            rows/cols (depending on `header_orient`) that are table headers.
+
+            `measure` - An eTRM measure object, used for adding links and data
+            that would otherwise be unaccessible.
+
+            `spans` - A list of table spans that exist within the table. A
+            table span is a two-tuple of two-tuples. The first two-tuple
+            contains the (y, x) coords of the first cell in the span. The
+            second two-tuple contains the (row, column) span sizes of the
+            span. The span sizes should include the initial cell.
+
+            `header_orient` - The orientation of the table header.
+
+            `header_styles` - A list of paragraph styles that define how the
+            elements within the table headers should be styled. If only one
+            style is provided, that style will be used for each table header.
+            Otherwise, a style must be provided for each header col ('top'
+            `header_orient`) or row ('left' `header_orient`).
+
+            `body_styles` - A list of paragraph styles that define how the
+            elements within the table body should be styled. These follow the
+            same structure as the `header_styles`.
+
+            `table_style` - A ReportLab `TableStyle`. If none is provided, the
+            default table style is applied.
+
+            `col_widths` - A list of floats that define the widths of each
+            column in the table. If none are provided, they are calculated
+            based on the contents of `data` to fit the page size.
+
+            `row_heights` - A list of floats the define the heights of each
+            row in the table. If none are provided, they are calculated based
+            on the contents of `data` to fit the provided or calculated column
+            widths.
+
+            `h_align` - The horizontal aligmnent of the table.
+
+            `repeat_rows` - The number of table rows that will be repeated
+            in the event of a table split.
+        """
+
+        if kwargs.get('normalizedData') is not None:
             Table.__init__(self, data, **kwargs)
             return
 
@@ -1007,7 +1074,7 @@ class ValueTable(BasicTable):
                  determinants: int=0,
                  spans: list[_TABLE_SPAN] | None=None,
                  **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
+        if kwargs.get('normalizedData') is not None:
             Table.__init__(self, data, **kwargs)
             return
 

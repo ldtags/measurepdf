@@ -4,10 +4,6 @@ import platform
 from datetime import datetime
 
 
-_LOG_FILE_NAME = 'summarygen.log'
-logging.basicConfig(filename=_LOG_FILE_NAME, level=logging.INFO)
-
-
 match platform.system():
     case 'Linux' | 'Darwin' | 'Windows' as system:
         _SYSTEM = system
@@ -19,6 +15,12 @@ _NOW = datetime.now()
 
 
 _ROOT = os.path.abspath(os.path.dirname(__file__))
+
+
+_LOG_FILE_NAME = 'summarygen.log'
+logging.basicConfig(filename=_LOG_FILE_NAME,
+                    level=logging.INFO,
+                    filemode='w')
 
 
 def asset_path(file_name: str, *parent_dirs: str) -> str:
