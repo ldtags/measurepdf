@@ -1,7 +1,8 @@
 import re
 import logging
 import requests
-from typing import overload
+import functools
+from typing import TypeVar, Callable, overload
 
 from src import patterns
 from src.etrm.models import (
@@ -21,11 +22,27 @@ from src.etrm.exceptions import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 PROD_API = 'https://www.caetrm.com/api/v1'
 STAGE_API = 'https://stage.caetrm.com/api/v1'
 
 
-logger = logging.getLogger(__name__)
+_T = TypeVar('_T')
+
+
+_DEC_TYPE = Callable[..., _T | None]
+def etrm_cache_request(func: _DEC_TYPE) -> _DEC_TYPE:
+    @functools.wraps
+    def wrapper(*args, **kwargs) -> _T | None:
+        value = func(*args, **kwargs)
+        if value is not None:
+            logger.info('Cache HIT')
+        else:
+            logger.info('Cache MISS')
+        return value
+    return wrapper
 
 
 class ETRMCache:
@@ -44,6 +61,7 @@ class ETRMCache:
         self.references: dict[str, Reference] = {}
         self.shared_value_tables: dict[str, SharedValueTable] = {}
 
+    @etrm_cache_request
     def get_ids(self,
                 offset: int,
                 limit: int,
@@ -97,24 +115,28 @@ class ETRMCache:
                     id_cache[i] = measure_ids[i - offset]
             id_cache.extend(new_ids)
 
+    @etrm_cache_request
     def get_versions(self, measure_id: str) -> list[str] | None:
         return self.version_cache.get(measure_id, None)
 
     def add_versions(self, measure_id: str, versions: list[str]):
         self.version_cache[measure_id] = versions
 
+    @etrm_cache_request
     def get_measure(self, version_id: str) -> Measure | None:
         return self.measure_cache.get(version_id, None)
 
     def add_measure(self, measure: Measure):
         self.measure_cache[measure.full_version_id] = measure
 
+    @etrm_cache_request
     def get_reference(self, ref_id: str) -> Reference | None:
         return self.references.get(ref_id, None)
 
     def add_reference(self, ref_id: str, reference: Reference):
         self.references[ref_id] = reference
 
+    @etrm_cache_request
     def get_shared_value_table(self,
                                table_name: str,
                                version: str

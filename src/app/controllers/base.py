@@ -34,13 +34,6 @@ reside in a class that extends `BaseController`.
 """
 
 
-# def etrm_request() -> Callable[[_DEC_ARGS], _BC_DEC_RETV]:
-#     """Decorator for ensuring that the eTRM connection is present.
-
-#     Use when creating a controller method that directly interacts with
-#     the eTRM API connection layer.
-#     """
-
 def etrm_request(func: _DEC_ARGS) -> _BC_DEC_RETV:
     @functools.wraps
     def wrapper(self: BaseController,
@@ -52,4 +45,3 @@ def etrm_request(func: _DEC_ARGS) -> _BC_DEC_RETV:
         value: _T = func(self, *args, **kwargs)
         return value
     return wrapper
-# return decorator
