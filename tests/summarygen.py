@@ -143,7 +143,7 @@ if __name__ == '__main__':
             if use_category in blacklist:
                 continue
             print(f'Building summary for {use_category}')
-            builder.build(f'SW{use_category}_summary',
+            builder.build(f'SW{use_category}_Summary',
                           use_categories=use_category)
     else:
         builder.build(name,

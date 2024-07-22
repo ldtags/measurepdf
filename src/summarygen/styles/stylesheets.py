@@ -112,7 +112,8 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'ReferenceTag',
-            parent=style_sheet['Paragraph'].bold,
+            font_name=f'{_DEF_FONT_NAME}B',
+            font_size=_DEF_FONT_SIZE - 3,
             text_color=colors.white,
             backColor=COLORS['ReferenceTagBG'],
             space_before=1,
@@ -124,9 +125,7 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             'VTHeaderRefTag',
             parent=style_sheet['SmallerBase'].bold,
             text_color=colors.white,
-            backColor=COLORS['Green'],
-            space_before=1,
-            space_after=1
+            backColor=COLORS['Green']
         )
     )
     style_sheet.add(

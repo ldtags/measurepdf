@@ -406,21 +406,21 @@ class Reference(Flowable):
         self.link = link
         self.tri_frac = 0.25
         self.rect_frac = 1 - self.tri_frac
-        self.base_style = style or PSTYLES['ReferenceTag']
+        self.base_style = PSTYLES['ReferenceTag']
         self.x_padding = self.base_style.x_padding
         self.y_padding = self.base_style.y_padding
-        self.__height = self.base_style.leading - self.y_padding
+        self.__height = self.base_style.leading + self.y_padding
         font_size = self.__height * self.rect_frac - self.y_padding
         self.style = copy.deepcopy(self.base_style)
         self.style.font_size = font_size
         text_width = stringWidth(self.text,
                                  self.base_style.font_name,
                                  self.base_style.font_size)
-        self.__width = text_width + self.x_padding
         small_width = stringWidth(self.text,
                                   self.style.font_name,
                                   self.style.font_size)
-        self.text_offset = (self.__width - small_width) / 2
+        self.text_offset = text_width - small_width + self.x_padding
+        self.__width = text_width + self.x_padding
 
     def wrap(self, *args) -> tuple[float, float]:
         return (self.__width, self.__height)
@@ -456,7 +456,7 @@ class Reference(Flowable):
             canvas.restoreState()
             canvas.saveState()
 
-            text_obj = canvas.beginText(x=self.text_offset,
+            text_obj = canvas.beginText(x=self.text_offset / 2,
                                         y=y + 1.5 + self.y_padding / 2)
             text_obj.setFont(self.style.font_name,
                              self.style.font_size,
