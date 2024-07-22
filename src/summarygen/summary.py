@@ -3,6 +3,7 @@ import re
 import math
 import shutil
 import logging
+import datetime
 from typing import overload
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
@@ -28,9 +29,9 @@ from src.etrm.exceptions import (
     ETRMRequestError
 )
 from src.summarygen.parser import CharacterizationParser, TMP_DIR
-from src.summarygen.styling import (
+from src.summarygen.styles import (
     TableStyle,
-    BetterParagraphStyle,
+    ParagraphStyle,
     PAGESIZE,
     X_MARGIN,
     Y_MARGIN,
@@ -119,45 +120,95 @@ class SummaryDocTemplate(BaseDocTemplate):
         self.inner_height = self.page_height - y_margin
         self.pt_index = -1
 
-    def afterPage(self) -> None:
+    def handle_nextPageTemplate(self,
+                                pt: str | int | list[str] | tuple[str, ...]
+                               ) -> None:
+        return super().handle_nextPageTemplate(pt)
+
+    def get_previous_page_template(self) -> PageTemplate | None:
+        if self.pageTemplates == []:
+            return None
+
+        if self.pt_index == -1:
+            return None
+
+        return self.pageTemplates[self.pt_index]
+
+    def get_current_pt_index(self) -> int:
+        if self.pageTemplates == []:
+            return -1
+
         try:
-            next_pt_index = self._nextPageTemplateIndex
-            if next_pt_index != self.pt_index:
-                if self.pt_index == -1:
-                    prev_template = None
-                else:
-                    prev_template = self.pageTemplates[self.pt_index]
-                    assert isinstance(prev_template, SummaryPageTemplate)
-                cur_template = self.pageTemplates[next_pt_index]
-                assert isinstance(cur_template, SummaryPageTemplate)
-                if cur_template.id == 'TOC':
-                    return
-                if self.page != 2:
-                    page = self.page + 1
-                else:
-                    page = self.page
-                prev_category = ''
-                if prev_template is not None:
-                    prev_id = prev_template.id
-                    if prev_id is not None:
-                        re_match = re.search(patterns.VERSION_ID, prev_id)
-                        if re_match is not None:
-                            prev_category = str(re_match.group(4))
-                cur_id = cur_template.id
-                if cur_id is not None:
-                    re_match = re.search(patterns.VERSION_ID, cur_id)
-                    if re_match is not None:
-                        cur_category = str(re_match.group(4))
-                        if prev_category != cur_category:
-                            uc_name = lookups.USE_CATEGORIES[cur_category]
-                            text = f'{cur_category} - {uc_name}'
-                            self.notify('TOCEntry', (0, text, page))
-                key = self.canv.bookmarkPage(cur_template.id)
-                text = f'{cur_template.id} - {cur_template.measure_name}'
-                self.notify('TOCEntry', (1, text, page))
-                self.pt_index = next_pt_index
+            pt_index = self._nextPageTemplateIndex
         except AttributeError:
-            pass
+            return -1
+
+        return pt_index
+
+    def get_current_page_template(self) -> PageTemplate | None:
+        pt_index = self.get_current_pt_index()
+        if pt_index == -1:
+            return None
+        return self.pageTemplates[pt_index]
+
+    def add_toc_entry(self,
+                      level: int,
+                      page: int,
+                      use_category: str | None=None,
+                      measure_id: str | None=None
+                     ) -> None:
+        if use_category is not None and measure_id is not None:
+            raise RuntimeError('use_category and measure_id are mutually'
+                               ' exclusive')
+
+        if use_category is not None:
+            try:
+                verbose_name = lookups.USE_CATEGORIES[use_category]
+            except KeyError:
+                raise SummaryGenError(f'Invalid use category: {use_category}')
+            text = f'{use_category} - {verbose_name}'
+        elif measure_id is not None:
+            text = measure_id
+        else:
+            raise SummaryGenError('One of either use_category or measure_id'
+                                  ' are required to create a TOC entry')
+
+        self.notify('TOCEntry', (level, text, page))
+
+    def after_page_toc_handler(self) -> None:
+        cur_template = self.get_current_page_template()
+        if cur_template is None or cur_template.id is None:
+            return
+
+        cur_match = re.fullmatch(patterns.VERSION_ID, cur_template.id)
+        if cur_match is None:
+            return
+
+        cur_uc = str(cur_match.group(4))
+        prev_template = self.get_previous_page_template()
+        if prev_template is None or prev_template.id is None:
+            self.add_toc_entry(0, self.page, use_category=cur_uc)
+            self.add_toc_entry(1, self.page, measure_id=cur_template.id)
+            self.pt_index = self.get_current_pt_index()
+            return
+
+        prev_match = re.fullmatch(patterns.VERSION_ID, prev_template.id)
+        if prev_match is None:
+            self.add_toc_entry(0, self.page, use_category=cur_uc)
+            self.add_toc_entry(1, self.page, measure_id=cur_template.id)
+            return
+
+        if cur_template.id != prev_template.id:
+            self.add_toc_entry(0, self.page + 1, measure_id=cur_template.id)
+
+        prev_uc = str(prev_match.group(4))
+        if cur_uc != prev_uc:
+            self.add_toc_entry(1, self.page + 1, use_category=cur_uc)
+
+        self.pt_index = self.get_current_pt_index()
+
+    def afterPage(self) -> None:
+        self.after_page_toc_handler()
 
 
 class SummaryPageTemplate(PageTemplate):
@@ -228,7 +279,7 @@ class SummaryPageTemplate(PageTemplate):
 
 def calc_row_heights(data: list[list[str | Paragraph]],
                      table_style: TableStyle,
-                     para_styles: tuple[BetterParagraphStyle, ...],
+                     para_styles: tuple[ParagraphStyle, ...],
                      base_height: float,
                      base_widths: tuple[float, ...]
                     ) -> list[float]:
@@ -238,10 +289,10 @@ def calc_row_heights(data: list[list[str | Paragraph]],
     hpadding = table_style.left_padding + table_style.right_padding
     height = base_height + vpadding
     row_heights: list[float] = []
-    row_styles: tuple[BetterParagraphStyle, ...] = []
+    row_styles: tuple[ParagraphStyle, ...] = []
     for row in data:
         row_height = height
-        if isinstance(para_styles, BetterParagraphStyle):
+        if isinstance(para_styles, ParagraphStyle):
             row_styles = [para_styles] * len(row)
         elif len(para_styles) == 1:
             row_styles = para_styles * len(row)
@@ -394,6 +445,8 @@ class MeasureSummary:
                         col_data
                     )
                 )
+                if len(vals) == 0:
+                    continue
                 avg = math.fsum(vals) / len(vals)
                 impacts.append(avg)
             except KeyError:
@@ -631,9 +684,6 @@ class MeasureSummary:
             self.measures[measure.use_category].sort(key=Measure.sorting_key)
         except KeyError:
             self.measures[measure.use_category] = [measure]
-        template = SummaryPageTemplate(id=measure.full_version_id,
-                                       measure_name=measure.name)
-        self.summary.addPageTemplates(template)
 
     def add_use_category(self, use_category: str) -> None:
         logger.info(f'Adding use category {use_category}')
@@ -654,6 +704,30 @@ class MeasureSummary:
         for version_id in versions:
             self.add_measure(version_id)
 
+    def filter_measures(self,
+                        min_end_date: datetime.date | None=None
+                       ) -> None:
+        """Filters the currently stored measures to meet the parameters.
+        
+        Parameters:
+            `min_end_date` - A date representing the earliest the end date
+            of a measure can be. Any measures without an end date will still
+            be permitted.
+        """
+
+        measures = [measure
+                        for measures in self.measures.values()
+                        for measure in measures]
+        self.measures = {}
+        for measure in measures:
+            end_date = measure.end_date
+            if not (min_end_date is None
+                    or end_date is None
+                    or end_date >= min_end_date):
+                continue
+
+            self.add_measure(measure)
+
     def reset(self):
         self.story.clear()
 
@@ -670,8 +744,12 @@ class MeasureSummary:
         logger.info('Building summary for measure'
                         f' {summary_measure.full_version_id}')
 
+        template = SummaryPageTemplate(id=summary_measure.full_version_id,
+                                       measure_name=summary_measure.name)
+        self.summary.addPageTemplates(template)
         self.story.add(NextPageTemplate(summary_measure.full_version_id))
-        if not self.is_first(measure):
+
+        if not self.is_first(summary_measure):
             self.story.add(PageBreak())
         self.add_title_page()
         self.add_tech_summary()
@@ -681,9 +759,9 @@ class MeasureSummary:
 
         self.__cur_measure = None
 
-    def build(self):
-        # if len(self.measures) > 1:
-        #     self.add_table_of_contents()
+    def build(self, toc: bool=False):
+        if toc:
+            self.add_table_of_contents()
 
         for use_category in sorted(self.measures.keys()):
             self.add_use_category_page(use_category)

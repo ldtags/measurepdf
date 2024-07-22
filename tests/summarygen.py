@@ -1,12 +1,12 @@
 import os
-import re
 import sys
 import time
+import datetime
 import argparse as ap
 from typing import Literal
 from configparser import ConfigParser
 
-from context import src, etrm, summarygen, resources
+from context import src, etrm, summarygen, resources, lookups
 
 
 MEASURES = [
@@ -51,42 +51,39 @@ def get_api_key(role: Literal['user', 'admin']='user') -> str:
 
 
 class TestBuilder:
-    def __init__(self,
-                 version_ids: list[str]=[],
-                 use_categories: list[str]=[]):
+    def __init__(self):
         api_key = get_api_key(role='user')
         self.connection = etrm.ETRMConnection(api_key)
-        self.version_ids = version_ids
-        self.use_categories = use_categories
 
-    def is_empty(self) -> bool:
-        return (
-            self.version_ids == []
-                and self.use_categories == []
-        )
-
-    def build_summary(self):
-        if self.is_empty():
-            return
-
+    def build(self,
+              file_name: str,
+              measure_versions: list[str] | str | None=None,
+              use_categories: list[str] | str | None=None):
         dir_path = os.path.join(src._ROOT, '..', 'summaries')
-        measure_pdf = summarygen.MeasureSummary(dir_path, self.connection)
+        measure_pdf = summarygen.MeasureSummary(dir_path=dir_path,
+                                                connection=self.connection,
+                                                file_name=file_name)
         print('measure pdf object created', file=sys.stderr)
 
-        for measure in self.version_ids:
-            measure_pdf.add_measure(measure)
+        measure_versions = measure_versions or []
+        if isinstance(measure_versions, str):
+            measure_versions = [measure_versions]
 
-        for use_category in self.use_categories:
+        for version_id in measure_versions:
+            measure_pdf.add_measure(version_id)
+
+        use_categories = use_categories or []
+        if isinstance(use_categories, str):
+            use_categories = [use_categories]
+
+        for use_category in use_categories:
             measure_pdf.add_use_category(use_category)
 
+        measure_pdf.filter_measures(
+            min_end_date=datetime.date(2024, 1, 1)
+        )
         measure_pdf.build()
         print(f'measure summary {measure_pdf.file_name} was successfully created')
-
-    def run(self):
-        start = time.time()
-        self.build_summary()
-        elapsed = time.time() - start
-        print(f'took {elapsed}s', file=sys.stderr)
 
 
 def parse_args() -> ap.Namespace:
@@ -111,6 +108,19 @@ def parse_args() -> ap.Namespace:
         help='specify use categories to build a summary for'
     )
 
+    parser.add_argument(
+        '-n', '--name',
+        metavar='name',
+        default='measure_summary',
+        help='specify the name of the generated file'
+    )
+
+    parser.add_argument(
+        '-a', '--all',
+        action='store_true',
+        help='include to generate several summaries of each use category'
+    )
+
     return parser.parse_args()
 
 
@@ -118,5 +128,27 @@ if __name__ == '__main__':
     args = parse_args()
     measures = getattr(args, 'measures', [])
     use_categories = getattr(args, 'use_category', [])
-    builder = TestBuilder(measures, use_categories)
-    builder.run()
+    name = getattr(args, 'name', 'measure_summary')
+    _all = getattr(args, 'all', False)
+    if _all and (measures or use_categories):
+        print('Usage: ./cli [-a | -m -u -n]')
+        exit(1)
+
+    builder = TestBuilder()
+    start = time.time()
+    if _all:
+        blacklist = ['WB']
+        use_categories = list(lookups.USE_CATEGORIES.keys())
+        for use_category in use_categories:
+            if use_category in blacklist:
+                continue
+            print(f'Building summary for {use_category}')
+            builder.build(f'SW{use_category}_summary',
+                          use_categories=use_category)
+    else:
+        builder.build(name,
+                      measure_versions=measures,
+                      use_categories=use_categories)
+
+    elapsed = time.time() - start
+    print(f'took {elapsed}s', file=sys.stderr)

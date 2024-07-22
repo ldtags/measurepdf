@@ -1,6 +1,7 @@
 from __future__ import annotations
 import math
 import pandas as pd
+import datetime
 import unicodedata
 from enum import Enum
 from typing import Any, overload
@@ -76,9 +77,13 @@ class PermutationsTable:
                 f'Permutation column {header} not found'
             ) from err
 
-    def join(self, table: PermutationsTable):
+    def join(self, table: PermutationsTable) -> None:
+        if table.count == 0:
+            return
+
         if self.headers != table.headers:
             raise ETRMResponseError()
+
         self.results.extend(table.results)
 
     def average(self, column_name: str) -> float | None:
@@ -123,6 +128,9 @@ class PermutationsTable:
             es += ar_rows[Baseline.ES_2.value].mean()
             gs += ar_rows[Baseline.GS_2.value].mean()
             baseline_count += 1
+
+        if baseline_count == 0:
+            return (0.0, 0.0, 0.0)
 
         if math.isnan(pedr):
             pedr = 0.0
@@ -176,21 +184,29 @@ class PermutationsTable:
             None                            (other)
         """
 
-        mtc_col = pd.concat(
-            [
-                self.data.loc[
-                    self.data['MeasAppType'].isin(['NC', 'NR'])
-                ][Baseline.MTC_1.value],
-                self.data.loc[
-                    self.data['MeasAppType'] == 'AR'
-                ][Baseline.MTC_2.value]
-            ],
-            ignore_index=True,
-            sort=False
-        )
-        mtc = mtc_col.mean()
+        mtc_1_col = self.data.loc[
+            self.data['MeasAppType'].isin(['NC', 'NR'])
+        ][Baseline.MTC_1.value]
+
+        mtc_2_col = self.data.loc[
+            self.data['MeasAppType'] == 'AR'
+        ][Baseline.MTC_2.value]
+
+        if mtc_1_col.empty and mtc_2_col.empty:
+            return 0.0
+
+        if mtc_1_col.empty:
+            mtc = mtc_2_col.mean()
+        elif mtc_2_col.empty:
+            mtc = mtc_1_col.mean()
+        else:
+            mtc_col = pd.concat([mtc_1_col, mtc_2_col],
+                                ignore_index=True,
+                                sort=False)
+            mtc = mtc_col.mean()
+
         if math.isnan(mtc):
-            mtc = 0.0
+            return 0.0
         return mtc
 
     def get_total_cost(self) -> float:
@@ -496,6 +512,17 @@ class Measure:
 
         self.characterizations = self.__get_characterizations()
         self.value_table_cache: dict[str, ValueTable] = {}
+
+    @property
+    def start_date(self) -> datetime.date:
+        return utils.to_date(self.effective_start_date)
+
+    @property
+    def end_date(self) -> datetime.date | None:
+        if self.sunset_date is None:
+            return None
+
+        return utils.to_date(self.sunset_date)
 
     def __get_characterizations(self) -> dict[str, str]:
         char_list: dict[str, str] = {}

@@ -15,8 +15,7 @@ from reportlab.platypus import (
     Flowable,
     Paragraph,
     KeepTogether,
-    Image,
-    XPreformatted
+    Image
 )
 
 from src import _ROOT, utils
@@ -28,10 +27,12 @@ from src.summarygen.models import (
     EmbeddedValueTableTag,
     EmbeddedImage,
 )
-from src.summarygen.styling import (
+from src.summarygen.styles import (
     PSTYLES,
     INNER_WIDTH,
-    PAGESIZE
+    INNER_HEIGHT,
+    PAGESIZE,
+    DEF_PSTYLE
 )
 from src.summarygen.rlobjects import (
     ElemType,
@@ -97,7 +98,7 @@ def convert_element(element: PageElement) -> list[ParagraphElement]:
                                             type=ElemType.REF)
                 return [ref_elem]
             return convert_elements(element.contents)
-        case 'strong' | 'sup' | 'sub' | 'em':
+        case 'strong' | 'sup' | 'sub' | 'em' | 'pre':
             elements = convert_elements(element.contents)
             for item in elements:
                 style = TextStyle(element.name)
@@ -106,6 +107,10 @@ def convert_element(element: PageElement) -> list[ParagraphElement]:
             return elements
         case 'br':
             return [ParagraphElement('', type=ElemType.NEWLINE)]
+        case 'a':
+            href = element.get('href')
+            text = element.get_text()
+            return [ParagraphElement(text, href=href)]
         case _:
             raise RuntimeError(f'unsupported tag: {element.name}')
 
@@ -222,7 +227,10 @@ def convert_spanned_table(content: list[ResultSet[Tag]],
     return table_body
 
 
-def get_image(_url: str, max_width=INNER_WIDTH) -> Image:
+def get_image(_url: str,
+              max_width=INNER_WIDTH,
+              max_height=INNER_HEIGHT
+             ) -> Image:
     img_name = _url[_url.rindex('/') + 1:]
     response = requests.get(_url, stream=True)
     if response.status_code != 200:
@@ -233,7 +241,7 @@ def get_image(_url: str, max_width=INNER_WIDTH) -> Image:
     with open(tmp_path, 'wb+') as out_file:
         shutil.copyfileobj(response.raw, out_file)
     del response
-    return utils.get_rlimage(tmp_path, max_width)
+    return utils.get_rlimage(tmp_path, max_width, max_height)
 
 
 class CharacterizationParser:
@@ -257,7 +265,7 @@ class CharacterizationParser:
         if json_str != None:
             ref_tag = ReferenceTag(json_str)
             if ref_tag.obj_deleted:
-                return None
+                return []
             ref_link = f'{self.measure.link}/#references_list'
             return [Reference(ref_tag.title, ref_link)]
 
@@ -265,7 +273,7 @@ class CharacterizationParser:
         if json_str != None:
             vt_tag = EmbeddedValueTableTag(json_str)
             if vt_tag.obj_deleted:
-                return None
+                return []
 
             header = ValueTableHeader(table_info=vt_tag.obj_info,
                                       measure=self.measure)
@@ -286,11 +294,13 @@ class CharacterizationParser:
         if len(header.contents) < 1:
             return [Paragraph('', PSTYLES[header.name])]
 
-        elements = convert_element(header.contents[0])
-        text = ''
+        elements = convert_elements(header.contents)
         for element in elements:
-            text += element.text_xml
-        return [XPreformatted(text, PSTYLES[header.name])]
+            if element.style == DEF_PSTYLE:
+                element.style = PSTYLES[header.name]
+        return [SummaryParagraph(elements,
+                                 self.measure,
+                                 space_after=5)]
 
     def handle_a(self, tag: Tag) -> list[Flowable]:
         _url = tag.get('href', None)
@@ -328,6 +338,10 @@ class CharacterizationParser:
             elements.append(items)
         return [BulletList(elements, self.measure)]
 
+    def handle_pre(self, tag: Tag) -> list[Flowable]:
+        elements = convert_element(tag)
+        return [SummaryParagraph(elements, self.measure)]
+
     def parse_contents(self, tag: Tag) -> list[Flowable]:
         flowables: list[Flowable] = []
         for element in tag.contents:
@@ -357,6 +371,8 @@ class CharacterizationParser:
                 return self.handle_table(element)
             case 'ul':
                 return self.handle_ul(element)
+            case 'pre':
+                return self.handle_pre(element)
             case '<br>':
                 return [NEWLINE]
             case tag:

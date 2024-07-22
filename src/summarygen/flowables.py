@@ -18,6 +18,7 @@ Extending Custom Tables:
 
 from __future__ import annotations
 import math
+import copy
 from typing import Literal
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
@@ -28,15 +29,16 @@ from reportlab.platypus import (
     Paragraph,
     Table,
     XPreformatted,
-    Spacer as _Spacer
+    Spacer as _Spacer,
+    KeepTogether
 )
 
 from src import utils, lookups, _SYSTEM, _NOW
 from src.etrm.models import Measure
 from src.summarygen.types import _TABLE_SPAN, _TABLE_ORIENT
 from src.summarygen.models import VTObjectInfo
-from src.summarygen.styling import (
-    BetterParagraphStyle,
+from src.summarygen.styles import (
+    ParagraphStyle,
     TableStyle,
     PSTYLES,
     DEF_PSTYLE,
@@ -44,6 +46,7 @@ from src.summarygen.styling import (
     INNER_WIDTH,
     INNER_HEIGHT,
     COLORS,
+    _NL_HEIGHT,
     get_table_style
 )
 from src.summarygen.rlobjects import (
@@ -67,7 +70,6 @@ class Spacer(_Spacer):
         return (availWidth, height)
 
 
-_NL_HEIGHT = 0.3 * inch
 NEWLINE = Spacer(1, _NL_HEIGHT, isGlue=True)
 
 
@@ -282,7 +284,7 @@ class TitleSectionContainer(Table):
                        **kwargs)
 
 
-class TitlePage(Table):
+class TitlePage(KeepTogether):
     """A measure title page.
 
     Each measure within the summary should be preceded by a
@@ -301,7 +303,10 @@ class TitlePage(Table):
         self.row_heights: list[Flowable] = []
 
         img_path = utils.asset_path('etrm.png', 'images')
-        img = utils.get_rlimage(img_path, INNER_WIDTH / 9, hAlign='LEFT')
+        img = utils.get_rlimage(img_path,
+                                INNER_WIDTH / 9,
+                                INNER_HEIGHT / 3,
+                                hAlign='LEFT')
         self.row_heights.append(img.drawHeight)
         self.data.append(img)
 
@@ -320,11 +325,11 @@ class TitlePage(Table):
         rem_height = INNER_HEIGHT - math.fsum(self.row_heights)
         self.insert_spacer(1, rem_height / 2)
         self.insert_spacer(-1, rem_height / 2)
-        Table.__init__(self,
-                       [[item] for item in self.data],
-                       colWidths=INNER_WIDTH,
-                       rowHeights=self.row_heights,
-                       style=TSTYLES['TitlePage'])
+        table = Table([[item] for item in self.data],
+                      colWidths=INNER_WIDTH,
+                      rowHeights=self.row_heights,
+                      style=TSTYLES['TitlePage'])
+        KeepTogether.__init__(self, [table])
 
     @property
     def sections(self) -> TitleSectionContainer:
@@ -333,21 +338,6 @@ class TitlePage(Table):
         except AttributeError:
             self.__sections = self.__build_sections_container(self.measure)
             return self.__sections
-
-    def add_text(self, text: str, style: BetterParagraphStyle) -> None:
-        used_height = math.fsum(self.row_heights) - self.sections.total_height
-        para = Paragraph(text, style)
-        _, h = para.wrap(INNER_WIDTH, INNER_HEIGHT - used_height)
-        self.data.append(para)
-        self.row_heights.append(h)
-
-    def add_spacer(self, height: float) -> None:
-        self.data.append(Spacer(1, height))
-        self.row_heights.append(height)
-
-    def insert_spacer(self, index: int, height: float) -> None:
-        self.data.insert(index, Spacer(1, height))
-        self.row_heights.insert(index, height)
 
     def __build_sections_container(self,
                                    measure: Measure
@@ -389,6 +379,21 @@ class TitlePage(Table):
         ]
         return TitleSectionContainer(sections)
 
+    def add_text(self, text: str, style: ParagraphStyle) -> None:
+        used_height = math.fsum(self.row_heights) + self.sections.total_height
+        para = Paragraph(text, style)
+        _, h = para.wrap(INNER_WIDTH, INNER_HEIGHT - used_height)
+        self.data.append(para)
+        self.row_heights.append(h)
+
+    def add_spacer(self, height: float) -> None:
+        self.data.append(Spacer(1, height))
+        self.row_heights.append(height)
+
+    def insert_spacer(self, index: int, height: float) -> None:
+        self.data.insert(index, Spacer(1, height))
+        self.row_heights.insert(index, height)
+
 
 class Reference(Flowable):
     """A custom flowable that draws an eTRM reference tag."""
@@ -396,7 +401,7 @@ class Reference(Flowable):
     def __init__(self,
                  text: str,
                  link: str | None=None,
-                 style: BetterParagraphStyle | None=None):
+                 style: ParagraphStyle | None=None):
         self.text = text
         self.link = link
         self.tri_frac = 0.25
@@ -406,12 +411,16 @@ class Reference(Flowable):
         self.y_padding = self.base_style.y_padding
         self.__height = self.base_style.leading - self.y_padding
         font_size = self.__height * self.rect_frac - self.y_padding
-        self.style = self.base_style
-        self.style.set_font_size(font_size)
+        self.style = copy.deepcopy(self.base_style)
+        self.style.font_size = font_size
         text_width = stringWidth(self.text,
                                  self.base_style.font_name,
                                  self.base_style.font_size)
         self.__width = text_width + self.x_padding
+        small_width = stringWidth(self.text,
+                                  self.style.font_name,
+                                  self.style.font_size)
+        self.text_offset = (self.__width - small_width) / 2
 
     def wrap(self, *args) -> tuple[float, float]:
         return (self.__width, self.__height)
@@ -447,7 +456,7 @@ class Reference(Flowable):
             canvas.restoreState()
             canvas.saveState()
 
-            text_obj = canvas.beginText(x=self.x_padding / 2,
+            text_obj = canvas.beginText(x=self.text_offset,
                                         y=y + 1.5 + self.y_padding / 2)
             text_obj.setFont(self.style.font_name,
                              self.style.font_size,
@@ -571,7 +580,7 @@ def split_word(element: ParagraphElement,
 
 def wrap_elements(elements: list[ParagraphElement],
                   max_width: float=INNER_WIDTH,
-                  style: BetterParagraphStyle | None=None,
+                  style: ParagraphStyle | None=None,
                   strict: bool=False
                  ) -> list[ElementLine]:
     element_lines: list[ElementLine] = []
@@ -618,6 +627,7 @@ class SummaryParagraph(Table):
                  elements: list[ParagraphElement],
                  measure: Measure | None=None,
                  max_width: float=INNER_WIDTH,
+                 space_after: float | None=None,
                  **kwargs):
         if kwargs.get('normalizedData', None) is not None:
             Table.__init__(self, elements, **kwargs)
@@ -629,6 +639,12 @@ class SummaryParagraph(Table):
             lines = [[]]
         col_widths = [max_width]
         row_heights = [DEF_PSTYLE.leading] * len(lines)
+
+        if space_after is not None:
+            assert space_after > 0
+            lines.append([''])
+            row_heights.append(space_after)
+
         Table.__init__(self,
                        lines,
                        colWidths=col_widths,
@@ -641,7 +657,7 @@ class TableCell(Table):
     def __init__(self,
                  elements: list[ParagraphLine],
                  width: float=INNER_WIDTH,
-                 style: BetterParagraphStyle | None=None,
+                 style: ParagraphStyle | None=None,
                  **kwargs):
         if kwargs.get('normalizedData', None) is not None:
             Table.__init__(self, elements, **kwargs)
@@ -673,7 +689,7 @@ class TableCell(Table):
         return [elem.height for elem in self.elements]
 
 
-_TABLE_STYLES = list[BetterParagraphStyle] | BetterParagraphStyle
+_TABLE_STYLES = list[ParagraphStyle] | ParagraphStyle
 
 
 class BasicTable(Table):
@@ -779,13 +795,13 @@ class BasicTable(Table):
         self.v_padding = self.style.top_padding + self.style.bottom_padding
 
         style_count = row_len if header_orient == 'top' else len(data)
-        if isinstance(header_styles, BetterParagraphStyle):
+        if isinstance(header_styles, ParagraphStyle):
             self.header_styles = [header_styles] * style_count
         else:
             assert len(header_styles) == headers
             self.header_styles = header_styles
 
-        if isinstance(body_styles, BetterParagraphStyle):
+        if isinstance(body_styles, ParagraphStyle):
             self.body_styles = [body_styles] * style_count
         else:
             assert len(body_styles) == style_count
@@ -862,7 +878,7 @@ class BasicTable(Table):
         self.__row_heights = row_heights
         return self.__row_heights
 
-    def get_style(self, x: int, y: int) -> BetterParagraphStyle:
+    def get_style(self, x: int, y: int) -> ParagraphStyle:
         if self.header_orient == 'left':
             is_header = x < self.header_count
             head_axis = x
@@ -880,6 +896,12 @@ class BasicTable(Table):
                           data: list[list[ElementLine]],
                           size: int=1
                          ) -> list[list[float]]:
+        """Calculates the minimum width of each column in `data` given
+        that each table cell will use, at most, `size` amount of words.
+
+        If a table cell has less than `size` words, it will not be wrapped.
+        """
+
         min_matrix: list[list[float]] = []
         for y, row in enumerate(data):
             skip = 0
@@ -958,6 +980,10 @@ class BasicTable(Table):
                            data: list[list[ElementLine]],
                            col_widths: list[float] | None=None
                           ) -> list[float]:
+        """Calculates the heights of each row of the table by wrapping
+        all data to fit within the previously calculated `col_widths`.
+        """
+
         _col_widths = col_widths or self.col_widths
         h_padding = self.style.left_padding + self.style.right_padding
         height_matrix: list[list[float]] = []
@@ -1006,7 +1032,9 @@ class BasicTable(Table):
             for x, cell in enumerate(row):
                 if isinstance(cell, str):
                     style = self.get_style(x, y)
-                    elem = ElementLine(string=cell, style=style)
+                    elem = ElementLine(string=cell,
+                                       style=style,
+                                       max_width=None)
                 else:
                     elem = cell
                 sanitized_row.append(elem)

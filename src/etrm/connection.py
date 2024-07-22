@@ -1,10 +1,11 @@
 import re
+import time
 import logging
 import requests
-import functools
+import http.client as httpc
 from typing import TypeVar, Callable, overload
 
-from src import patterns
+from src import patterns, utils
 from src.etrm.models import (
     MeasuresResponse,
     MeasureVersionsResponse,
@@ -40,7 +41,6 @@ def etrm_cache_request(func: _DEC_TYPE) -> _DEC_TYPE:
     every eTRM cache request method.    
     """
 
-    @functools.wraps
     def wrapper(*args, **kwargs) -> _T | None:
         value = func(*args, **kwargs)
         if value is not None:
@@ -212,18 +212,31 @@ class ETRMConnection:
 
         _url = f'{self.api}{_endpoint}'
         logger.info(f'Making request to {_url}')
-        try:
-            response = requests.get(_url,
-                                    params=params,
-                                    headers=req_headers,
-                                    stream=stream,
-                                    **kwargs)
-        except requests.exceptions.ConnectionError as err:
-            raise ConnectionError() from err
+        for i in range(4):
+            try:
+                response = requests.get(_url,
+                                        params=params,
+                                        headers=req_headers,
+                                        stream=stream,
+                                        **kwargs)
+                logger.info('Request complete')
+                break
+            except httpc.IncompleteRead:
+                logger.info('Request failed')
+                if i == 3:
+                    raise
+                time.sleep(i)
+                logger.info('Trying again...')
+            except requests.exceptions.ConnectionError as err:
+                raise ConnectionError() from err
 
         match response.status_code:
             case 200:
                 return response
+            case 429:
+                print(response.json()['detail'])
+                raise ETRMResponseError(message='Too Many Requests',
+                                        status=429)
             case status:
                 msg = response.content.decode()
                 raise ETRMResponseError(message=msg, status=status)
@@ -393,8 +406,15 @@ class ETRMConnection:
         url = f'/measures/{statewide_id}/{version}/permutations'
         permutations_table: PermutationsTable | None = None
         while url is not None:
-            response = self.get(url)
+            response = self.get(url, stream=False)
             table = PermutationsTable(response.json())
+            if table.links.next is not None:
+                prev_url = utils.parse_url(url)
+                prev_offset = prev_url.query.get('offset', '')
+                parsed_url = utils.parse_url(table.links.next)
+                url_offset = parsed_url.query.get('offset', '')
+                if prev_offset == url_offset:
+                    break
             if permutations_table is None:
                 permutations_table = table
             else:

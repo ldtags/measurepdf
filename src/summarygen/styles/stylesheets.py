@@ -1,0 +1,456 @@
+import copy
+from reportlab.lib import colors
+from reportlab.lib.enums import TA_CENTER
+from reportlab.lib.styles import getSampleStyleSheet
+
+from src.summarygen.types import (
+    _TABLE_SPAN,
+    _TABLE_ORIENT
+)
+from src.summarygen.styles.config import (
+    _DEF_FONT_NAME,
+    _DEF_FONT_SIZE
+)
+from src.summarygen.styles.colors import COLORS
+from src.summarygen.styles.objects import (
+    StyleSheet,
+    ParagraphStyle,
+    TableStyle
+)
+
+
+def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
+    style_sheet = StyleSheet[ParagraphStyle]()
+    style_sheet.add(
+        ParagraphStyle(
+            'Base',
+            font_name=_DEF_FONT_NAME,
+            font_size=_DEF_FONT_SIZE
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'SmallBase',
+            font_name=_DEF_FONT_NAME,
+            font_size=_DEF_FONT_SIZE - 1
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'SmallerBase',
+            font_name=_DEF_FONT_NAME,
+            font_size=_DEF_FONT_SIZE - 2
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'Paragraph',
+            leading=14,
+            parent=style_sheet['Base']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'SmallParagraph',
+            font_size=_DEF_FONT_SIZE - 1,
+            parent=style_sheet['Paragraph']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'SummaryTableItem',
+            font_name='SourceSansPro',
+            font_size=9
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'SummaryTableHeader',
+            font_name='SourceSansProB',
+            font_size=10
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TitlePageSubtitle',
+            font_name='SourceSansProB',
+            font_size=17,
+            text_color=COLORS['LightBrown']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TitlePageTitle',
+            font_name='MerriweatherL',
+            font_size=34,
+            left_indent=2
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TitleSectionTitle',
+            font_name='SourceSansProB',
+            font_size=10,
+            text_color=COLORS['LightBrown']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TitleSectionContent',
+            font_name='SourceSansPro',
+            font_size=12
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'Test',
+            parent=style_sheet['Paragraph'],
+            borderWidth=1,
+            borderColor=colors.black
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'ReferenceTag',
+            parent=style_sheet['Paragraph'].bold,
+            text_color=colors.white,
+            backColor=COLORS['ReferenceTagBG'],
+            space_before=1,
+            space_after=1
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'VTHeaderRefTag',
+            parent=style_sheet['SmallerBase'].bold,
+            text_color=colors.white,
+            backColor=COLORS['Green'],
+            space_before=1,
+            space_after=1
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'ValueTableHeaderThin',
+            text_color=colors.white,
+            parent=style_sheet['SmallerBase']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'ValueTableHeader',
+            font_name=f'{_DEF_FONT_NAME}B',
+            parent=style_sheet['ValueTableHeaderThin']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'ValueTableDeterminant',
+            parent=style_sheet['SmallBase']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'ValueTableItem',
+            font_name=f'{_DEF_FONT_NAME}B',
+            parent=style_sheet['SmallBase']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TableHeader',
+            font_name=f'{_DEF_FONT_NAME}B',
+            font_size=_DEF_FONT_SIZE + 3.5
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'h2',
+            font_name='Merriweather',
+            font_size=19
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'h3',
+            font_name='SourceSansProB',
+            font_size=18,
+            space_after=5
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'h6',
+            font_name='Merriweather',
+            font_size=11,
+            space_after=8
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'Link',
+            font_name='SourceSansPro',
+            leading=18.5,
+            font_size=13.5,
+            linkUnderline=1,
+            underlineWidth=0.25,
+            text_color=COLORS['Green']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TitleLink',
+            font_name='SourceSansPro',
+            font_size=16,
+            text_color=COLORS['Green']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'h6Link',
+            linkUnderline=0,
+            text_color=COLORS['Green'],
+            parent=style_sheet['h6']
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'BulletPoint',
+            font_name='SourceSansPro',
+            font_size=18
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TOCHeader',
+            font_name='MerriweatherB',
+            font_size=18,
+            alignment=TA_CENTER
+        )
+    )
+
+    return style_sheet
+
+
+def __gen_tstyles() -> StyleSheet[TableStyle]:
+    style_sheet = StyleSheet[TableStyle]()
+    style_sheet.add(
+        TableStyle(
+            'SummaryTable', 
+            [
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
+                ('TOPPADDING', (0, 0), (-1, -1), 1),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
+                ('VALIGN', (0, 0), (1, -1), 'MIDDLE')
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'SectionsTable',
+            [
+                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
+                ('SPAN', (0, 0), (0, 2)),
+                ('SPAN', (0, 3), (0, 6)),
+                ('SPAN', (0, 7), (0, 9)),
+                ('SPAN', (0, 10), (0, 13)),
+                ('SPAN', (0, 14), (0, 17)),
+                ('TOPPADDING', (0, 0), (-1, -1), 5),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
+                ('VALIGN', (0, 0), (0, -1), 'TOP'),
+                ('VALIGN', (1, 0), (1, -1), 'MIDDLE')
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'ValueTable',
+            [
+                ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+                ('LEFTPADDING', (0, 0), (-1, -1), 9),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 9),
+                ('TOPPADDING', (0, 0), (-1, -1), 9),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'ElementLine',
+            [
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'TitleSectionLeft',
+            [
+                ('ALIGN', (0, 0), (-1, -1), 'LEFT')
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'TitleSectionRight',
+            [
+                ('ALIGN', (0, 0), (-1, -1), 'RIGHT')
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'TitleSectionContainer',
+            [
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (1, -1), 'RIGHT')
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'TitlePage',
+            [
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('VALIGN', (0, 0), (0, 0), 'TOP'),
+                ('VALIGN', (-1, -1), (-1, -1), 'BOTTOM')
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            'SummaryList',
+            [
+                ('LEFTPADDING', (0, 0), (-1, -1), 0),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
+                ('TOPPADDING', (1, 0), (1, -1), -10),
+                ('VALIGN', (1, 0), (1, -1), 'TOP')
+            ]
+        )
+    )
+
+    return style_sheet
+
+
+STYLES = getSampleStyleSheet()
+PSTYLES = __gen_pstyles()
+TSTYLES = __gen_tstyles()
+DEF_PSTYLE = PSTYLES['Paragraph']
+
+
+def get_table_style(data: list[list],
+                    headers: int=1,
+                    determinants: int=0,
+                    spans: list[_TABLE_SPAN]=[],
+                    orient: _TABLE_ORIENT='top'
+                   ) -> TableStyle:
+    table_style = copy.deepcopy(TSTYLES['ValueTable'])
+    table_styles = table_style.getCommands()
+
+    for i in range(0, headers):
+        if determinants > 0:
+            table_styles.append(('BACKGROUND',
+                                 (0, i),
+                                 (determinants - 1, i),
+                                 COLORS['ValueTableHeaderLight']))
+        if len(data) > 0 and len(data[0]) > determinants:
+            table_styles.append(('BACKGROUND',
+                                 (determinants, i),
+                                 (-1, i),
+                                 COLORS['ValueTableHeaderDark']))
+
+    top_styles: list[tuple] = []
+    left_styles: list[tuple] = []
+    if determinants > 0:
+        top_styles.append((
+            'BACKGROUND',
+            (0, 0),
+            (determinants - 1, headers - 1),
+            COLORS['ValueTableHeaderLight']
+        ))
+        left_styles.append((
+            'BACKGROUND',
+            (0, 0),
+            (headers - 1, determinants - 1),
+            COLORS['ValueTableHeaderLight']
+        ))
+    if len(data) > 0 and len(data[0]) > determinants:
+        top_styles.append((
+            'BACKGROUND',
+            (determinants, 0),
+            (-1, headers - 1),
+            COLORS['ValueTableHeaderDark']
+        ))
+        left_styles.append((
+            'BACKGROUND',
+            (0, determinants),
+            (headers - 1, -1),
+            COLORS['ValueTableHeaderDark']
+        ))
+
+    for i in range(headers, len(data)):
+        if determinants > 0:
+            if i % 2 == 1:
+                color = COLORS['ValueTableRowLight']
+            else:
+                color = COLORS['ValueTableRowAltLight']
+            top_styles.append((
+                'BACKGROUND',
+                (0, i),
+                (determinants - 1, i),
+                color
+            ))
+            left_styles.append((
+                'BACKGROUND',
+                (i, 0),
+                (i, determinants - 1),
+                color
+            ))
+
+        if len(data[i]) > determinants:
+            if i % 2 == 1:
+                color = COLORS['ValueTableRowDark']
+            else:
+                color = COLORS['ValueTableRowAltDark']
+            top_styles.append((
+                'BACKGROUND',
+                (determinants, i),
+                (-1, i),
+                color
+            ))
+            left_styles.append((
+                'BACKGROUND',
+                (i, determinants),
+                (i, -1),
+                color
+            ))
+
+    if orient == 'left':
+        table_styles.extend(left_styles)
+    elif orient == 'top':
+        table_styles.extend(top_styles)
+    elif orient == 'top-left':
+        table_styles.extend(top_styles)
+        table_styles.extend(left_styles)
+
+    for span in spans:
+        y, x = span[0]
+        row_span, col_span = span[1]
+        if col_span != 0:
+            col_span -= 1
+        if row_span != 0:
+            row_span -= 1
+        span_style = ('SPAN', (x, y), (x + col_span, y + row_span))
+        table_styles.append(span_style)
+
+    return TableStyle(table_style.name, cmds=table_styles)

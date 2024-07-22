@@ -10,12 +10,12 @@ from reportlab.platypus import (
     Paragraph
 )
 
-from src.summarygen.styling import (
+from src.summarygen.styles import (
     INNER_WIDTH,
     INNER_HEIGHT,
     PSTYLES,
     DEF_PSTYLE,
-    BetterParagraphStyle
+    ParagraphStyle
 )
 from src.summarygen.exceptions import (
     WidthExceededError,
@@ -36,6 +36,8 @@ class TextStyle(Enum):
     ITALIC = 'em'
     SUP = 'sup'
     SUB = 'sub'
+    LINK = 'link'
+    PRE = 'pre'
 
 
 _TYPE_STYLES = {
@@ -55,13 +57,17 @@ class ParagraphElement:
                  text: str,
                  type: ElemType=ElemType.TEXT,
                  styles: list[TextStyle] | None=None,
-                 style: BetterParagraphStyle | None=None):
+                 style: ParagraphStyle | None=None,
+                 href: str | None=None):
         self.text = text.replace('\n', '')
+        self.href = href
         self.type = type
         if styles is not None:
             self.styles = styles
         else:
             self.styles = [*_TYPE_STYLES.get(type, self.__DEFAULT_STYLES)]
+            if self.href is not None:
+                self.styles.append(TextStyle.LINK)
         self.__style = style
 
     @property
@@ -80,6 +86,11 @@ class ParagraphElement:
                     text = f'<b>{text}</b>'
                 case TextStyle.ITALIC:
                     text = f'<i>{text}</i>'
+                case TextStyle.LINK:
+                    if self.href is not None:
+                        text = f'<link href=\"{self.href}\">{text}</link>'
+                case TextStyle.PRE:
+                    text = f'<pre>{text}</pre>'
                 case TextStyle.NORMAL:
                     pass
                 case x:
@@ -88,7 +99,7 @@ class ParagraphElement:
         return text
 
     @property
-    def style(self) -> BetterParagraphStyle:
+    def style(self) -> ParagraphStyle:
         if self.__style is not None:
             return self.__style
 
@@ -98,22 +109,25 @@ class ParagraphElement:
         if self.type == ElemType.SPACE:
             return PSTYLES['SmallParagraph']
 
-        for style in self.styles:
-            match style:
+        style = DEF_PSTYLE
+        for text_style in self.styles:
+            match text_style:
                 case TextStyle.SUP:
-                    return DEF_PSTYLE.superscripted
+                    style = style.superscripted
                 case TextStyle.SUB:
-                    return DEF_PSTYLE.subscripted
+                    style = style.subscripted
                 case TextStyle.STRONG:
-                    return DEF_PSTYLE.bold
+                    style = style.bold
                 case TextStyle.ITALIC:
-                    return DEF_PSTYLE.italic
+                    style = style.italic
+                case TextStyle.LINK:
+                    style = style.link
                 case _:
                     pass
-        return DEF_PSTYLE
+        return style
 
     @style.setter
-    def style(self, _style: BetterParagraphStyle):
+    def style(self, _style: ParagraphStyle):
         self.__style = _style
 
     @property
@@ -210,13 +224,17 @@ class ParagraphElement:
                 raise ElementJoinError('Cannot join elements with different'
                                        ' styles')
 
+            if self.href != element.href:
+                raise ElementJoinError('Cannot join elements with different'
+                                       ' link destinations.')
+
             self.text += element.text
 
     def copy(self,
              text: str | None=None,
              type: ElemType | None=None,
              styles: list[TextStyle] | None=None,
-             style: BetterParagraphStyle | None=None
+             style: ParagraphStyle | None=None
             ) -> ParagraphElement:
         return ParagraphElement(text or self.text,
                                 type or self.type,
@@ -229,7 +247,7 @@ class ElementLine:
                  string: str | None=None,
                  elements: list[ParagraphElement] | None=None,
                  max_width: float | None=INNER_WIDTH,
-                 style: BetterParagraphStyle | None=None):
+                 style: ParagraphStyle | None=None):
         self.style = style
         self.max_width = max_width
         self._elements: list[ParagraphElement] = []
@@ -248,10 +266,14 @@ class ElementLine:
         if len(self._elements) == 0:
             return self._elements
 
-        _elements = self._elements.copy()
-        while _elements[-1].type == ElemType.SPACE:
-            _elements.pop()
-        return _elements
+        elements: list[ParagraphElement] = []
+        for i, element in enumerate(self._elements):
+            elem_types = [elem.type for elem in self._elements[i:]]
+            if all([elem_type == ElemType.SPACE for elem_type in elem_types]):
+                break
+            elements.append(element.copy())
+
+        return elements
 
     @property
     def width(self) -> float:
@@ -301,7 +323,7 @@ class ElementLine:
         if element.text == '':
             return
 
-        if self.style is not None:
+        if self.style is not None and element.type != ElemType.REF:
             element.style = self.style
 
         if self.elements == []:
@@ -340,18 +362,6 @@ class Story:
 
     @property
     def contents(self) -> list[Flowable]:
-        # current_height = 0.0
-        # _contents: list[Flowable] = []
-        # for flowable in self.__contents:
-        #     height = self.get_height(flowable)
-        #     if (current_height + height > self.inner_height
-        #             or current_height == 0):
-        #         if isinstance(flowable, Spacer):
-        #             continue
-        #         current_height = 0.0
-        #     current_height += height
-        #     _contents.append(flowable)
-
         _contents = self.__contents
 
         # trim any trailing space

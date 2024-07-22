@@ -45,3 +45,21 @@ Group 4: Use Category\n
 Group 5: Use Category Version\n
 Group 6: Measure Version Number (including optional draft version)
 """
+
+
+__DATE = (
+    '('
+        r'([0-9]{4})'
+        '-'
+        r'((?:1[0-2])|(?:0?[1-9]))'
+        '-'
+        r'((?:0?[1-9])|(?:[1-2][0-9])|(?:[3][0-1]))'
+    ')'
+)
+DATE = re.compile(rf'^{__DATE}$')
+"""eTRM Date Representation RegEx Pattern
+
+Group 1: Year
+Group 2: Month
+Group 3: Day
+"""
