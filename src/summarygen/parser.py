@@ -37,11 +37,11 @@ from src.summarygen.styles import (
 from src.summarygen.rlobjects import (
     ElemType,
     TextStyle,
-    ParagraphElement
+    ParagraphElement,
+    ElementLine
 )
 from src.summarygen.flowables import (
     Reference,
-    ElementLine,
     ValueTableHeader,
     ValueTable as ValueTableFlowable,
     EmbeddedValueTable,

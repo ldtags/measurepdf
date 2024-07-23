@@ -569,18 +569,16 @@ class MeasureSummary:
                      style=tstyle,
                      hAlign='LEFT')
 
-    def add_sections_table(self):
+    def add_sections_table(self) -> None:
         if self.__cur_measure is None:
             return
 
-        measure = self.__cur_measure
-        id_path = '/'.join(measure.full_version_id.split('-', 1))
-        link = f'{ETRM_URL}/measure/{id_path}'
+        link = self.__cur_measure.link
         try:
-            ref_id = lookups.PERMUTATION_REFS[measure.use_category]
+            ref_id = lookups.PERMUTATION_REFS[self.__cur_measure.use_category]
         except KeyError:
             raise SummaryGenError('unknown use category:'
-                                  f' {measure.use_category}')
+                                  f' {self.__cur_measure.use_category}')
         try:
             reference = self.connection.get_reference(ref_id)
             perm_link = reference.source_document

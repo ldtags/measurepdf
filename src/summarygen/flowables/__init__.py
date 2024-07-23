@@ -18,7 +18,6 @@ Extending Custom Tables:
 
 from src.summarygen.flowables.general import (
     Spacer,
-    BulletList,
     Reference,
     NEWLINE
 )
@@ -38,6 +37,9 @@ from src.summarygen.flowables.titlepage import (
     TitleSection,
     TitleSectionContainer,
     TitleSectionSubContainer
+)
+from src.summarygen.flowables.bulletlist import (
+    BulletList
 )
 from src.summarygen.flowables.utils import (
     split_word,
