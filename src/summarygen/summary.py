@@ -64,7 +64,11 @@ class NumberedCanvas(Canvas):
 
     def showPage(self):
         self._saved_page_states.append(dict(self.__dict__))
-        self._startPage()
+        try:
+            self._startPage()
+        except AttributeError:
+            raise SummaryGenError('Canvas Build Error: could not show page'
+                                  f' {len(self._saved_page_states)}.')
 
     def save(self):
         """add page info to each page (page x of y)"""
@@ -426,6 +430,7 @@ class MeasureSummary:
             table_name = lookups.SHARED_VALUE_TABLES[shared_param.name]
         except KeyError:
             return ''
+
         shared_lookup = measure.get_shared_lookup(table_name)
         if shared_lookup is None:
             return ''
@@ -447,6 +452,7 @@ class MeasureSummary:
                 )
                 if len(vals) == 0:
                     continue
+
                 avg = math.fsum(vals) / len(vals)
                 impacts.append(avg)
             except KeyError:
@@ -458,6 +464,7 @@ class MeasureSummary:
         impact_avg = sum(impacts) / len(impacts)
         if impact_avg == 0:
             return ''
+
         return f'{impact_avg:.2f}'
 
     def __build_parameters_table(self,
@@ -509,7 +516,12 @@ class MeasureSummary:
         if self.__cur_measure is None:
             return
 
-        permutations = self.connection.get_permutations(self.__cur_measure)
+        try:
+            permutations = self.connection.get_permutations(self.__cur_measure)
+        except ETRMResponseError as err:
+            raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
+                                  f'\n{err.message}')
+        
         std_costs = permutations.get_standard_costs()
         pre_costs = permutations.get_pre_existing_costs()
         inc_cost = permutations.get_incremental_cost()
@@ -670,7 +682,11 @@ class MeasureSummary:
                 arg = kwargs.get('measure')
 
         if isinstance(arg, str):
-            measure = self.connection.get_measure(arg)
+            try:
+                measure = self.connection.get_measure(arg)
+            except ETRMResponseError as err:
+                raise SummaryGenError(f'eTRM Connection Error ({err.status})'
+                                      f'\n{err.message}')
         elif isinstance(arg, Measure):
             measure = arg
         else:
@@ -686,12 +702,28 @@ class MeasureSummary:
             self.measures[measure.use_category] = [measure]
 
     def add_use_category(self, use_category: str) -> None:
+        """Adds the most recent published version of each measure in the
+        use category `use_category`.
+
+        Use when making a summary of a use category.
+        """
+
         logger.info(f'Adding use category {use_category}')
 
-        measure_ids = self.connection.get_all_measure_ids(use_category)
+        connection = self.connection
+        try:
+            measure_ids = connection.get_all_measure_ids(use_category)
+        except ETRMResponseError as err:
+            raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
+                                  f'\n{err.message}')
+        
         versions: list[str] = []
         for measure_id in measure_ids:
-            measure_versions = self.connection.get_measure_versions(measure_id)
+            try:
+                measure_versions = connection.get_measure_versions(measure_id)
+            except ETRMResponseError as err:
+                raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
+                                      f'\n{err.message}')
             measure_versions.sort(key=utils.version_key)
             recent_version: str | None = None
             for measure_version in measure_versions:
@@ -734,8 +766,8 @@ class MeasureSummary:
     def __build_summary(self, measure: Measure | None=None):
         if measure is None:
             if self.__cur_measure is None:
-                raise RuntimeError('Missing Measure: no measure provided'
-                                        ' to build a summary with')
+                raise SummaryGenError('Missing Measure: no measure provided'
+                                      ' to build a summary with')
             summary_measure = self.__cur_measure
         else:
             summary_measure = measure
