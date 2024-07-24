@@ -47,6 +47,14 @@ Group 6: Measure Version Number (including optional draft version)
 """
 
 
+__WHITELIST = r'[A-Za-z0-9\-]'
+WHITELIST = re.compile(__WHITELIST)
+"""eTRM Connection Request Whitelist RegEx Pattern
+
+Use to sanitize prepared eTRM API requests.
+"""
+
+
 __DATE = (
     '('
         r'([0-9]{4})'
