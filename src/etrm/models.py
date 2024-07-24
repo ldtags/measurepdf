@@ -225,6 +225,15 @@ class PermutationsTable:
             mtc = 0.0
         return mtc
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, PermutationsTable):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class MeasureInfo:
     def __init__(self, res_json: dict[str, Any]):
@@ -233,6 +242,15 @@ class MeasureInfo:
             self.url = getc(res_json, 'url', str)
         except IndexError:
             raise ETRMResponseError()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, MeasureInfo):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 
 class MeasuresResponse:
@@ -244,6 +262,15 @@ class MeasuresResponse:
             self.results = getc(res_json, 'results', list[MeasureInfo])
         except IndexError:
             raise ETRMResponseError()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, MeasuresResponse):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 
 class MeasureVersionInfo:
@@ -259,6 +286,15 @@ class MeasureVersionInfo:
         except IndexError:
             raise ETRMResponseError('malformed measure version info')
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, MeasureVersionInfo):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class MeasureVersionsResponse:
     def __init__(self, res_json: dict[str, Any]):
@@ -273,6 +309,15 @@ class MeasureVersionsResponse:
         except IndexError:
             raise ETRMResponseError('malformed measure versions response')
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, MeasureVersionsResponse):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class Version:
     def __init__(self, res_json: dict[str, Any]):
@@ -285,6 +330,15 @@ class Version:
         except ValueError:
             raise ETRMResponseError(f'{version_string} is not'
                                     ' properly formatted')
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Version):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 
 class SharedDeterminantRef:
@@ -299,6 +353,15 @@ class SharedDeterminantRef:
         except IndexError:
             raise ETRMResponseError()
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, SharedDeterminantRef):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class Label:
     def __init__(self, res_json: dict[str, Any]):
@@ -309,6 +372,15 @@ class Label:
             self.description = getc(res_json, 'description', str)
         except IndexError:
             raise ETRMResponseError()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Label):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 
 class Determinant:
@@ -323,6 +395,15 @@ class Determinant:
         except IndexError:
             raise ETRMResponseError()
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Determinant):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class SharedLookupRef:
     def __init__(self, res_json: dict[str, Any]):
@@ -334,6 +415,15 @@ class SharedLookupRef:
             self.url = getc(res_json, 'url', str)
         except IndexError:
             raise ETRMResponseError()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, SharedLookupRef):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 
 class Column:
@@ -351,6 +441,15 @@ class Column:
         except IndexError:
             raise ETRMResponseError()
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Column):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class ValueTable:
     def __init__(self, res_json: dict[str, Any]):
@@ -366,6 +465,15 @@ class ValueTable:
             self.reference_refs = getc(res_json, 'reference_refs', list[str])
         except IndexError:
             raise ETRMResponseError()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, ValueTable):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 
 class SharedValueTable:
@@ -409,6 +517,15 @@ class SharedValueTable:
         except IndexError:
             raise ETRMResponseError()
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, SharedValueTable):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class Calculation:
     def __init__(self, res_json: dict[str, Any]):
@@ -423,6 +540,15 @@ class Calculation:
         except IndexError:
             raise ETRMResponseError()
 
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Calculation):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
+
 
 class ExclusionTable:
     def __init__(self, res_json: dict[str, Any]):
@@ -435,6 +561,15 @@ class ExclusionTable:
             self.reference_refs = getc(res_json, 'reference_refs', list[str])
         except IndexError:
             raise ETRMResponseError()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, ExclusionTable):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
 
 class Measure:
@@ -512,6 +647,15 @@ class Measure:
 
         self.characterizations = self.__get_characterizations()
         self.value_table_cache: dict[str, ValueTable] = {}
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Measure):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
 
     @property
     def start_date(self) -> datetime.date:
@@ -611,3 +755,12 @@ class Reference:
             self.source_document = getc(res_json, 'source_document', str)
         except IndexError:
             raise ETRMResponseError()
+
+    def __eq__(self, other) -> bool:
+        if not isinstance(other, Reference):
+            return False
+
+        return self.__dict__ == other.__dict__
+
+    def __ne__(self, other) -> bool:
+        return not self.__eq__(other)
