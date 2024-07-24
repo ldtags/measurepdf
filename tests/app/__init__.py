@@ -5,4 +5,4 @@ import sys
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 
 
-from tests.summarygen.main import suites
+from tests.app.main import suites

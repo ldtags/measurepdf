@@ -148,3 +148,27 @@ class UserTestCase(ut.TestCase, ETRMConnectionTester):
                                       (0.591, 2890, 121.025),
                                       917.49,
                                       1942.44)
+
+
+def suite() -> ut.TestSuite:
+    suite = ut.TestSuite()
+    suite.addTests(
+        [
+            ConnectionTestCase('test_valid_api_key'),
+            ConnectionTestCase('test_invalid_api_key')
+        ]
+    )
+    suite.addTests(
+        [
+            UserTestCase('test_get_measure'),
+            UserTestCase('test_get_measure_ids'),
+            UserTestCase('test_get_all_measure_ids'),
+            UserTestCase('test_permutation_costs')
+        ]
+    )
+    return suite
+
+
+if __name__ == '__main__':
+    runner = ut.TextTestRunner()
+    runner.run(suite())

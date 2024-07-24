@@ -3,66 +3,25 @@ import sys
 import time
 import datetime
 import argparse as ap
-from typing import Literal
-from configparser import ConfigParser
 
-from context import src, etrm, summarygen, resources, lookups
-
-
-MEASURES = [
-    'SWFS006-03',
-    # embedded value table with no cids
-
-    'SWFS001-03',
-    # embedded value table with cids
-
-    'SWHC045-03',
-    # static value table with no spanning
-
-    'SWWH025-07',
-    # medium-sized subscript
-    # unscaled images
-    # list
-
-    'SWFS017-03',
-    # static value table with column spans and row spans
-    # single digit superscript
-    # image rescaling
-    # list
-
-    'SWFS010-03',
-    # edge case for measure details table column wrapping
-]
-
-def get_api_key(role: Literal['user', 'admin']='user') -> str:
-    match role:
-        case 'user':
-            source = 'etrm'
-        case 'admin':
-            source = 'etrm-admin'
-        case other:
-            raise RuntimeError(f'invalid eTRM role: {other}')
-
-    config = ConfigParser()
-    config.read(resources.get_path('config.ini'))
-    token_type = config[source]['type']
-    token = config[source]['token']
-    return f'{token_type} {token}'
+from src import utils, lookups, _ROOT
+from src.etrm import ETRMConnection
+from src.summarygen import MeasureSummary
 
 
 class TestBuilder:
     def __init__(self):
-        api_key = get_api_key(role='user')
-        self.connection = etrm.ETRMConnection(api_key)
+        api_key = utils.get_api_key(role='user')
+        self.connection = ETRMConnection(api_key)
 
     def build(self,
               file_name: str,
               measure_versions: list[str] | str | None=None,
               use_categories: list[str] | str | None=None):
-        dir_path = os.path.join(src._ROOT, '..', 'summaries')
-        measure_pdf = summarygen.MeasureSummary(dir_path=dir_path,
-                                                connection=self.connection,
-                                                file_name=file_name)
+        dir_path = os.path.join(_ROOT, '..', 'summaries')
+        measure_pdf = MeasureSummary(dir_path=dir_path,
+                                     connection=self.connection,
+                                     file_name=file_name)
         print('measure pdf object created', file=sys.stderr)
 
         measure_versions = measure_versions or []

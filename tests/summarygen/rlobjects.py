@@ -135,3 +135,23 @@ class ParagraphElementTestCase(ut.TestCase):
             for join_elem in join_elems:
                 with self.assertRaises(ElementJoinError):
                     test_elem.join(join_elem)
+
+
+def suite() -> ut.TestSuite:
+    suite = ut.TestSuite()
+    suite.addTests(
+        [
+            ParagraphElementTestCase('test_normal_element'),
+            ParagraphElementTestCase('test_bold_element'),
+            ParagraphElementTestCase('test_italic_element'),
+            ParagraphElementTestCase('test_split'),
+            ParagraphElementTestCase('test_copy'),
+            ParagraphElementTestCase('test_join')
+        ]
+    )
+    return suite
+
+
+if __name__ == '__main__':
+    runner = ut.TextTestRunner()
+    runner.run(suite())

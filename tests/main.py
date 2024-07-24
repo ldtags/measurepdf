@@ -1,15 +1,17 @@
 import sys
 import os
 import argparse as ap
+import unittest as ut
 
-import measurepdf
-import utils
+from tests import utils, summarygen, etrm, app
 
 
-MODULES = ['measurepdf', 'utils', 'etrm']
-UNIT_TEST = {
-    'measurepdf': measurepdf.test,
-    'utils': utils.main
+MODULES = ['utils', 'summarygen', 'etrm', 'app']
+TEST_SUITES = {
+    'utils': utils.suites,
+    'summarygen': summarygen.suites,
+    'etrm': etrm.suites,
+    'app': app.suites
 }
 
 
@@ -44,8 +46,13 @@ def main():
                     print(f'supported modules - {MODULES}', file=sys.stderr)
                     sys.exit(os.EX_OK)
 
+        test_suites: list[ut.TestSuite] = []
         for module in unit_modules:
-            UNIT_TEST[module]()
+            test_suites.extend(TEST_SUITES[module]())
+
+        runner = ut.TextTestRunner()
+        for test_suite in test_suites:
+            runner.run(test_suite)
 
 
 if __name__ == '__main__':
