@@ -3,12 +3,12 @@ import os
 import argparse as ap
 import unittest as ut
 
-from tests import utils, summarygen, etrm, app
+from tests import misc, summarygen, etrm, app
 
 
 MODULES = ['utils', 'summarygen', 'etrm', 'app']
 TEST_SUITES = {
-    'utils': utils.suites,
+    'utils': misc.suites,
     'summarygen': summarygen.suites,
     'etrm': etrm.suites,
     'app': app.suites

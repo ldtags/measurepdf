@@ -1,11 +1,11 @@
 import unittest as ut
 
-from tests.utils import misc
+from tests.misc import utils
 
 
 def suites() -> list[ut.TestSuite]:
     return [
-        misc.suite()
+        utils.suite()
     ]
 
 
