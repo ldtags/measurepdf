@@ -2,17 +2,17 @@ import copy
 import unittest as ut
 from reportlab.pdfbase.pdfmetrics import stringWidth
 
-from src.summarygen.models import (
+from src.summarygen.rlobjects import (
     ParagraphElement,
     ElemType,
     TextStyle
 )
-from src.summarygen.styling import (
-    BetterParagraphStyle,
+from src.summarygen.styles import (
+    ParagraphStyle,
     DEF_PSTYLE,
     PSTYLES
 )
-from src.exceptions import (
+from src.summarygen.exceptions import (
     ElementJoinError
 )
 
@@ -43,8 +43,8 @@ class ParagraphElementTestCase(ut.TestCase):
                        expected_xml: str,
                        element_type: ElemType,
                        text_styles: list[TextStyle],
-                       base_style: BetterParagraphStyle | None=None,
-                       expected_style: BetterParagraphStyle=DEF_PSTYLE
+                       base_style: ParagraphStyle | None=None,
+                       expected_style: ParagraphStyle=DEF_PSTYLE
                       ) -> None:
         text_copy = copy.deepcopy(text)
         type_copy = copy.deepcopy(ElemType)
@@ -120,21 +120,18 @@ class ParagraphElementTestCase(ut.TestCase):
         bold_elem = ParagraphElement('test', styles=[TextStyle.STRONG])
         styled_bold_elem = bold_elem.copy(style=PSTYLES['Test'])
 
-        with self.assertRaises(ElementJoinError):
-            normal_elem.join(space)
-            normal_elem.join(ref_tag)
-            normal_elem.join(italic_elem)
-            normal_elem.join(bold_elem)
-            normal_elem.join(styled_normal_elem)
-
-            italic_elem.join(space)
-            italic_elem.join(ref_tag)
-            italic_elem.join(normal_elem)
-            italic_elem.join(bold_elem)
-            italic_elem.join(styled_italic_elem)
-
-            bold_elem.join(space)
-            bold_elem.join(ref_tag)
-            bold_elem.join(normal_elem)
-            bold_elem.join(italic_elem)
-            bold_elem.join(styled_bold_elem)
+        test_elems = [
+            normal_elem,
+            styled_normal_elem,
+            italic_elem,
+            styled_italic_elem,
+            bold_elem,
+            styled_bold_elem,
+            space,
+            ref_tag
+        ]
+        for test_elem in test_elems:
+            join_elems = [elem for elem in test_elems if elem is not test_elem]
+            for join_elem in join_elems:
+                with self.assertRaises(ElementJoinError):
+                    test_elem.join(join_elem)
