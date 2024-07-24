@@ -51,11 +51,7 @@ class ETRMConnectionTester:
         return Measure(measure_json)
 
 
-class UserTestCase(ut.TestCase, ETRMConnectionTester):
-    def setUp(self) -> None:
-        api_key = utils.get_api_key(role='user')
-        ETRMConnectionTester.__init__(self, api_key)        
-
+class RequestTestCase(ut.TestCase, ETRMConnectionTester):
     def assert_measure(self, measure_id: str) -> None:
         json_measure = self.get_measure(measure_id)
         etrm_measure = self.connection.get_measure(measure_id)
@@ -150,6 +146,18 @@ class UserTestCase(ut.TestCase, ETRMConnectionTester):
                                       1942.44)
 
 
+class UserTestCase(RequestTestCase):
+    def setUp(self) -> None:
+        api_key = utils.get_api_key(role='user')
+        ETRMConnectionTester.__init__(self, api_key)
+
+
+class AdminTestCase(RequestTestCase):
+    def setUp(self) -> None:
+        api_key = utils.get_api_key(role='admin')
+        ETRMConnectionTester.__init__(self, api_key)
+
+
 def suite() -> ut.TestSuite:
     suite = ut.TestSuite()
     suite.addTests(
@@ -158,14 +166,20 @@ def suite() -> ut.TestSuite:
             ConnectionTestCase('test_invalid_api_key')
         ]
     )
-    suite.addTests(
-        [
-            UserTestCase('test_get_measure'),
-            UserTestCase('test_get_measure_ids'),
-            UserTestCase('test_get_all_measure_ids'),
-            UserTestCase('test_permutation_costs')
-        ]
-    )
+
+    request_test_methods = [
+        func
+        for func
+        in dir(RequestTestCase)
+        if (
+            callable(getattr(RequestTestCase, func))
+                and func.startswith('test_')
+        )
+    ]
+    for method in request_test_methods:
+        suite.addTest(UserTestCase(method))
+        # suite.addTest(AdminTestCase(method))
+
     return suite
 
 
