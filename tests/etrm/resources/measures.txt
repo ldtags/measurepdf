@@ -1,0 +1,6 @@
+To avoid placing test data directly in the repository, the following is a
+list of all measures required to run the eTRM connection tests. Place the
+associated JSON files into the resources folder.
+
+SWFS017-03
+SWFS019-03
