@@ -47,12 +47,43 @@ Group 6: Measure Version Number (including optional draft version)
 """
 
 
-__WHITELIST = r'[^A-Za-z0-9\-]'
-WHITELIST = re.compile(__WHITELIST)
-"""eTRM Connection Request Whitelist RegEx Pattern
+__STWD_WHITELIST = r'[^A-Za-z0-9]'
+STATEWIDE_WHITELIST = re.compile(__STWD_WHITELIST)
+"""eTRM Connection Measure Statewide ID Whitelist RegEx Pattern
 
-Use to sanitize prepared eTRM API requests. If a match is found,
-the string contains invalid characters.
+Use to sanitize prepared eTRM API requests that accept a statewide ID.
+
+If a match is found, the string contains invalid characters.
+"""
+
+
+__VRSN_WHITELIST = r'[^A-Za-z0-9\-]'
+VERSION_WHITELIST = re.compile(__VRSN_WHITELIST)
+"""eTRM Connection Measure Version Whitelist RegEx Pattern
+
+Use to sanitize prepared eTRM API requests that accept a measure ID.
+
+If a match is found, the string contains invalid characters.
+"""
+
+
+__REF_WHITELIST = r'[^rR0-9]'
+REFERENCE_WHITELIST = re.compile(__REF_WHITELIST)
+"""eTRM Connection Reference Whitelist RegEx Pattern
+
+Use to sanitize prepared eTRM API requests that accept a reference tag ID.
+
+If a match is found, the string contains invalid characters.
+"""
+
+
+__TBL_NAME_WHITELIST = r'[^A-Za-z0-9]'
+TABLE_NAME_WHITELIST = re.compile(__TBL_NAME_WHITELIST)
+"""eTRM Connection Value Table Name Whitelist RegEx Pattern
+
+Use to sanitize prepared eTRM API requests that accept a value table name.
+
+If a match is found, the string contains invalid characters.
 """
 
 

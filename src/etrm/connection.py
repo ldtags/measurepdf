@@ -5,7 +5,8 @@ import requests
 import http.client as httpc
 from typing import TypeVar, Callable, overload
 
-from src import patterns, utils
+from src import utils
+from src.etrm import sanitizers
 from src.etrm.models import (
     MeasuresResponse,
     MeasureVersionsResponse,
@@ -18,8 +19,7 @@ from src.etrm.models import (
 from src.etrm.exceptions import (
     ETRMResponseError,
     ETRMRequestError,
-    ETRMConnectionError,
-    UnauthorizedError
+    ETRMConnectionError
 )
 
 
@@ -160,25 +160,12 @@ class ETRMConnection:
     """eTRM API connection layer"""
 
     def __init__(self, auth_token: str, stage: bool=False):
-        self.auth_token = self.__sanitize_auth_token(auth_token)
+        self.auth_token = sanitizers.sanitize_auth_token(auth_token)
         self.api = STAGE_API if stage else PROD_API
         self.headers = {
             'Authorization': auth_token
         }
         self.cache = ETRMCache()
-
-    def __sanitize_auth_token(self, token: str) -> str:
-        re_match = re.fullmatch(patterns.AUTH_TOKEN, token)
-        if re_match == None:
-            raise UnauthorizedError(f'invalid API key: {token}')
-
-        token_type = 'Token'
-        api_key = re_match.group(3)
-        if not isinstance(api_key, str):
-            raise ETRMConnectionError('An error occurred while parsing the '
-                                      f' API key from {token}')
-
-        return f'{token_type} {api_key}'
 
     def extract_id(self, url: str) -> str | None:
         URL_RE = re.compile(f'{self.api}/measures/([a-zA-Z0-9]+)/')
@@ -219,7 +206,7 @@ class ETRMConnection:
                                         headers=req_headers,
                                         stream=stream,
                                         **kwargs)
-                logger.info('Request complete')
+                logger.info(f'Request complete: {response.status_code}')
                 break
             except httpc.IncompleteRead:
                 logger.info('Request failed')
@@ -233,22 +220,24 @@ class ETRMConnection:
         match response.status_code:
             case 200:
                 return response
-            case 429:
-                print(response.json()['detail'])
-                raise ETRMResponseError(message='Too Many Requests',
-                                        status=429)
             case status:
                 msg = response.content.decode()
                 raise ETRMResponseError(message=msg, status=status)
 
-    def get_measure(self, full_version_id: str) -> Measure:
-        logger.info(f'Retrieving measure: {full_version_id}')
+    def get_measure(self, measure_id: str) -> Measure:
+        logger.info(f'Retrieving measure: {measure_id}')
 
-        cached_measure = self.cache.get_measure(full_version_id)
+        try:
+            measure_version = sanitizers.sanitize_measure_id(measure_id)
+        except:
+            logger.info(f'Invalid measure ID: {measure_id}')
+            raise
+
+        cached_measure = self.cache.get_measure(measure_version)
         if cached_measure != None:
             return cached_measure
 
-        statewide_id, version_id = full_version_id.split('-', 1)
+        statewide_id, version_id = measure_version.split('-', 1)
         response = self.get(f'/measures/{statewide_id}/{version_id}')
         measure = Measure(response.json())
         self.cache.add_measure(measure)
@@ -262,7 +251,7 @@ class ETRMConnection:
         logger.info(f'Retrieving measure IDs')
 
         cache_response = self.cache.get_ids(offset, limit, use_category)
-        if cache_response != None:
+        if cache_response is not None:
             return cache_response
 
         params = {
@@ -270,7 +259,7 @@ class ETRMConnection:
             'limit': str(limit)
         }
 
-        if use_category != None:
+        if use_category is not None:
             params['use_category'] = use_category
 
         response = self.get('/measures', params=params)
@@ -294,22 +283,36 @@ class ETRMConnection:
                                               use_category=use_category)
         return measure_ids
 
-    def get_measure_versions(self, measure_id: str) -> list[str]:
-        logger.info(f'Retrieving versions of measure {measure_id}')
+    def get_measure_versions(self, statewide_id: str) -> list[str]:
+        logger.info(f'Retrieving versions of measure {statewide_id}')
 
-        cached_versions = self.cache.get_versions(measure_id)
-        if cached_versions != None:
+        try:
+            statewide_id = sanitizers.sanitize_statewide_id(statewide_id)
+        except:
+            logger.info(f'Invalid statewide ID: {statewide_id}')
+            raise
+
+        cached_versions = self.cache.get_versions(statewide_id)
+        if cached_versions is not None:
             return list(reversed(cached_versions))
 
-        response = self.get(f'/measures/{measure_id}/')
+        response = self.get(f'/measures/{statewide_id}/')
         response_body = MeasureVersionsResponse(response.json())
-        measure_versions = sorted(map(lambda result: result.version,
-                                      response_body.versions))
-        self.cache.add_versions(measure_id, measure_versions)
+        measure_versions: list[str] = []
+        for version_info in response_body.versions:
+            measure_versions.append(version_info.version)
+
+        self.cache.add_versions(statewide_id, measure_versions)
         return list(reversed(measure_versions))
 
     def get_reference(self, ref_id: str) -> Reference:
         logger.info(f'Retrieving reference {ref_id}')
+
+        try:
+            ref_id = sanitizers.sanitize_reference(ref_id)
+        except:
+            logger.info(f'Invalid reference ID: {ref_id}')
+            raise
 
         cached_ref = self.cache.get_reference(ref_id)
         if cached_ref is not None:
@@ -351,6 +354,12 @@ class ETRMConnection:
             raise ETRMRequestError('missing required parameters')
 
         logger.info(f'Retrieving shared value table {table_name}')
+
+        try:
+            sanitizers.sanitize_table_name(table_name)
+        except:
+            logger.info(f'Invalid value table name: {table_name}')
+            raise
 
         cached_table = self.cache.get_shared_value_table(table_name, version)
         if cached_table is not None:
@@ -402,6 +411,12 @@ class ETRMConnection:
 
         logger.info('Retrieving permutations of measure'
                         f' {statewide_id}-{version}')
+
+        try:
+            statewide_id = sanitizers.sanitize_statewide_id(statewide_id)
+        except:
+            logger.info(f'Invalid statewide ID: {statewide_id}')
+            raise
 
         url = f'/measures/{statewide_id}/{version}/permutations'
         permutations_table: PermutationsTable | None = None
