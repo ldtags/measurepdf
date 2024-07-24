@@ -1,7 +1,8 @@
+import re
 import json
 import unittest as ut
 
-from src import utils
+from src import utils, patterns
 from src.etrm.models import (
     Measure
 )
@@ -90,9 +91,20 @@ class RequestTestCase(ut.TestCase, ETRMConnectionTester):
         for i in range(len(id_list)):
             for measure_id in id_list[i]:
                 self.assertNotIn(measure_id, id_set)
+                re_match = re.fullmatch(patterns.STWD_ID, measure_id)
+                self.assertIsNotNone(re_match,
+                                     f'invalid measure ID: {measure_id}')
+                if use_category is not None:
+                    self.assertEqual(use_category, re_match.group(3))
                 id_set.add(measure_id)
 
     def test_get_measure_ids(self) -> None:
+        """Tests the `get_measure_ids` method.
+
+        Asserts that the method returns the proper measure IDs and that
+        all request queries were properly applied.
+        """
+
         self.assert_measure_ids()
         self.assert_measure_ids(use_category='FS')
         self.assert_measure_ids(use_category='HC')
@@ -109,6 +121,12 @@ class RequestTestCase(ut.TestCase, ETRMConnectionTester):
         self.assertEqual(count, len(all_ids))
 
     def test_get_all_measure_ids(self) -> None:
+        """Tests the `get_all_measure_ids` method.
+        
+        Asserts that all measure were properly retrieved and that none
+        are missing.
+        """
+
         self.assert_all_measure_ids()
         self.assert_all_measure_ids(use_category='FS')
         self.assert_all_measure_ids(use_category='HC')
