@@ -59,6 +59,12 @@ class RequestTestCase(ut.TestCase, ETRMConnectionTester):
         self.assertEqual(json_measure, etrm_measure)
 
     def test_get_measure(self) -> None:
+        """Tests the `get_measure` method.
+        
+        Asserts that `Measure` objects are only returned when they
+        should be and that the `Measure` objects are properly created.
+        """
+
         self.assert_measure('SWFS017-03')
         self.assert_measure('SWFS019-03')
 
@@ -130,6 +136,37 @@ class RequestTestCase(ut.TestCase, ETRMConnectionTester):
         self.assert_all_measure_ids()
         self.assert_all_measure_ids(use_category='FS')
         self.assert_all_measure_ids(use_category='HC')
+
+    def assert_measure_versions(self, statewide_id: str) -> None:
+        versions = self.connection.get_measure_versions(statewide_id)
+        for version in versions:
+            re_match = re.fullmatch(patterns.VERSION_ID, version)
+            self.assertIsNotNone(re_match)
+
+    def test_get_measure_versions(self) -> None:
+        """Tests the `get_measure_versions` method.
+        
+        Asserts that only valid statewide IDs can be used and that
+        all returned measure versions are correct.
+        """
+
+        invalid_ids = [
+            'SWFS017/03/..',
+            'SWHC013/?offset=50',
+            '#ref_id',
+            'Hello there',
+            'General Kenobi'
+        ]
+        for string in invalid_ids:
+            with self.assertRaises(ETRMRequestError):
+                self.connection.get_measure_versions(string)
+    
+        valid_ids = [
+            'SWFS017',
+            'SWHC014'
+        ]
+        for string in valid_ids:
+            self.assert_measure_versions(string)
 
     def assert_permutation_costs(self,
                                  measure_id: str,
