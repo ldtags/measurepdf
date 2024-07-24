@@ -6,9 +6,9 @@ import unittest as ut
 from tests import misc, summarygen, etrm, app
 
 
-MODULES = ['utils', 'summarygen', 'etrm', 'app']
+MODULES = ['misc', 'summarygen', 'etrm', 'app']
 TEST_SUITES = {
-    'utils': misc.suites,
+    'misc': misc.suites,
     'summarygen': summarygen.suites,
     'etrm': etrm.suites,
     'app': app.suites
