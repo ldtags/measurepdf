@@ -1,14 +1,24 @@
 import re
-import json
 import PIL.Image as Image
+import json
 import datetime
 import customtkinter as ctk
-from urllib.parse import urlparse
-from typing import Type, TypeVar, overload, NewType, get_args, get_origin, Any
 from types import UnionType, NoneType
+from urllib.parse import urlparse
+from typing import (
+    Type,
+    TypeVar,
+    Literal,
+    overload,
+    NewType,
+    get_args,
+    get_origin,
+    Any
+)
 from reportlab.platypus import Image as RLImage
+from configparser import ConfigParser
 
-from src import asset_path, src_path, patterns
+from src import asset_path, src_path, patterns, resources
 
 
 _NotDefined = NewType('_NotDefined', None)
@@ -307,6 +317,22 @@ def to_date(date_str: str) -> datetime.date:
         ) from err
 
     return end_date
+
+
+def get_api_key(role: Literal['user', 'admin']='user') -> str:
+    match role:
+        case 'user':
+            source = 'etrm'
+        case 'admin':
+            source = 'etrm-admin'
+        case other:
+            raise RuntimeError(f'invalid eTRM role: {other}')
+
+    config = ConfigParser()
+    config.read(resources.get_path('config.ini'))
+    token_type = config[source]['type']
+    token = config[source]['token']
+    return f'{token_type} {token}'
 
 
 class ParsedUrl:
