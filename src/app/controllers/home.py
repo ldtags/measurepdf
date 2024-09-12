@@ -10,6 +10,7 @@ from src.app.views import View
 from src.app.models import Model
 from src.app.controllers.base import BaseController, etrm_request
 from src.etrm.models import Measure
+from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import ETRMResponseError
 from src.summarygen import MeasureSummary
 
@@ -21,10 +22,13 @@ class HomeController(BaseController):
         BaseController.__init__(self, view, model)
         self.model = model.home
         self.view = view.home
-        self.connection = model.connection
         self.__bind_id_list()
         self.__bind_version_list()
         self.__bind_selected_list()
+
+    @property
+    def connection(self) -> ETRMConnection | None:
+        return self.model_root.connection
 
     def unfocus(self, *args):
         """Removes focus from any currently focused widget."""

@@ -16,6 +16,7 @@ from src.etrm.models import (
     SharedValueTable,
     PermutationsTable
 )
+from src.etrm.constants import STAGE_API, PROD_API
 from src.etrm.exceptions import (
     ETRMResponseError,
     ETRMRequestError,
@@ -24,10 +25,6 @@ from src.etrm.exceptions import (
 
 
 logger = logging.getLogger(__name__)
-
-
-PROD_API = 'https://www.caetrm.com/api/v1'
-STAGE_API = 'https://stage.caetrm.com/api/v1'
 
 
 _T = TypeVar('_T')

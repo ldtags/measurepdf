@@ -9,10 +9,8 @@ from pandas import DataFrame, Series
 
 from src import utils
 from src.utils import getc
+from src.etrm.constants import ETRM_URL
 from src.etrm.exceptions import ETRMResponseError, ETRMConnectionError
-
-
-ETRM_URL = 'https://www.caetrm.com'
 
 
 class Baseline(Enum):

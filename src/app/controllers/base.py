@@ -34,8 +34,7 @@ reside in a class that extends `BaseController`.
 """
 
 
-def etrm_request(func: _DEC_ARGS) -> _BC_DEC_RETV:
-    @functools.wraps
+def etrm_request(func: Callable[_P, _T]) -> _BC_DEC_RETV:
     def wrapper(self: BaseController,
                 *args: _P.args,
                 **kwargs: _P.kwargs
