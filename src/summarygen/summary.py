@@ -542,120 +542,6 @@ class MeasureSummary:
         header = Paragraph('Impact:', style=PSTYLES['h6'])
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
-    def __build_sections_table(self,
-                               sections: list[tuple[str, str, str]]
-                              ) -> Table:
-        data: list[tuple[Paragraph | str, Paragraph]] = []
-        for title, label, link in sections:
-            if title != '':
-                title_para = Paragraph(title, style=PSTYLES['TableHeader'])
-            else:
-                title_para = ''
-            link_para = Paragraph(f'<link href=\"{link}\">{label}</link>',
-                                  PSTYLES['Link'])
-            data.append((title_para, link_para))
-        tstyle = TSTYLES['SectionsTable']
-        para_styles = (PSTYLES['TableHeader'], PSTYLES['Link'])
-        col_widths = (1.42*inch, 4.81*inch)
-        base_height = PSTYLES['TableHeader'].leading
-        row_heights = calc_row_heights(data,
-                                       tstyle,
-                                       para_styles,
-                                       base_height,
-                                       col_widths)
-        return Table(data,
-                     colWidths=col_widths,
-                     rowHeights=row_heights,
-                     style=tstyle,
-                     hAlign='LEFT')
-
-    def add_sections_table(self) -> None:
-        if self.__cur_measure is None:
-            return
-
-        link = self.__cur_measure.link
-        try:
-            ref_id = lookups.PERMUTATION_REFS[self.__cur_measure.use_category]
-        except KeyError:
-            raise SummaryGenError('unknown use category:'
-                                  f' {self.__cur_measure.use_category}')
-        try:
-            reference = self.connection.get_reference(ref_id)
-            perm_link = reference.source_document
-        except (ETRMResponseError, ETRMRequestError):
-            perm_link = f'{link}/permutation-report'
-        sections = [
-            ('Descriptions',
-                'Technology Summary',
-                f'{link}#technology-summary'),
-            ('',
-                'Measure Case Description',
-                f'{link}#measure-case-description'),
-            ('',
-                'Base Case Description',
-                f'{link}#base-case-description'),
-            ('Requirements',
-                'Code Requirements',
-                f'{link}#code-requirements'),
-            ('',
-                'Program Requirements',
-                f'{link}#program-requirements'),
-            ('',
-                'Program Exclusions',
-                f'{link}#program-exclusions'),
-            ('',
-                'Data Collection Requirements',
-                f'{link}#data-collection-requirements'),
-            ('Savings',
-                'Electric Savings (kWh)',
-                f'{link}#electric-savings-kwh'),
-            ('',
-                'Electric Demand Reduction (kW)',
-                f'{link}#peak-electric-demand-reduction-kw'),
-            ('',
-                'Gas Savings (Therms)',
-                f'{link}#gas-savings-therms'),
-            ('Cost',
-                'Base Case Material Cost ($/Unit)',
-                f'{link}#base-case-material-cost-unit'),
-            ('',
-                'Measure Case Material Cost ($/Unit)',
-                f'{link}#measure-case-material-cost-unit'),
-            ('',
-                'Base Case Labor Cost ($/Unit)',
-                f'{link}#base-case-labor-cost-unit'),
-            ('',
-                'Measure Case Labor Cost ($/Unit)',
-                f'{link}#measure-case-labor-cost-unit'),
-            ('Other',
-                'Life Cycle',
-                f'{link}#life-cycle'),
-            ('',
-                'Net-to-gross',
-                f'{link}#net-to-gross'),
-            ('',
-                'Gross Savings Installation Adjustment (GSIA)',
-                f'{link}#gross-savings-installation-adjustment-gsia'),
-            ('',
-                'Non-Energy Impacts',
-                f'{link}#non-energy-impacts'),
-            ('Version Comparison',
-                'Cover Sheet',
-                f'{link}/cover-sheet'),
-            ('Field Validation List',
-                'Property Data',
-                f'{link}/property-data'),
-            ('Subscribe',
-                'Subscriptions',
-                f'{link}/subscriptions'),
-            ('Permutations',
-                'Permutations',
-                perm_link)
-        ]
-        table = self.__build_sections_table(sections)
-        table_header = Paragraph('Sections:', PSTYLES['h2'])
-        self.story.add(KeepTogether([table_header, table]))
-
     def add_table_of_contents(self):
         self.story.add(NextPageTemplate('TOC'))
         toc_header = Paragraph('Table of Contents', style=PSTYLES['TOCHeader'])
@@ -785,7 +671,6 @@ class MeasureSummary:
         self.add_tech_summary()
         self.add_parameters_table()
         self.add_impact_table()
-        self.add_sections_table()
 
         self.__cur_measure = None
 
