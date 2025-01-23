@@ -5,7 +5,6 @@ import shutil
 import logging
 import datetime
 from typing import overload
-from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
@@ -21,12 +20,11 @@ from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
 from src import lookups, patterns, utils, _SYSTEM, _NOW
-from src.etrm.models import ETRM_URL, Measure
+from src.etrm.models import Measure
 from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import (
     ETRMConnectionError,
-    ETRMResponseError,
-    ETRMRequestError
+    ETRMResponseError
 )
 from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styles import (
@@ -36,7 +34,6 @@ from src.summarygen.styles import (
     X_MARGIN,
     Y_MARGIN,
     PSTYLES,
-    TSTYLES,
     INNER_HEIGHT,
     INNER_WIDTH
 )
