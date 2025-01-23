@@ -597,7 +597,7 @@ class MeasureSummary:
         except ETRMResponseError as err:
             raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
                                   f'\n{err.message}')
-        
+
         versions: list[str] = []
         for measure_id in measure_ids:
             try:
@@ -605,21 +605,24 @@ class MeasureSummary:
             except ETRMResponseError as err:
                 raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
                                       f'\n{err.message}')
+
             measure_versions.sort(key=utils.version_key)
             recent_version: str | None = None
             for measure_version in measure_versions:
                 if measure_version.count('-') == 1:
                     recent_version = measure_version
                     break
+
             if recent_version is not None:
                 versions.append(recent_version)
 
         for version_id in versions:
             self.add_measure(version_id)
 
-    def filter_measures(self,
-                        min_end_date: datetime.date | None=None
-                       ) -> None:
+    def filter_measures(
+        self,
+        min_end_date: datetime.date | None = None
+    ) -> None:
         """Filters the currently stored measures to meet the parameters.
         
         Parameters:
@@ -628,9 +631,15 @@ class MeasureSummary:
             be permitted.
         """
 
-        measures = [measure
-                        for measures in self.measures.values()
-                        for measure in measures]
+        # flattens the dict of measure lists
+        measures = [
+            measure
+                for measures
+                in self.measures.values()
+                for measure
+                in measures
+        ]
+
         self.measures = {}
         for measure in measures:
             end_date = measure.end_date
@@ -644,26 +653,30 @@ class MeasureSummary:
     def reset(self):
         self.story.clear()
 
-    def __build_summary(self, measure: Measure | None=None):
+    def _build_summary(self, measure: Measure | None = None) -> None:
         if measure is None:
             if self.__cur_measure is None:
-                raise SummaryGenError('Missing Measure: no measure provided'
-                                      ' to build a summary with')
+                raise SummaryGenError(
+                    'Missing Measure: no measure provided to build a summary with'
+                )
+
             summary_measure = self.__cur_measure
         else:
             summary_measure = measure
             self.__cur_measure = measure
 
-        logger.info('Building summary for measure'
-                        f' {summary_measure.full_version_id}')
+        logger.info(f'Building summary for measure {summary_measure.full_version_id}')
 
-        template = SummaryPageTemplate(id=summary_measure.full_version_id,
-                                       measure_name=summary_measure.name)
+        template = SummaryPageTemplate(
+            id=summary_measure.full_version_id,
+            measure_name=summary_measure.name
+        )
         self.summary.addPageTemplates(template)
         self.story.add(NextPageTemplate(summary_measure.full_version_id))
 
         if not self.is_first(summary_measure):
             self.story.add(PageBreak())
+
         self.add_title_page()
         self.add_tech_summary()
         self.add_parameters_table()
@@ -671,14 +684,14 @@ class MeasureSummary:
 
         self.__cur_measure = None
 
-    def build(self, toc: bool=False):
+    def build(self, toc: bool=False) -> None:
         if toc:
             self.add_table_of_contents()
 
         for use_category in sorted(self.measures.keys()):
             self.add_use_category_page(use_category)
             for measure in self.measures[use_category]:
-                self.__build_summary(measure)
-        self.summary.multiBuild(self.story.contents,
-                                canvasmaker=NumberedCanvas)
+                self._build_summary(measure)
+
+        self.summary.multiBuild(self.story.contents, canvasmaker=NumberedCanvas)
         clean()
