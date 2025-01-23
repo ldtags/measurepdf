@@ -26,7 +26,7 @@ from src.etrm.exceptions import (
     ETRMConnectionError,
     ETRMResponseError
 )
-from src.summarygen.parser import CharacterizationParser, TMP_DIR
+from src.summarygen.parser import TMP_DIR
 from src.summarygen.styles import (
     TableStyle,
     ParagraphStyle,
