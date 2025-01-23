@@ -90,24 +90,28 @@ class NumberedCanvas(Canvas):
 
 
 class SummaryDocTemplate(BaseDocTemplate):
-    def __init__(self,
-                 filename: str,
-                 pagesize: tuple[float, float]=PAGESIZE,
-                 left_margin: float=X_MARGIN,
-                 right_margin: float=X_MARGIN,
-                 top_margin: float=Y_MARGIN,
-                 bottom_margin: float=Y_MARGIN,
-                 *args,
-                 **kwargs):
-        BaseDocTemplate.__init__(self,
-                                 filename=filename,
-                                 pagesize=pagesize,
-                                 leftMargin=left_margin,
-                                 rightMargin=right_margin,
-                                 topMargin=top_margin,
-                                 bottomMargin=bottom_margin,
-                                 *args,
-                                 **kwargs)
+    def __init__(
+        self,
+        filename: str,
+        pagesize: tuple[float, float]=PAGESIZE,
+        left_margin: float=X_MARGIN,
+        right_margin: float=X_MARGIN,
+        top_margin: float=Y_MARGIN,
+        bottom_margin: float=Y_MARGIN,
+        *args,
+        **kwargs
+    ) -> None:
+        BaseDocTemplate.__init__(
+            self,
+            filename=filename,
+            pagesize=pagesize,
+            leftMargin=left_margin,
+            rightMargin=right_margin,
+            topMargin=top_margin,
+            bottomMargin=bottom_margin,
+            *args,
+            **kwargs
+        )
 
         self.left_margin = left_margin
         self.right_margin = right_margin
@@ -121,9 +125,10 @@ class SummaryDocTemplate(BaseDocTemplate):
         self.inner_height = self.page_height - y_margin
         self.pt_index = -1
 
-    def handle_nextPageTemplate(self,
-                                pt: str | int | list[str] | tuple[str, ...]
-                               ) -> None:
+    def handle_nextPageTemplate(
+        self,
+        pt: str | int | list[str] | tuple[str, ...]
+    ) -> None:
         return super().handle_nextPageTemplate(pt)
 
     def get_previous_page_template(self) -> PageTemplate | None:
@@ -152,15 +157,15 @@ class SummaryDocTemplate(BaseDocTemplate):
             return None
         return self.pageTemplates[pt_index]
 
-    def add_toc_entry(self,
-                      level: int,
-                      page: int,
-                      use_category: str | None=None,
-                      measure_id: str | None=None
-                     ) -> None:
+    def add_toc_entry(
+        self,
+        level: int,
+        page: int,
+        use_category: str | None=None,
+        measure_id: str | None=None
+    ) -> None:
         if use_category is not None and measure_id is not None:
-            raise RuntimeError('use_category and measure_id are mutually'
-                               ' exclusive')
+            raise RuntimeError('use_category and measure_id are mutually exclusive')
 
         if use_category is not None:
             try:
@@ -213,26 +218,31 @@ class SummaryDocTemplate(BaseDocTemplate):
 
 
 class SummaryPageTemplate(PageTemplate):
-    def __init__(self,
-                 id: str,
-                 measure_name: str | None=None):
+    def __init__(
+        self,
+        id: str,
+        measure_name: str | None = None
+    ) -> None:
         self.id = id
         self.measure_name = measure_name
-        frame = Frame(x1=X_MARGIN,
-                      y1=Y_MARGIN,
-                      width=INNER_WIDTH,
-                      height=INNER_HEIGHT,
-                      leftPadding=0,
-                      rightPadding=0,
-                      topPadding=0,
-                      bottomPadding=0,
-                      id='normal')
+        frame = Frame(
+            x1=X_MARGIN,
+            y1=Y_MARGIN,
+            width=INNER_WIDTH,
+            height=INNER_HEIGHT,
+            leftPadding=0,
+            rightPadding=0,
+            topPadding=0,
+            bottomPadding=0,
+            id='normal'
+        )
         PageTemplate.__init__(self, id=id, frames=frame)
 
-    def draw_footer(self,
-                    canv: Canvas,
-                    doc: SummaryDocTemplate
-                   ) -> None:
+    def draw_footer(
+        self,
+        canv: Canvas,
+        doc: SummaryDocTemplate
+    ) -> None:
             if self.measure_name is None:
                 return
 
@@ -244,20 +254,25 @@ class SummaryPageTemplate(PageTemplate):
             x = X_MARGIN / 1.5
             y = h * 1.5
             id_footer.drawOn(canvas=canv, x=x, y=y)
-            id_width = stringWidth(self.id,
-                                   style.font_name, 
-                                   style.font_size)
-            name_footer = Paragraph(self.measure_name,
-                                    style=PSTYLES['SmallParagraph'])
+            id_width = stringWidth(
+                self.id,
+                style.font_name, 
+                style.font_size
+            )
+            name_footer = Paragraph(
+                self.measure_name,
+                style=PSTYLES['SmallParagraph']
+            )
             _, h = name_footer.wrap(INNER_WIDTH - id_width, Y_MARGIN)
             name_footer.drawOn(canvas=canv, x=x + id_width + 3, y=y)
 
             canv.restoreState()
 
-    def draw_header(self,
-                    canv: Canvas,
-                    doc: SummaryDocTemplate
-                   ) -> None:
+    def draw_header(
+        self,
+        canv: Canvas,
+        doc: SummaryDocTemplate
+    ) -> None:
         canv.saveState()
 
         if _SYSTEM == 'Windows':
@@ -278,12 +293,13 @@ class SummaryPageTemplate(PageTemplate):
         self.draw_header(canv, doc)
 
 
-def calc_row_heights(data: list[list[str | Paragraph]],
-                     table_style: TableStyle,
-                     para_styles: tuple[ParagraphStyle, ...],
-                     base_height: float,
-                     base_widths: tuple[float, ...]
-                    ) -> list[float]:
+def calc_row_heights(
+    data: list[list[str | Paragraph]],
+    table_style: TableStyle,
+    para_styles: tuple[ParagraphStyle, ...],
+    base_height: float,
+    base_widths: tuple[float, ...]
+) -> list[float]:
     """Calculates row heights for static tables"""
 
     vpadding = table_style.top_padding + table_style.bottom_padding
@@ -326,11 +342,13 @@ def calc_row_heights(data: list[list[str | Paragraph]],
 class MeasureSummary:
     """eTRM measure summary PDF generator"""
 
-    def __init__(self,
-                 dir_path: str,
-                 connection: ETRMConnection,
-                 file_name: str='measure_summary',
-                 override: bool=True):
+    def __init__(
+        self,
+        dir_path: str,
+        connection: ETRMConnection,
+        file_name: str = 'measure_summary',
+        override: bool = True
+    ) -> None:
         clean()
         self.measures: dict[str, list[Measure]] = {}
         self.__cur_measure: Measure | None = None
