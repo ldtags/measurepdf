@@ -404,21 +404,12 @@ class MeasureSummary:
         self.story.add(TitlePage(self.__cur_measure))
         self.story.add(PageBreak())
 
-    def add_tech_summary(self):
-        header = Paragraph('Technology Summary', PSTYLES['h2'])
-        parser = CharacterizationParser(measure=self.__cur_measure,
-                                        connection=self.connection,
-                                        name='technology_summary')
-        flowables = parser.parse()
-        self.story.add(header, NEWLINE, *flowables, NEWLINE)
-
-    def add_use_category_page(self, use_category: str) -> None:
-        ...
-
-    def __get_shared_avg(self,
-                         param_name: str,
-                         column: str,
-                         measure: Measure) -> str:
+    def _get_shared_avg(
+        self,
+        param_name: str,
+        column: str,
+        measure: Measure
+    ) -> str:
         shared_param = measure.get_shared_parameter(param_name)
         if shared_param is None:
             return ''
@@ -464,10 +455,11 @@ class MeasureSummary:
 
         return f'{impact_avg:.2f}'
 
-    def __build_parameters_table(self,
-                                 params: list[tuple[str, str]],
-                                 impacts: list[tuple[str, str]]=[]
-                                ) -> Table:
+    def __build_parameters_table(
+        self,
+        params: list[tuple[str, str]],
+        impacts: list[tuple[str, str]] | None = None
+    ) -> Table:
         data: list[tuple[str, str]] = [('Parameters', 'Labels')]
         for label, api_name in params:
             param = self.__cur_measure.get_shared_parameter(api_name)
@@ -477,15 +469,17 @@ class MeasureSummary:
                 param_labels = ', '.join(sorted(set(param.active_labels)))
             data.append((label, param_labels))
 
-        for label, api_name, column_name in impacts:
-            impact = self.__get_shared_avg(param_name=api_name,
-                                           column=column_name,
-                                           measure=self.__cur_measure)
+        for label, api_name, column_name in impacts or []:
+            impact = self._get_shared_avg(
+                param_name=api_name,
+                column=column_name,
+                measure=self.__cur_measure
+            )
             data.append((label, impact))
         
         return BasicTable(data)
 
-    def add_parameters_table(self):
+    def add_parameters_table(self) -> None:
         if self.__cur_measure is None:
             return
 
@@ -678,7 +672,6 @@ class MeasureSummary:
             self.story.add(PageBreak())
 
         self.add_title_page()
-        self.add_tech_summary()
         self.add_parameters_table()
         self.add_impact_table()
 
@@ -689,7 +682,6 @@ class MeasureSummary:
             self.add_table_of_contents()
 
         for use_category in sorted(self.measures.keys()):
-            self.add_use_category_page(use_category)
             for measure in self.measures[use_category]:
                 self._build_summary(measure)
 
