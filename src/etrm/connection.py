@@ -14,7 +14,10 @@ from src.etrm.models import (
     Reference,
     SharedLookupRef,
     SharedValueTable,
-    PermutationsTable
+    PermutationsTable,
+    SharedDeterminantRef,
+    SharedParameter,
+    SharedParameterVersion
 )
 from src.etrm.constants import STAGE_API, PROD_API
 from src.etrm.exceptions import (
@@ -63,13 +66,15 @@ class ETRMCache:
         self.measure_cache: dict[str, Measure] = {}
         self.references: dict[str, Reference] = {}
         self.shared_value_tables: dict[str, SharedValueTable] = {}
+        self.shared_parameters: dict[str, SharedParameter] = {}
 
     @etrm_cache_request
-    def get_ids(self,
-                offset: int,
-                limit: int,
-                use_category: str | None=None
-               ) -> tuple[list[str], int] | None:
+    def get_ids(
+        self,
+        offset: int,
+        limit: int,
+        use_category: str | None = None
+    ) -> tuple[list[str], int] | None:
         if use_category != None:
             try:
                 id_cache = self.uc_id_caches[use_category]
@@ -88,12 +93,14 @@ class ETRMCache:
             return None
         return None
 
-    def add_ids(self,
-                measure_ids: list[str],
-                offset: int,
-                limit: int,
-                count: int,
-                use_category: str | None=None):
+    def add_ids(
+        self,
+        measure_ids: list[str],
+        offset: int,
+        limit: int,
+        count: int,
+        use_category: str | None = None
+    ) -> None:
         if use_category != None:
             try:
                 id_cache = self.uc_id_caches[use_category]
@@ -122,36 +129,49 @@ class ETRMCache:
     def get_versions(self, measure_id: str) -> list[str] | None:
         return self.version_cache.get(measure_id, None)
 
-    def add_versions(self, measure_id: str, versions: list[str]):
+    def add_versions(self, measure_id: str, versions: list[str]) -> None:
         self.version_cache[measure_id] = versions
 
     @etrm_cache_request
     def get_measure(self, version_id: str) -> Measure | None:
         return self.measure_cache.get(version_id, None)
 
-    def add_measure(self, measure: Measure):
+    def add_measure(self, measure: Measure) -> None:
         self.measure_cache[measure.full_version_id] = measure
 
     @etrm_cache_request
     def get_reference(self, ref_id: str) -> Reference | None:
         return self.references.get(ref_id, None)
 
-    def add_reference(self, ref_id: str, reference: Reference):
+    def add_reference(self, ref_id: str, reference: Reference) -> None:
         self.references[ref_id] = reference
 
     @etrm_cache_request
-    def get_shared_value_table(self,
-                               table_name: str,
-                               version: str
-                              ) -> SharedValueTable | None:
-        return self.shared_value_tables.get(f'{table_name}-{version}', None)
+    def get_shared_value_table(
+        self,
+        table_name: str,
+        version: str
+    ) -> SharedValueTable | None:
+        return self.shared_value_tables.get(f'{table_name}-{version}')
 
-    def add_shared_value_table(self,
-                               table_name: str,
-                               version: str,
-                               value_table: SharedValueTable):
+    def add_shared_value_table(
+        self,
+        table_name: str,
+        version: str,
+        value_table: SharedValueTable
+    ) -> None:
         self.shared_value_tables[f'{table_name}-{version}'] = value_table
 
+    @etrm_cache_request
+    def get_shared_parameter(
+        self,
+        param_type: str,
+        version: str
+    ) -> SharedParameter | None:
+        return self.shared_parameters.get(f"{param_type}-{version}")
+
+    def add_shared_parameter(self, parameter: SharedParameter) -> None:
+        self.shared_parameters[parameter.version] = parameter
 
 class ETRMConnection:
     """eTRM API connection layer"""
@@ -367,15 +387,86 @@ class ETRMConnection:
         self.cache.add_shared_value_table(table_name, version, value_table)
         return value_table
 
+    def get_shared_parameter_versions(
+        self,
+        api_name: str,
+        sorted: bool = True,
+    ) -> list[SharedParameterVersion]:
+        """Returns a list of all versions of the shared parameter associated with the
+        provided API name.
+
+        If sorted, the list of versions will be sorted from most-recent to least-recent.
+        """
+
+        res = self.get(f"/shared-parameters/{api_name}")
+        content = res.json()
+        try:
+            results: list[dict[str, str]] = content["results"]
+        except KeyError:
+            return []
+
+        versions: list[SharedParameterVersion] = []
+        for result in results:
+            versions.append(SharedParameterVersion(result))
+
+        if sorted:
+            versions.sort(key=lambda version: -1 * version.version_num)
+
+        return versions
+
+    @overload
+    def get_shared_parameter(self, reference: SharedDeterminantRef) -> SharedParameter:
+        ...
+
+    @overload
+    def get_shared_parameter(self, name: str) -> SharedParameter:
+        ...
+
+    @overload
+    def get_shared_parameter(self, name: str, version: str) -> SharedParameter:
+        ...
+
+    def get_shared_parameter(
+        self,
+        arg: str | SharedDeterminantRef,
+        version: str | None = None,
+    ) -> SharedParameter:
+        if isinstance(arg, str):
+            if version is None:
+                versions = self.get_shared_parameter_versions(arg)
+                if versions == []:
+                    raise ETRMRequestError(f"Unknown shared parameter API name: {arg}")
+
+                name, version = versions[0].version.split("-", 1)
+            else:
+                name = arg
+        else:
+            name = arg.name
+            version = arg.version
+
+        cached_param = self.cache.get_shared_parameter(name, version)
+        if cached_param is not None:
+            return cached_param
+
+        res = self.get(f"/shared-parameters/{name}/{version}")
+        param = SharedParameter(res.json())
+        self.cache.add_shared_parameter(param)
+        return param
+
+    def get_shared_parameter_description(self, name: str, version: str, label: str) -> str | None:
+        param = self.get_shared_parameter(name, version)
+        label_obj = param.get_label(label)
+        if label_obj is None:
+            return None
+
+        return label_obj.description
+
     @overload
     def get_permutations(self, measure: Measure) -> PermutationsTable:
         ...
 
     @overload
-    def get_permutations(self,
-                         statewide_id: str,
-                         version_id: str
-                        ) -> PermutationsTable:
+    def get_permutations(self, statewide_id: str, version_id: str) -> PermutationsTable:
         ...
 
     def get_permutations(self, *args) -> PermutationsTable:
@@ -383,32 +474,26 @@ class ETRMConnection:
             case 1:
                 measure = args[0]
                 if not isinstance(measure, Measure):
-                    raise ETRMRequestError('Invalid arg type: measure must be'
-                                           ' a Measure object')
+                    raise ETRMRequestError('Invalid arg type: measure must be a Measure object')
 
                 ids = measure.full_version_id.split('-', 1)
                 if len(ids) != 2:
-                    raise ETRMConnectionError('Invalid measure id:'
-                                              f' {measure.full_version_id}')
+                    raise ETRMConnectionError(f'Invalid measure id: {measure.full_version_id}')
 
                 statewide_id = ids[0]
                 version = ids[1]
             case 2:
                 statewide_id = args[0]
                 if not isinstance(statewide_id, str):
-                    raise ETRMRequestError('Invalid arg type: statewide_id'
-                                           ' must be a str object')
+                    raise ETRMRequestError('Invalid arg type: statewide_id must be a string')
 
                 version = args[1]
                 if not isinstance(version, str):
-                    raise ETRMRequestError('Invalid arg type: version_id'
-                                           ' must be a str object')
+                    raise ETRMRequestError('Invalid arg type: version_id must be a string')
             case _:
                 raise ETRMRequestError('Unsupported arg count')
 
-        logger.info('Retrieving permutations of measure'
-                        f' {statewide_id}-{version}')
-
+        logger.info(f'Retrieving permutations of measure {statewide_id}-{version}')
         try:
             statewide_id = sanitizers.sanitize_statewide_id(statewide_id)
         except:
@@ -427,9 +512,12 @@ class ETRMConnection:
                 url_offset = parsed_url.query.get('offset', '')
                 if prev_offset == url_offset:
                     break
+
             if permutations_table is None:
                 permutations_table = table
             else:
                 permutations_table.join(table)
+
             url = table.links.next
+
         return permutations_table

@@ -79,20 +79,22 @@ class BasicTable(Table):
     the ReportLab gods.
     """
 
-    def __init__(self,
-                 data: list[list[str | ElementLine]],
-                 headers: int=1,
-                 measure: Measure | None=None,
-                 spans: list[_TABLE_SPAN] | None=None,
-                 header_orient: _TABLE_ORIENT='top',
-                 header_styles: _TABLE_STYLES=PSTYLES['ValueTableHeader'],
-                 body_styles: _TABLE_STYLES=PSTYLES['ValueTableDeterminant'],
-                 table_style: TableStyle | None=None,
-                 col_widths: list[float] | float | None=None,
-                 row_heights: list[float] | float | None=None,
-                 h_align: Literal['left', 'center', 'right']='left',
-                 repeat_rows: int=1,
-                 **kwargs):
+    def __init__(
+        self,
+        data: list[list[str | ElementLine]],
+        headers: int=1,
+        measure: Measure | None=None,
+        spans: list[_TABLE_SPAN] | None=None,
+        header_orient: _TABLE_ORIENT='top',
+        header_styles: _TABLE_STYLES=PSTYLES['ValueTableHeader'],
+        body_styles: _TABLE_STYLES=PSTYLES['ValueTableDeterminant'],
+        table_style: TableStyle | None=None,
+        col_widths: list[float] | float | None=None,
+        row_heights: list[float] | float | None=None,
+        h_align: Literal['left', 'center', 'right']='left',
+        repeat_rows: int=1,
+        **kwargs
+    ) -> None:
         """Constructs a ReportLab `Table` with the provided data.
         
         Parameters:
@@ -152,19 +154,24 @@ class BasicTable(Table):
                 row_len = len(row)
             else:
                 assert len(row) == row_len
-        assert row_len is not None
 
+        assert row_len is not None
         self.header_orient = header_orient
         self.measure = measure
         self.max_width = INNER_WIDTH
         self.spans = spans or []
-        self.span_dict = {str((y, x)): span_sizes
-                            for (y, x), span_sizes in self.spans}
+        self.span_dict = {
+            str((y, x)): span_sizes
+                for (y, x), span_sizes
+                in self.spans
+        }
 
-        self.style = table_style or get_table_style(data=data,
-                                                    headers=headers,
-                                                    determinants=row_len,
-                                                    spans=self.spans)
+        self.style = table_style or get_table_style(
+            data=data,
+            headers=headers,
+            determinants=row_len,
+            spans=self.spans
+        )
         self.h_padding = self.style.left_padding + self.style.right_padding
         self.v_padding = self.style.top_padding + self.style.bottom_padding
 
@@ -206,14 +213,16 @@ class BasicTable(Table):
         else:
             self.headers = self.table_cells[0:headers]
 
-        Table.__init__(self,
-                       data=self.table_cells,
-                       colWidths=self.col_widths,
-                       rowHeights=self.row_heights,
-                       style=self.style,
-                       hAlign=h_align.upper(),
-                       repeatRows=repeat_rows,
-                       **kwargs)
+        Table.__init__(
+            self,
+            data=self.table_cells,
+            colWidths=self.col_widths,
+            rowHeights=self.row_heights,
+            style=self.style,
+            hAlign=h_align.upper(),
+            repeatRows=repeat_rows,
+            **kwargs
+        )
 
     @property
     def col_widths(self) -> list[float]:
@@ -230,6 +239,7 @@ class BasicTable(Table):
                     f'the number of column widths {widths_len} does not'
                     f' match the amount of columns in row {y}'
                 ) from err
+
         self.__col_widths = col_widths
         return self.__col_widths
 
@@ -249,6 +259,7 @@ class BasicTable(Table):
                     f'the number of row heights {heights_len} does not'
                     f' match the amount of rows in column {x}'
                 ) from err
+
         self.__row_heights = row_heights
         return self.__row_heights
 
@@ -264,6 +275,7 @@ class BasicTable(Table):
 
         if is_header:
             return self.header_styles[head_axis]
+
         return self.body_styles[x - body_off]
 
     def __calc_min_widths(self,
@@ -284,6 +296,7 @@ class BasicTable(Table):
                 if skip > 0:
                     skip -= 1
                     continue
+
                 width = cell.get_min_width(size)
                 _, col_span = self.span_dict.get(str((y, x)), (0, 0))
                 if col_span > 1:
@@ -293,7 +306,9 @@ class BasicTable(Table):
                     matrix_row.extend(width_frags)
                     skip = col_span - 1
                     continue
+
                 matrix_row.append(width + self.h_padding)
+
             min_matrix.append(matrix_row)
 
         for (y, x), (row_span, _) in self.spans:
@@ -303,9 +318,7 @@ class BasicTable(Table):
                 for i in range(y, y + row_span):
                     min_matrix[i][x] = width
 
-        return [max(column)
-                    for column
-                    in utils.rotate_matrix(min_matrix)]
+        return [max(column) for column in utils.rotate_matrix(min_matrix)]
 
     def __calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
         """Returns the list of column widths for this table.
@@ -328,6 +341,7 @@ class BasicTable(Table):
                 differences: list[tuple[int, float]] = []
                 for i, width in enumerate(col_widths):
                     differences.append((i, width - prev_widths[i]))
+
                 differences.sort(key=lambda t: t[1], reverse=True)
                 for difference in differences:
                     index = difference[0]
@@ -336,7 +350,9 @@ class BasicTable(Table):
                     widths[index] += amount
                     if math.fsum(widths) > self.max_width:
                         break
+
                     prev_widths[index] += amount
+
                 break
 
             size += 1
@@ -369,11 +385,13 @@ class BasicTable(Table):
                 if skip != 0:
                     skip -= 1
                     continue
+
                 _, col_span = self.span_dict.get(str((y, x)), (0, 0))
                 if col_span > 1:
                     col_width = sum(_col_widths[x:x + col_span - 1])
                 else:
                     col_width = _col_widths[x]
+
                 frags = wrap_elements(row[x].elements, col_width - h_padding)
                 height = row[x].height * len(frags)
                 if col_span > 1:
@@ -386,6 +404,7 @@ class BasicTable(Table):
                     height += self.style.top_padding
                     height += self.style.bottom_padding
                     matrix_row.append(height)
+
             height_matrix.append(matrix_row)
 
         for (y, x), (row_span, _) in self.spans:

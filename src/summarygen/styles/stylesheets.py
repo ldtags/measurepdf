@@ -346,26 +346,43 @@ TSTYLES = __gen_tstyles()
 DEF_PSTYLE = PSTYLES['Paragraph']
 
 
-def get_table_style(data: list[list],
-                    headers: int=1,
-                    determinants: int=0,
-                    spans: list[_TABLE_SPAN]=[],
-                    orient: _TABLE_ORIENT='top'
-                   ) -> TableStyle:
-    table_style = copy.deepcopy(TSTYLES['ValueTable'])
+def is_spanned(x: int, y: int, spans: list[_TABLE_SPAN]) -> bool:
+    for span in spans:
+        y_min, x_min = span[0]
+        y_inc, x_inc = span[1]
+        y_max = y_min + y_inc - (1 if y_inc != 0 else 0)
+        x_max = x_min + x_inc - (1 if x_inc != 0 else 0)
+        if y >= y_min and x >= x_min and y <= y_max and x <= x_max:
+            return True
+
+    return False
+
+def get_table_style(
+    data: list[list],
+    headers: int = 1,
+    determinants: int = 0,
+    spans: list[_TABLE_SPAN] = [],
+    orient: _TABLE_ORIENT = "top"
+) -> TableStyle:
+    table_style = copy.deepcopy(TSTYLES["ValueTable"])
     table_styles = table_style.getCommands()
 
     for i in range(0, headers):
         if determinants > 0:
-            table_styles.append(('BACKGROUND',
-                                 (0, i),
-                                 (determinants - 1, i),
-                                 COLORS['ValueTableHeaderLight']))
+            table_styles.append((
+                'BACKGROUND',
+                (0, i),
+                (determinants - 1, i),
+                COLORS['ValueTableHeaderLight']
+            ))
+
         if len(data) > 0 and len(data[0]) > determinants:
-            table_styles.append(('BACKGROUND',
-                                 (determinants, i),
-                                 (-1, i),
-                                 COLORS['ValueTableHeaderDark']))
+            table_styles.append((
+                'BACKGROUND',
+                (determinants, i),
+                (-1, i),
+                COLORS['ValueTableHeaderDark']
+            ))
 
     top_styles: list[tuple] = []
     left_styles: list[tuple] = []
@@ -382,6 +399,7 @@ def get_table_style(data: list[list],
             (headers - 1, determinants - 1),
             COLORS['ValueTableHeaderLight']
         ))
+
     if len(data) > 0 and len(data[0]) > determinants:
         top_styles.append((
             'BACKGROUND',
@@ -396,42 +414,46 @@ def get_table_style(data: list[list],
             COLORS['ValueTableHeaderDark']
         ))
 
-    for i in range(headers, len(data)):
-        if determinants > 0:
-            if i % 2 == 1:
-                color = COLORS['ValueTableRowLight']
-            else:
-                color = COLORS['ValueTableRowAltLight']
-            top_styles.append((
-                'BACKGROUND',
-                (0, i),
-                (determinants - 1, i),
-                color
-            ))
-            left_styles.append((
-                'BACKGROUND',
-                (i, 0),
-                (i, determinants - 1),
-                color
-            ))
+    for y in range(headers, len(data)):
+        row = data[y]
+        for x in range(0, len(row)):    # will cause a bug with left-orient tables
+            if determinants > 0:
+                if y % 2 == 1 or is_spanned(x, y, spans):
+                    color = COLORS['ValueTableRowLight']
+                else:
+                    color = COLORS['ValueTableRowAltLight']
 
-        if len(data[i]) > determinants:
-            if i % 2 == 1:
-                color = COLORS['ValueTableRowDark']
-            else:
-                color = COLORS['ValueTableRowAltDark']
-            top_styles.append((
-                'BACKGROUND',
-                (determinants, i),
-                (-1, i),
-                color
-            ))
-            left_styles.append((
-                'BACKGROUND',
-                (i, determinants),
-                (i, -1),
-                color
-            ))
+                top_styles.append((
+                    'BACKGROUND',
+                    (x, y),
+                    (x, y),
+                    color
+                ))
+                left_styles.append((
+                    'BACKGROUND',
+                    (y, x),
+                    (y, x),
+                    color
+                ))
+
+            if len(row) > determinants:
+                if y % 2 == 1 or is_spanned(x, y, spans):
+                    color = COLORS['ValueTableRowDark']
+                else:
+                    color = COLORS['ValueTableRowAltDark']
+
+                top_styles.append((
+                    'BACKGROUND',
+                    (x, y),
+                    (x, y),
+                    color
+                ))
+                left_styles.append((
+                    'BACKGROUND',
+                    (y, x),
+                    (y, x),
+                    color
+                ))
 
     if orient == 'left':
         table_styles.extend(left_styles)

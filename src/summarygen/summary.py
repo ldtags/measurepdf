@@ -339,6 +339,24 @@ def calc_row_heights(
     return row_heights
 
 
+def contains_all_climate_zones(labels: list[str]) -> bool:
+    label_set = set([label.upper() for label in labels])
+    for i in range(1, 17):
+        if f"CZ{str(i).zfill(2)}" not in label_set:
+            return False
+
+    return True
+
+
+def remove_all_climate_zones(labels: list[str]) -> None:
+    if not contains_all_climate_zones(labels):
+        return
+
+    for label in reversed(labels):
+        if re.fullmatch(re.compile(r"^CZ(?:(?:[0][1-9])|(?:1[0-6]))$"), label):
+            labels.remove(label)
+
+
 class MeasureSummary:
     """eTRM measure summary PDF generator"""
 
@@ -444,7 +462,6 @@ class MeasureSummary:
             return
 
         self.story.add(TitlePage(self.__cur_measure))
-        self.story.add(PageBreak())
 
     def _get_shared_avg(
         self,
@@ -500,25 +517,38 @@ class MeasureSummary:
     def __build_parameters_table(
         self,
         params: list[tuple[str, str]],
-        impacts: list[tuple[str, str]] | None = None
+        nd_params: list[tuple[str, str]],
     ) -> Table:
-        data: list[tuple[str, str]] = [('Parameters', 'Labels')]
-        for label, api_name in params:
+        data: list[tuple[str, str]] = [("Parameters", "Labels")]
+        for verbose_name, api_name in params:
             param = self.__cur_measure.get_shared_parameter(api_name)
-            if param == None:
-                param_labels = ''
-            else:
-                param_labels = ', '.join(sorted(set(param.active_labels)))
-            data.append((label, param_labels))
+            param_labels: list[str] = []
+            if param is not None:
+                labels = param.active_labels.copy()
 
-        for label, api_name, column_name in impacts or []:
-            impact = self._get_shared_avg(
-                param_name=api_name,
-                column=column_name,
-                measure=self.__cur_measure
-            )
-            data.append((label, impact))
-        
+                # Parameter specific modifications
+                match param.name:
+                    case "BldgLoc":
+                        if contains_all_climate_zones(labels):
+                            remove_all_climate_zones(labels)
+                            param_labels.append("All climate zones")
+                    case _:
+                        pass
+
+                for label in labels:
+                    desc = self.connection.get_shared_parameter_description(
+                        param.name,
+                        param.version,
+                        label
+                    )
+                    param_labels.append(f"{label} - {desc}")
+
+            data.append((verbose_name, ", ".join(param_labels).strip()))
+
+        for verbose_name, api_name in nd_params:
+            param = self.__cur_measure.get_shared_parameter(api_name)
+            data.append((verbose_name, ", ".join(param.active_labels).strip()))
+
         return BasicTable(data)
 
     def add_parameters_table(self) -> None:
@@ -532,17 +562,16 @@ class MeasureSummary:
             ('Building Vintage', 'BldgVint'),
             ('Building Location', 'BldgLoc'),
             ('Delivery Type', 'DelivType'),
-            ('Normalized Unit', 'NormUnit'),
+            ('Normalized Unit', 'NormUnit')
+        ]
+
+        nd_params = [
             ('Electric Impact Profile ID', 'electricImpactProfileID'),
-            ('Gas Impact Profile ID', 'GasImpactProfileID'),
-            ('Effective Useful Life ID', 'EULID')
+            ('Gas Impact Profile ID', 'GasImpactProfileID')
         ]
-        impacts = [
-            ('Effective Useful Life (Years)', 'EULID', 'EUL_Yrs'),
-            ('Remaining Useful Life (Years)', 'EULID', 'RUL_Yrs')
-        ]
-        table = self.__build_parameters_table(params, impacts)
-        table_header = Paragraph('Parameters:', PSTYLES['h6'])
+
+        table = self.__build_parameters_table(params, nd_params)
+        table_header = Paragraph('Applicable Parameters:', PSTYLES['h6'])
         self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
     def add_impact_table(self):
@@ -552,8 +581,7 @@ class MeasureSummary:
         try:
             permutations = self.connection.get_permutations(self.__cur_measure)
         except ETRMResponseError as err:
-            raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
-                                  f'\n{err.message}')
+            raise SummaryGenError(f"eTRM Connection Error ({err.status}):\n{err.message}")
         
         std_costs = permutations.get_standard_costs()
         pre_costs = permutations.get_pre_existing_costs()
@@ -561,18 +589,32 @@ class MeasureSummary:
         tot_cost = permutations.get_total_cost()
 
         data = [
-            ['', 'Peak Demand Reduction', 'Electric Savings', 'Gas Savings'],
-            ['Standard', *[f'{cost:.2f}' for cost in std_costs]],
-            ['Pre-Existing', *[f'{cost:.2f}' for cost in pre_costs]],
-            ['Incremental Cost', f'{inc_cost:.2f}', '', ''],
-            ['Total Cost', f'{tot_cost:.2f}', '', '']
+            ["", "Average Value", "Methodology"],
+            ["Standard - Peak Demand Reduction (kW)", f"{std_costs[0]:.2f}", "Link"],
+            ["Existing - Peak Demand Reduction (kW)", f"{pre_costs[0]:.2f}", ""],
+            ["Standard - Electric Savings (kWh/yr)", f"{std_costs[1]:.2f}", "Link"],
+            ["Existing - Electric Savings (kWh/yr)", f"{pre_costs[1]:.2f}", ""],
+            ["Standard - Gas Savings (therm/yr)", f"{std_costs[2]:.2f}", "Link"],
+            ["Existing - Gas Savings (therm/yr)", f"{pre_costs[2]:.2f}", ""],
+            ["Standard - Water Savings (gal/yr)", "", "Link"],
+            ["Existing - Water Savings (gal/yr)", "", ""],
+            ["Measure Case Costs ($)", "", "Link"],
+            ["Base Case Costs ($)", f"{tot_cost:.2f}", ""],
+            ["Incremental Cost ($)", f"{inc_cost:.2f}", ""],
+            ["Effective Useful Life (years)", "", "Link"],
+            ["Remaining Useful Life (years)", "", ""]
         ]
+
         spans = [
-            ((3, 1), (0, 3)),
-            ((4, 1), (0, 3))
+            ((1, 2), (2, 0)),
+            ((3, 2), (2, 0)),
+            ((5, 2), (2, 0)),
+            ((7, 2), (2, 0)),
+            ((9, 2), (2, 0)),
+            ((12, 2), (2, 0))
         ]
         table = BasicTable(data, spans=spans)
-        header = Paragraph('Impact:', style=PSTYLES['h6'])
+        header = Paragraph("Average Impact:", style=PSTYLES["h6"])
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
     def add_table_of_contents(self):

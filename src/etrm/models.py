@@ -1,7 +1,7 @@
 from __future__ import annotations
 import math
 import pandas as pd
-import datetime
+import datetime as dt
 import unicodedata
 from enum import Enum
 from typing import Any, overload
@@ -11,6 +11,15 @@ from src import utils
 from src.utils import getc
 from src.etrm.constants import ETRM_URL
 from src.etrm.exceptions import ETRMResponseError, ETRMConnectionError
+
+
+def convert_from_utc(date_string: str) -> dt.datetime:
+    return dt.datetime.strptime(
+        date_string,
+        r"%Y-%m-%dT%H:%M:%S.%fZ"
+    ).replace(
+        tzinfo=dt.timezone.utc
+    )
 
 
 class Baseline(Enum):
@@ -525,6 +534,56 @@ class SharedValueTable:
         return not self.__eq__(other)
 
 
+class SharedParameterVersion:
+    def __init__(self, res_json: dict[str, Any]) -> None:
+        self.type = getc(res_json, "type", str)
+        self.version = getc(res_json, "version", str)
+        self.versions_url = getc(res_json, "versions_url", str)
+        self.url = getc(res_json, "url", str)
+        committed_date = getc(res_json, "committed_date", str)
+        self.committed_date = convert_from_utc(committed_date)
+        last_updated_date = getc(res_json, "last_updated_date", str)
+        self.last_updated_date = convert_from_utc(last_updated_date)
+
+        try:
+            _, version_num = self.version.split("-", 1)
+            version_num = int(version_num)
+        except ValueError:
+            version_num = -1
+
+        self.version_num = version_num
+
+
+class SharedParameterLabel:
+    def __init__(self, res_json: dict[str, Any]) -> None:
+        self.name = getc(res_json, "name", str)
+        self.api_name = getc(res_json, "api_name", str)
+        self.description = getc(res_json, "description", str)
+
+
+class SharedParameter(SharedParameterVersion):
+    def __init__(self, res_json: dict[str, Any]) -> None:
+        super().__init__(res_json)
+        self.name = getc(res_json, "name", str)
+        self.api_name = getc(res_json, "api_name", str)
+        self.labels = getc(res_json, "labels", list[SharedParameterLabel])
+        self.description = getc(res_json, "description", str)
+        self.references = getc(res_json, "references", list[str])
+        self.version = getc(res_json, "version", str)
+        self.status = getc(res_json, "status", str)
+        self.change_description = getc(res_json, "change_description", str)
+        self.owner = getc(res_json, "owner", str)
+        self.is_published = getc(res_json, "is_published", bool)
+        self._label_dict = {
+            label.name: label
+                for label
+                in self.labels
+        }
+
+    def get_label(self, label: str) -> SharedParameterLabel | None:
+        return self._label_dict.get(label)
+
+
 class Calculation:
     def __init__(self, res_json: dict[str, Any]):
         try:
@@ -656,11 +715,11 @@ class Measure:
         return not self.__eq__(other)
 
     @property
-    def start_date(self) -> datetime.date:
+    def start_date(self) -> dt.date:
         return utils.to_date(self.effective_start_date)
 
     @property
-    def end_date(self) -> datetime.date | None:
+    def end_date(self) -> dt.date | None:
         if self.sunset_date is None:
             return None
 
