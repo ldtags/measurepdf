@@ -79,20 +79,29 @@ class Font:
             )
             fonts.append(font)
             pdfmetrics.registerFont(font)
+
         if len(fonts) == 1:
             return fonts[0]
+
         return fonts
 
     def register_family(self):
+        """Registers `Regular`, `Bold`, `Italic`, and `BoldItalic` for the font family.
+
+        Any other font faces must be registered manually via `register`.
+        """
+
         regular = self.register(FontType.Regular)
         bold = self.register(FontType.Bold)
         italic = self.register(FontType.Italic)
         bold_italic = self.register(FontType.BoldItalic)
-        registerFontFamily(self.name,
-                           normal=regular.fontName,
-                           bold=bold.fontName,
-                           italic=italic.fontName,
-                           boldItalic=bold_italic.fontName)
+        registerFontFamily(
+            self.name,
+            normal=regular.fontName,
+            bold=bold.fontName,
+            italic=italic.fontName,
+            boldItalic=bold_italic.fontName
+        )
 
 
 class ParagraphStyle(PropertySet):

@@ -81,9 +81,8 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'TitlePageTitle',
-            font_name='MerriweatherL',
-            font_size=34,
-            left_indent=2
+            font_name='TimesNewRoman',
+            font_size=32
         )
     )
     style_sheet.add(
@@ -99,6 +98,14 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             'TitleSectionContent',
             font_name='SourceSansPro',
             font_size=12
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            'TitleLink',
+            font_name='SourceSansPro',
+            font_size=12,
+            text_color=COLORS['Green']
         )
     )
     style_sheet.add(
@@ -193,14 +200,6 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             font_size=13.5,
             linkUnderline=1,
             underlineWidth=0.25,
-            text_color=COLORS['Green']
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            'TitleLink',
-            font_name='SourceSansPro',
-            font_size=16,
             text_color=COLORS['Green']
         )
     )

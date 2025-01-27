@@ -244,49 +244,33 @@ class TitleSectionContainer(Table):
 class TitlePage(KeepTogether):
     """A measure title page.
 
-    Each measure within the summary should be preceded by a
-    title page.
-
-    Guaranteed to take up a full page.
+    Each measure within the summary should be preceded by a title page.
     """
 
-    def __init__(self, measure: Measure, **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
-            Table.__init__(self, measure, **kwargs)
-            return
-
+    def __init__(self, measure: Measure):
         self.measure = measure
         self.data: list[Flowable] = []
         self.row_heights: list[Flowable] = []
 
-        img_path = utils.asset_path('etrm.png', 'images')
-        img = utils.get_rlimage(img_path,
-                                INNER_WIDTH / 9,
-                                INNER_HEIGHT / 3,
-                                hAlign='LEFT')
-        self.row_heights.append(img.drawHeight)
-        self.data.append(img)
-
-        self.add_text('MEASURE CHARACTERIZATION', PSTYLES['TitlePageSubtitle'])
-        self.add_spacer(0.15 * inch)
         self.add_text(measure.name, PSTYLES['TitlePageTitle'])
-        self.add_spacer(_NL_HEIGHT)
+        self.add_spacer(0.1 * inch)
 
         link = measure.link
-        link_xml = f'<link href=\"{link}\">{link}/</link>'
-        self.add_text(link_xml, PSTYLES['TitleLink'])
+        self.add_text(f"<link href=\"{link}\">{link}/</link>", PSTYLES['TitleLink'])
+        self.add_spacer(0.4 * inch)
 
         self.data.append(self.sections)
         self.row_heights.append(self.sections.total_height)
-
-        rem_height = INNER_HEIGHT - math.fsum(self.row_heights)
-        self.insert_spacer(1, rem_height / 2)
-        self.insert_spacer(-1, rem_height / 2)
-        table = Table([[item] for item in self.data],
-                      colWidths=INNER_WIDTH,
-                      rowHeights=self.row_heights,
-                      style=TSTYLES['TitlePage'])
-        KeepTogether.__init__(self, [table])
+        super().__init__(
+            [
+                Table(
+                    [[item] for item in self.data],
+                    colWidths=INNER_WIDTH,
+                    rowHeights=self.row_heights,
+                    style=TSTYLES['TitlePage']
+                )
+            ]
+        )
 
     @property
     def sections(self) -> TitleSectionContainer:
@@ -325,16 +309,18 @@ class TitlePage(KeepTogether):
             fmt = '#'
         else:
             fmt = '-'
-        download_date = _NOW.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
-        download_section = TitleSection('DOWNLOADED',
-                                          download_date,
-                                          side='right')        
 
-        sections = [
+        download_date = _NOW.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
+        download_section = TitleSection(
+            'DOWNLOADED',
+            download_date,
+            side='right'
+        )        
+
+        return TitleSectionContainer([
             [uc_section, pa_section, version_section],
             [start_section, end_section, download_section]
-        ]
-        return TitleSectionContainer(sections)
+        ])
 
     def add_text(self, text: str, style: ParagraphStyle) -> None:
         used_height = math.fsum(self.row_heights) + self.sections.total_height
