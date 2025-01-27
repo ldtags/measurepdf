@@ -366,7 +366,7 @@ class Story:
 
         # trim any trailing space
         i = len(_contents) - 1
-        while isinstance(_contents[i], Spacer):
+        while i > 0 and isinstance(_contents[i], Spacer):
             _contents.pop()
             i -= 1
 

@@ -346,7 +346,7 @@ class MeasureSummary:
         self,
         dir_path: str,
         connection: ETRMConnection,
-        file_name: str = 'measure_summary',
+        file_name: str = "measure_summary",
         override: bool = True
     ) -> None:
         clean()
@@ -354,16 +354,40 @@ class MeasureSummary:
         self.__cur_measure: Measure | None = None
         self.connection = connection
         self.story = Story()
-        if os.path.exists(dir_path):
-            self.dir_path = dir_path
-        else:
-            raise FileNotFoundError(f'no {dir_path} folder exists')
-        self.file_name = file_name + '.pdf'
-        self.file_path = os.path.join(self.dir_path, self.file_name)
+        self.dir_path = dir_path
+        self.file_name = file_name
         if not override and os.path.exists(self.file_path):
-            raise FileExistsError(f'a file named {file_name} already exists'
-                                  f' in {dir_path}')
+            raise FileExistsError(f"File already exists at {self.file_path}")
+
         self.summary = SummaryDocTemplate(self.file_path)
+
+    @property
+    def dir_path(self) -> str:
+        return self._dir_path
+
+    @dir_path.setter
+    def dir_path(self, path: str) -> None:
+        path = os.path.normpath(path)
+        if not os.path.exists(path):
+            os.mkdir(path)
+
+        self._dir_path = path
+
+    @property
+    def file_name(self) -> str:
+        return self._file_name
+
+    @file_name.setter
+    def file_name(self, name: str) -> None:
+        _, ext = os.path.splitext(name)
+        if ext != ".pdf":
+            name += ".pdf"
+
+        self._file_name = name
+
+    @property
+    def file_path(self) -> str:
+        return os.path.join(self.dir_path, self.file_name)
 
     def contains(self, measure: Measure) -> bool:
         try:
@@ -702,6 +726,9 @@ class MeasureSummary:
         for use_category in sorted(self.measures.keys()):
             for measure in self.measures[use_category]:
                 self._build_summary(measure)
+
+        if self.story.contents == []:
+            raise RuntimeError("Cannot create an empty summary")
 
         self.summary.multiBuild(self.story.contents, canvasmaker=NumberedCanvas)
         clean()

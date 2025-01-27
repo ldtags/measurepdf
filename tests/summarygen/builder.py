@@ -4,6 +4,7 @@ import time
 import datetime
 import argparse as ap
 
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
 from src import utils, lookups, _ROOT
 from src.etrm import ETRMConnection
 from src.summarygen import MeasureSummary
@@ -38,9 +39,9 @@ class TestBuilder:
         for use_category in use_categories:
             measure_pdf.add_use_category(use_category)
 
-        measure_pdf.filter_measures(
-            min_end_date=datetime.date(2024, 1, 1)
-        )
+        # measure_pdf.filter_measures(
+        #     min_end_date=datetime.date(2024, 1, 1)
+        # )
         measure_pdf.build()
         print(f'measure summary {measure_pdf.file_name} was successfully created')
 
@@ -101,13 +102,18 @@ if __name__ == '__main__':
         for use_category in use_categories:
             if use_category in blacklist:
                 continue
+            
             print(f'Building summary for {use_category}')
-            builder.build(f'SW{use_category}_Summary',
-                          use_categories=use_category)
+            builder.build(
+                f'SW{use_category}_Summary',
+                use_categories=use_category
+            )
     else:
-        builder.build(name,
-                      measure_versions=measures,
-                      use_categories=use_categories)
+        builder.build(
+            name,
+            measure_versions=measures,
+            use_categories=use_categories
+        )
 
     elapsed = time.time() - start
     print(f'took {elapsed}s', file=sys.stderr)
