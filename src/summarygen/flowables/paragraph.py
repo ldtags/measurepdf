@@ -23,25 +23,29 @@ from src.summarygen.flowables.general import Reference
 class ParagraphLine(Table):
     """Conversion of an `ElementLine` to an inline `Flowable`."""
 
-    def __init__(self,
-                 element_line: ElementLine,
-                 measure: Measure | None=None,
-                 **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
-            Table.__init__(self, element_line, **kwargs)
+    def __init__(
+        self,
+        element_line: ElementLine,
+        measure: Measure | None = None,
+        **kwargs
+    ) -> None:
+        if kwargs.get("normalizedData", None) is not None:
+            super().__init__(element_line, **kwargs)
             return
 
         self.element_line = element_line
         self.measure = measure
         if self.measure != None:
-            self.ref_link = f'{self.measure.link}/#references_list'
+            self.ref_link = f"{self.measure.link}/#references_list"
         else:
-            self.ref_link = ''
-        Table.__init__(self,
-                       self.line_matrix,
-                       colWidths=self.col_widths,
-                       rowHeights=element_line.height,
-                       style=TSTYLES['ElementLine'])
+            self.ref_link = ""
+
+        super().__init__(
+            self.line_matrix,
+            colWidths=self.col_widths,
+            rowHeights=element_line.height,
+            style=TSTYLES["ElementLine"]
+        )
 
     @property
     def col_widths(self) -> list[float]:
@@ -95,31 +99,38 @@ class ParagraphLine(Table):
 
 
 class SummaryParagraph(Table):
-    def __init__(self,
-                 elements: list[ParagraphElement],
-                 measure: Measure | None=None,
-                 max_width: float=INNER_WIDTH,
-                 space_after: float | None=None,
-                 **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
-            Table.__init__(self, elements, **kwargs)
+    def __init__(
+        self,
+        elements: list[ParagraphElement],
+        measure: Measure | None = None,
+        max_width: float = INNER_WIDTH,
+        space_after: float | None = None,
+        **kwargs
+    ) -> None:
+        if kwargs.get("normalizedData", None) is not None:
+            super().__init__(elements, **kwargs)
             return
 
-        lines = [[ParagraphLine(line, measure)]
-                    for line in wrap_elements(elements, max_width)]
+        lines = [
+            [ParagraphLine(line, measure)]
+            for line
+            in wrap_elements(elements, max_width)
+        ]
         if lines == []:
             lines = [[]]
+
         col_widths = [max_width]
         row_heights = [DEF_PSTYLE.leading] * len(lines)
 
         if space_after is not None:
             assert space_after > 0
-            lines.append([''])
+            lines.append([""])
             row_heights.append(space_after)
 
-        Table.__init__(self,
-                       lines,
-                       colWidths=col_widths,
-                       rowHeights=row_heights,
-                       style=TSTYLES['ElementLine'],
-                       hAlign='LEFT')
+        super().__init__(
+            lines,
+            colWidths=col_widths,
+            rowHeights=row_heights,
+            style=TSTYLES["ElementLine"],
+            hAlign="LEFT"
+        )

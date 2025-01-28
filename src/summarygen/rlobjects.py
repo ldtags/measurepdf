@@ -53,13 +53,15 @@ class ParagraphElement:
 
     __DEFAULT_STYLES = [TextStyle.NORMAL]
 
-    def __init__(self,
-                 text: str,
-                 type: ElemType=ElemType.TEXT,
-                 styles: list[TextStyle] | None=None,
-                 style: ParagraphStyle | None=None,
-                 href: str | None=None):
-        self.text = text.replace('\n', '')
+    def __init__(
+        self,
+        text: str,
+        type: ElemType = ElemType.TEXT,
+        styles: list[TextStyle] | None = None,
+        style: ParagraphStyle | None = None,
+        href: str | None = None
+    ) -> None:
+        self.text = text.replace("\n", "")
         self.href = href
         self.type = type
         if styles is not None:
@@ -68,6 +70,7 @@ class ParagraphElement:
             self.styles = [*_TYPE_STYLES.get(type, self.__DEFAULT_STYLES)]
             if self.href is not None:
                 self.styles.append(TextStyle.LINK)
+
         self.__style = style
 
     @property
@@ -243,11 +246,13 @@ class ParagraphElement:
 
 
 class ElementLine:
-    def __init__(self,
-                 string: str | None=None,
-                 elements: list[ParagraphElement] | None=None,
-                 max_width: float | None=INNER_WIDTH,
-                 style: ParagraphStyle | None=None):
+    def __init__(
+        self,
+        string: str | None = None,
+        elements: list[ParagraphElement] | None = None,
+        max_width: float | None = INNER_WIDTH,
+        style: ParagraphStyle | None = None
+    ) -> None:
         self.style = style
         self.max_width = max_width
         self._elements: list[ParagraphElement] = []
@@ -288,8 +293,9 @@ class ElementLine:
     @property
     def text(self) -> str:
         if self.elements == []:
-            return ''
-        return ''.join([elem.text for elem in self.elements])
+            return ""
+
+        return "".join([elem.text for elem in self.elements])
 
     def __getitem__(self, i: int) -> ParagraphElement:
         return self.elements[i]
@@ -310,9 +316,8 @@ class ElementLine:
         return result
 
     def __add(self, element: ParagraphElement):
-        if (self.max_width is not None
-                and element.width + self.width > self.max_width):
-            raise WidthExceededError(f'Max width of {self.max_width} exceeded')
+        if self.max_width is not None and element.width + self.width > self.max_width:
+            raise WidthExceededError(f"Max width of {self.max_width} exceeded")
 
         try:
             self._elements[-1].join(element)

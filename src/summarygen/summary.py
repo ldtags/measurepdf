@@ -19,14 +19,15 @@ from reportlab.platypus import (
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
-from src import lookups, patterns, utils, _SYSTEM, _NOW
+from src import lookups, patterns, utils, resources, _SYSTEM, _NOW
 from src.etrm.models import Measure
 from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import (
     ETRMConnectionError,
     ETRMResponseError
 )
-from src.summarygen.parser import TMP_DIR
+from src.summarygen.models import Revision
+from src.summarygen.parser import CharacterizationParser, TMP_DIR
 from src.summarygen.styles import (
     TableStyle,
     ParagraphStyle,
@@ -617,11 +618,31 @@ class MeasureSummary:
         header = Paragraph("Average Impact:", style=PSTYLES["h6"])
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
-    def add_table_of_contents(self):
+    def add_table_of_contents(self) -> None:
         self.story.add(NextPageTemplate('TOC'))
         toc_header = Paragraph('Table of Contents', style=PSTYLES['TOCHeader'])
         self.story.add(toc_header, NEWLINE)
         self.story.add(TableOfContents())
+        self.story.add(PageBreak())
+
+    def add_revision_log(self) -> None:
+        data = resources.get_json("revisions.json")
+        revisions = data.get("revisions", [])
+        if not isinstance(revisions, list):
+            logger.warning("No revisions found in the revisions JSON file")
+            return
+
+        data = [["Version", "Publish Date", "Description of Revisions", "Owner"]]
+        for revision_json in revisions:
+            try:
+                revision = Revision(revision_json)
+            except TypeError | AttributeError:
+                logger.warning("Invalid revision detected, skipping revision...")
+                continue
+
+            raw_description = revision.description
+            
+
         self.story.add(PageBreak())
 
     @overload
