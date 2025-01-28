@@ -19,5 +19,5 @@ def get_json(file_name: str) -> dict[str, Any]:
     if ext != ".json":
         raise RuntimeError(f"File {file_name} must be a JSON file")
 
-    file_path = get_path(file_name)
+    file_path = get_path(file_name, exists=True)
     return json.load(file_path)
