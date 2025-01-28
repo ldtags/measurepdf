@@ -20,4 +20,5 @@ def get_json(file_name: str) -> dict[str, Any]:
         raise RuntimeError(f"File {file_name} must be a JSON file")
 
     file_path = get_path(file_name, exists=True)
-    return json.load(file_path)
+    with open(file_path, "r") as fp:
+        return json.load(fp)

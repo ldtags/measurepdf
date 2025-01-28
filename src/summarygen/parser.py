@@ -32,7 +32,8 @@ from src.summarygen.styles import (
     INNER_WIDTH,
     INNER_HEIGHT,
     PAGESIZE,
-    DEF_PSTYLE
+    DEF_PSTYLE,
+    _NL_HEIGHT
 )
 from src.summarygen.rlobjects import (
     ElemType,
@@ -48,7 +49,8 @@ from src.summarygen.flowables import (
     SummaryParagraph,
     NEWLINE,
     Spacer,
-    BulletList
+    BulletList,
+    BulletOption
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -244,14 +246,14 @@ def get_image(_url: str,
     return utils.get_rlimage(tmp_path, max_width, max_height)
 
 
-class CharacterizationParser:
-    def __init__(self,
-                 measure: Measure,
-                 connection: ETRMConnection,
-                 name: str):
+class HTMLParser:
+    def __init__(
+        self,
+        measure: Measure,
+        connection: ETRMConnection
+    ) -> None:
         self.measure = measure
         self.connection = connection
-        self.html = measure.characterizations[name]
         self.width, self.height = PAGESIZE
 
     def handle_text(self, element: NavigableString) -> list[Flowable]:
@@ -309,13 +311,13 @@ class CharacterizationParser:
             return [NEWLINE, img, NEWLINE]
         return []
 
-    def handle_p(self, tag: Tag) -> list[Flowable]:
+    def handle_p(self, tag: Tag, max_width: float) -> list[Flowable]:
         elements: list[ParagraphElement] = []
         for child in tag.contents:
             elements.extend(convert_element(child))
         if elements == []:
             return []
-        return [SummaryParagraph(elements, self.measure)]
+        return [SummaryParagraph(elements, self.measure, max_width=max_width)]
 
     def handle_table(self, tag: Tag) -> list[Flowable]:
         headers = get_table_headers(tag)
@@ -330,25 +332,58 @@ class CharacterizationParser:
                                    determinants=len(content),
                                    spans=spans)]
 
-    def handle_ul(self, tag: Tag) -> list[Flowable]:
+    def handle_ul(
+        self,
+        tag: Tag,
+        max_width: float,
+        bullet_option: BulletOption
+    ) -> list[Flowable]:
         elements: list[list[ParagraphElement]] = []
         li_list: ResultSet[Tag] = tag.find_all('li')
         for li in li_list:
             items = convert_element(li)
             elements.append(items)
-        return [BulletList(elements, self.measure)]
 
-    def handle_pre(self, tag: Tag) -> list[Flowable]:
+        return [
+            BulletList(
+                elements,
+                self.measure,
+                max_width=max_width,
+                bullet_choice=bullet_option
+            )
+        ]
+
+    def handle_pre(self, tag: Tag, max_width: float) -> list[Flowable]:
         elements = convert_element(tag)
-        return [SummaryParagraph(elements, self.measure)]
+        return [SummaryParagraph(elements, self.measure, max_width=max_width)]
 
-    def parse_contents(self, tag: Tag) -> list[Flowable]:
+    def parse_contents(
+        self,
+        tag: Tag,
+        max_width: float,
+        bullet_option: BulletOption,
+        newline_height: float
+    ) -> list[Flowable]:
         flowables: list[Flowable] = []
         for element in tag.contents:
-            flowables.extend(self.parse_element(element))
+            flowables.extend(
+                self.parse_element(
+                    element,
+                    max_width,
+                    bullet_option,
+                    newline_height
+                )
+            )
+
         return flowables
 
-    def parse_element(self, element: PageElement) -> list[Flowable]:
+    def parse_element(
+        self,
+        element: PageElement,
+        max_width: float,
+        bullet_option: BulletOption,
+        newline_height: float
+    ) -> list[Flowable]:
         if isinstance(element, NavigableString):
             return self.handle_text(element)
 
@@ -360,48 +395,73 @@ class CharacterizationParser:
 
         match element.name:
             case 'div' | 'span':
-                return self.parse_contents(element)
+                return self.parse_contents(
+                    element,
+                    max_width,
+                    bullet_option,
+                    newline_height
+                )
             case 'a':
                 return self.handle_a(element)
             case 'p':
-                return self.handle_p(element)
+                return self.handle_p(element, max_width)
             case 'h3' | 'h6':
                 return self.handle_h(element)
             case 'table':
                 return self.handle_table(element)
             case 'ul':
-                return self.handle_ul(element)
+                return self.handle_ul(element, max_width, bullet_option)
             case 'pre':
-                return self.handle_pre(element)
-            case '<br>':
-                return [NEWLINE]
+                return self.handle_pre(element, max_width)
+            case '<br>' | "br":
+                return [Spacer(1, newline_height, isGlue=True)]
             case tag:
                 raise Exception(f'unsupported HTML tag: {tag}')
 
-    def parse(self) -> list[Flowable]:
-        soup = BeautifulSoup(self.html, 'html.parser')
+    def parse(
+        self,
+        html: str,
+        max_width: float = INNER_WIDTH,
+        bullet_option: BulletOption | None = None,
+        newline_height: float = _NL_HEIGHT
+    ) -> list[Flowable]:
+        soup = BeautifulSoup(html, 'html.parser')
         top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
         flowables: list[Flowable] = []
         i = 0
         while i < len(top_level):
             element = top_level[i]
-            parsed_elements = self.parse_element(element)
+            parsed_elements = self.parse_element(
+                element,
+                max_width,
+                bullet_option,
+                newline_height
+            )
             if is_header(element):
                 parsed_elements.append(Spacer(letter[0], 5))
-                next_elements = self.parse_element(top_level[i + 1])
+                next_elements = self.parse_element(
+                    top_level[i + 1],
+                    max_width,
+                    bullet_option,
+                    newline_height
+                )
                 extra_elements: list[Flowable] = []
                 if len(next_elements) > 1:
                     parsed_elements.append(next_elements.pop(0))
                     extra_elements = next_elements
                 else:
                     parsed_elements.extend(next_elements)
+
                 parsed_elements = [KeepTogether(parsed_elements)]
                 parsed_elements.extend(extra_elements)
                 i += 1
+
             flowables.extend(parsed_elements)
             if (isinstance(element, Tag)
                     and (element.name != 'a')
                     and element.next_sibling == '\n'):
                 flowables.append(NEWLINE)
+
             i += 1
+
         return flowables

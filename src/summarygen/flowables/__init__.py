@@ -39,7 +39,8 @@ from src.summarygen.flowables.titlepage import (
     TitleSectionSubContainer
 )
 from src.summarygen.flowables.bulletlist import (
-    BulletList
+    BulletList,
+    BulletOption
 )
 from src.summarygen.flowables.utils import (
     split_word,

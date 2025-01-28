@@ -1,4 +1,5 @@
 import math
+from enum import Enum
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Paragraph,
@@ -19,32 +20,39 @@ from src.summarygen.flowables.paragraph import SummaryParagraph
 from src.summarygen.exceptions import SummaryGenError
 
 
+class BulletOption(Enum):
+    SQUARE = u"\u25a0"
+    DASH = u"\u2014"
+
+
 class BulletList(Table):
-    def __init__(self,
-                 element_matrix: list[list[ParagraphElement]],
-                 measure: Measure | None=None,
-                 bullet_indent: float=11,
-                 text_indent: float=11,
-                 item_spacing: float=20,
-                 **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
+    def __init__(
+        self,
+        element_matrix: list[list[ParagraphElement]],
+        measure: Measure | None = None,
+        bullet_indent: float = 11,
+        text_indent: float = 11,
+        item_spacing: float = 0,
+        max_width: float = INNER_WIDTH,
+        bullet_choice: BulletOption = BulletOption.SQUARE,
+        **kwargs
+    ) -> None:
+        if kwargs.get("normalizedData") is not None:
             Table.__init__(self, element_matrix, **kwargs)
             return
-
-        if measure is None:
-            raise SummaryGenError('An eTRM measure is required to generate'
-                                  ' a summary bullet list')
 
         self.bullet_indent = bullet_indent
         self.text_indent = text_indent
 
-        bullet_style = PSTYLES['BulletPoint']
-        bullet = Paragraph(u'\u25a0', style=bullet_style) # square
-        bullet_width = stringWidth(bullet.text,
-                                   bullet_style.font_name,
-                                   bullet_style.font_size)
+        bullet_style = PSTYLES["BulletPoint"]
+        bullet = Paragraph(bullet_choice.value, style=bullet_style) # square
+        bullet_width = stringWidth(
+            bullet.text,
+            bullet_style.font_name,
+            bullet_style.font_size
+        )
 
-        text_width = INNER_WIDTH - bullet_width
+        text_width = max_width - bullet_width
         text_width -= self.bullet_indent + self.text_indent
         self.text_width = text_width
 

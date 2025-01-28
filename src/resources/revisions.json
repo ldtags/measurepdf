@@ -4,7 +4,7 @@
         {
             "version": 1.0,
             "publish_date": "2025-01-28T20:07:05Z",
-            "description": "Initial version of this POU TRM, replacing the previous <i>2017 CMUA Savings Estimation POU Technical Reference Manual</i>.<br/><ul><li>New measure structure, terminology, and information.</li><li>New list of measures extracted and summarized from the CA electronic technical reference manual (eTRM).</li></ul>",
+            "description": "<div><p>Initial version of this POU TRM, replacing the previous <em>2017 CMUA Savings Estimation POU Technical Reference Manual</em>.</p><br><ul><li>New measure structure, terminology, and information.</li><li>New list of measures extracted and summarized from the CA electronic technical reference manual (eTRM).</li></ul></div>",
             "owner": "Cal TF Staff"
         }
     ]

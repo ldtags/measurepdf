@@ -27,7 +27,7 @@ from src.etrm.exceptions import (
     ETRMResponseError
 )
 from src.summarygen.models import Revision
-from src.summarygen.parser import CharacterizationParser, TMP_DIR
+from src.summarygen.parser import HTMLParser, TMP_DIR
 from src.summarygen.styles import (
     TableStyle,
     ParagraphStyle,
@@ -36,13 +36,16 @@ from src.summarygen.styles import (
     Y_MARGIN,
     PSTYLES,
     INNER_HEIGHT,
-    INNER_WIDTH
+    INNER_WIDTH,
+    TSTYLES,
+    _NL_HEIGHT
 )
 from src.summarygen.rlobjects import Story
 from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
-    TitlePage
+    TitlePage,
+    BulletOption
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -633,6 +636,7 @@ class MeasureSummary:
             return
 
         data = [["Version", "Publish Date", "Description of Revisions", "Owner"]]
+        col_widths = [INNER_WIDTH * 0.13, INNER_WIDTH * 0.15, INNER_WIDTH * 0.47, INNER_WIDTH * 0.25]
         for revision_json in revisions:
             try:
                 revision = Revision(revision_json)
@@ -640,9 +644,27 @@ class MeasureSummary:
                 logger.warning("Invalid revision detected, skipping revision...")
                 continue
 
-            raw_description = revision.description
-            
+            desc_parser = HTMLParser(self.__cur_measure, self.connection)
+            desc_flowables = desc_parser.parse(
+                revision.description,
+                max_width=col_widths[2] - 8,
+                bullet_option=BulletOption.SQUARE,
+                newline_height=_NL_HEIGHT * 0.2
+            )
+            desc_table = Table(
+                [[flowable] for flowable in desc_flowables],
+                colWidths=(col_widths[2]),
+                style=TSTYLES["ElementLine"]
+            )
+            style = PSTYLES["Base"]
+            data.append([
+                Paragraph(str(revision.version), style=style),
+                Paragraph(revision.publish_date.strftime(r"%Y/%m/%d"), style=style),
+                desc_table,
+                Paragraph(revision.owner, style=style)
+            ])
 
+        self.story.add(Table(data, colWidths=col_widths, style=TSTYLES["RevisionLog"]))
         self.story.add(PageBreak())
 
     @overload
@@ -783,6 +805,7 @@ class MeasureSummary:
         self.__cur_measure = None
 
     def build(self, toc: bool=False) -> None:
+        self.add_revision_log()
         if toc:
             self.add_table_of_contents()
 

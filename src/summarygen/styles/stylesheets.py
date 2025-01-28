@@ -336,6 +336,18 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
             ]
         )
     )
+    style_sheet.add(
+        TableStyle(
+            'RevisionLog',
+            [
+                ('LEFTPADDING', (0, 0), (-1, -1), 2),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
+                ('TOPPADDING', (0, 0), (-1, -1), 2),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP')
+            ]
+        )
+    )
 
     return style_sheet
 
