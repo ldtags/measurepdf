@@ -69,34 +69,31 @@ _TABLE_STYLES = list[ParagraphStyle] | ParagraphStyle
 class BasicTable(Table):
     """Base class for tables in the summary PDF.
 
-    Use when creating a new table or extend to create a new
-    table class.
+    Use when creating a new table or extend to create a new table class.
 
     Do not use when creating a new class that will extend the
-    `Table` class, but will not be a genuine table.
-
-    Apologies for the __init__ weirdness here, but we must appease
-    the ReportLab gods.
+    `Table` class, but will not be a genuine table (i.e., `TableCell`,
+    `ParagraphLine`).
     """
 
     def __init__(
         self,
         data: list[list[str | ElementLine]],
-        headers: int=1,
-        measure: Measure | None=None,
-        spans: list[_TABLE_SPAN] | None=None,
-        header_orient: _TABLE_ORIENT='top',
-        header_styles: _TABLE_STYLES=PSTYLES['ValueTableHeader'],
-        body_styles: _TABLE_STYLES=PSTYLES['ValueTableDeterminant'],
-        table_style: TableStyle | None=None,
-        col_widths: list[float] | float | None=None,
-        row_heights: list[float] | float | None=None,
-        h_align: Literal['left', 'center', 'right']='left',
-        repeat_rows: int=1,
+        headers: int = 1,
+        measure: Measure | None = None,
+        spans: list[_TABLE_SPAN] | None = None,
+        header_orient: _TABLE_ORIENT = "top",
+        header_styles: _TABLE_STYLES = PSTYLES["ValueTableHeader"],
+        body_styles: _TABLE_STYLES = PSTYLES["ValueTableDeterminant"],
+        table_style: TableStyle | None = None,
+        col_widths: list[float] | float | None = None,
+        row_heights: list[float] | float | None = None,
+        h_align: Literal["left", "center", "right"] = "left",
+        repeat_rows: int = 1,
         **kwargs
     ) -> None:
         """Constructs a ReportLab `Table` with the provided data.
-        
+
         Parameters:
             `data` - A 2D matrix of strings or `ElementLine` objects that
             define the table data.
@@ -143,11 +140,16 @@ class BasicTable(Table):
             in the event of a table split.
         """
 
-        if kwargs.get('normalizedData') is not None:
-            Table.__init__(self, data, **kwargs)
+        # Allows reportlab to do the final pass in the multiBuild process
+        if kwargs.get("normalizedData") is not None:
+            super().__init__(data, **kwargs)
             return
 
+        # Validates input data
         assert data != []
+        assert headers > -1
+
+        # Ensures that each cell in each row has an associated size
         row_len: float | None = None
         for row in data:
             if row_len is None:
@@ -156,6 +158,8 @@ class BasicTable(Table):
                 assert len(row) == row_len
 
         assert row_len is not None
+
+        self.header_count = headers
         self.header_orient = header_orient
         self.measure = measure
         self.max_width = INNER_WIDTH
@@ -166,6 +170,7 @@ class BasicTable(Table):
                 in self.spans
         }
 
+        # Applies the table style
         self.style = table_style or get_table_style(
             data=data,
             headers=headers,
@@ -175,46 +180,51 @@ class BasicTable(Table):
         self.h_padding = self.style.left_padding + self.style.right_padding
         self.v_padding = self.style.top_padding + self.style.bottom_padding
 
-        style_count = row_len if header_orient == 'top' else len(data)
+        # Applies the header styles
+        style_count = row_len if header_orient == "top" else len(data)
         if isinstance(header_styles, ParagraphStyle):
             self.header_styles = [header_styles] * style_count
         else:
             assert len(header_styles) == headers
             self.header_styles = header_styles
 
+        # Applies the body styles
         if isinstance(body_styles, ParagraphStyle):
             self.body_styles = [body_styles] * style_count
         else:
             assert len(body_styles) == style_count
             self.body_styles = body_styles
 
-        assert headers > -1
-        self.header_count = headers
-        self.data = self.__sanitize_data(data)
-
+        # Ensures that each column has a defined width
         if isinstance(col_widths, float):
-            self.__col_widths = [col_widths] * row_len
+            self._col_widths = [col_widths] * row_len
         else:
             if col_widths is not None:
                 assert row_len == len(col_widths)
-            self.__col_widths = col_widths
 
+            self._col_widths = col_widths
+
+        # Ensures that each row has a defined height
         if isinstance(row_heights, float):
-            self.__row_heights = [row_heights] * len(data)
+            self._row_heights = [row_heights] * len(data)
         else:
             if row_heights is not None:
                 assert len(data) == len(row_heights)
-            self.__row_heights = row_heights
 
-        self.table_cells = self.__convert_data(self.data)
-        if header_orient == 'left':
+            self._row_heights = row_heights
+
+        # Cleans up and processes data into table cells
+        self.data = self._sanitize_data(data)
+        self.table_cells = self._convert_data(self.data)
+
+        # Pulls headers from the table data
+        if header_orient == "left":
             columns = utils.rotate_matrix(self.table_cells)
             self.headers = columns[0:headers]
         else:
             self.headers = self.table_cells[0:headers]
 
-        Table.__init__(
-            self,
+        super().__init__(
             data=self.table_cells,
             colWidths=self.col_widths,
             rowHeights=self.row_heights,
@@ -226,10 +236,10 @@ class BasicTable(Table):
 
     @property
     def col_widths(self) -> list[float]:
-        if self.__col_widths is not None:
-            return self.__col_widths
+        if self._col_widths is not None:
+            return self._col_widths
 
-        col_widths = self.__calc_col_widths(self.data)
+        col_widths = self._calc_col_widths(self.data)
         widths_len = len(col_widths)
         for y, row in enumerate(self.data):
             try:
@@ -240,15 +250,15 @@ class BasicTable(Table):
                     f' match the amount of columns in row {y}'
                 ) from err
 
-        self.__col_widths = col_widths
-        return self.__col_widths
+        self._col_widths = col_widths
+        return self._col_widths
 
     @property
     def row_heights(self) -> list[float]:
-        if self.__row_heights is not None:
-            return self.__row_heights
+        if self._row_heights is not None:
+            return self._row_heights
 
-        row_heights = self.__calc_row_heights(self.data)
+        row_heights = self._calc_row_heights(self.data)
         rows = [row for row in zip(*self.data)]
         heights_len = len(row_heights)
         for x, col in enumerate(rows):
@@ -260,8 +270,8 @@ class BasicTable(Table):
                     f' match the amount of rows in column {x}'
                 ) from err
 
-        self.__row_heights = row_heights
-        return self.__row_heights
+        self._row_heights = row_heights
+        return self._row_heights
 
     def get_style(self, x: int, y: int) -> ParagraphStyle:
         if self.header_orient == 'left':
@@ -278,10 +288,11 @@ class BasicTable(Table):
 
         return self.body_styles[x - body_off]
 
-    def __calc_min_widths(self,
-                          data: list[list[ElementLine]],
-                          size: int=1
-                         ) -> list[list[float]]:
+    def _calc_min_widths(
+        self,
+        data: list[list[ElementLine]],
+        size: int = 1
+    ) -> list[list[float]]:
         """Calculates the minimum width of each column in `data` given
         that each table cell will use, at most, `size` amount of words.
 
@@ -320,7 +331,7 @@ class BasicTable(Table):
 
         return [max(column) for column in utils.rotate_matrix(min_matrix)]
 
-    def __calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
+    def _calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
         """Returns the list of column widths for this table.
 
         Column widths are calculated by unwrapping data until it cannot
@@ -331,9 +342,9 @@ class BasicTable(Table):
         """
 
         size = 1
-        prev_widths = self.__calc_min_widths(data, size)
+        prev_widths = self._calc_min_widths(data, size)
         while math.fsum(prev_widths) <= self.max_width:
-            col_widths = self.__calc_min_widths(data, size=size + 1)
+            col_widths = self._calc_min_widths(data, size=size + 1)
             if col_widths == prev_widths:
                 break
 
@@ -366,7 +377,7 @@ class BasicTable(Table):
         prev_widths = [width + add_width for width in prev_widths]
         return prev_widths
 
-    def __calc_row_heights(self,
+    def _calc_row_heights(self,
                            data: list[list[ElementLine]],
                            col_widths: list[float] | None=None
                           ) -> list[float]:
@@ -416,30 +427,40 @@ class BasicTable(Table):
 
         return [max(heights) for heights in height_matrix]
 
-    def __sanitize_data(self,
-                        data: list[list[ElementLine | str]]
-                       ) -> list[list[ElementLine]]:
+    def _sanitize_data(
+        self,
+        data: list[list[ElementLine | str]]
+    ) -> list[list[ElementLine]]:
         sanitized_data: list[list[ElementLine]] = []
         for y, row in enumerate(data):
             sanitized_row: list[ElementLine] = []
             for x, cell in enumerate(row):
                 if isinstance(cell, str):
                     style = self.get_style(x, y)
-                    elem = ElementLine(string=cell,
-                                       style=style,
-                                       max_width=None)
+                    elem = ElementLine(
+                        string=cell,
+                        style=style,
+                        max_width=None
+                    )
                 else:
                     elem = cell
+
                 sanitized_row.append(elem)
+
             sanitized_data.append(sanitized_row)
+
         return sanitized_data
 
-    def __wrap_data(self,
-                    data: list[list[ElementLine]]
-                   ) -> list[list[list[ElementLine]]]:
+    def _wrap_data(
+        self,
+        data: list[list[ElementLine]]
+    ) -> list[list[list[ElementLine]]]:
         h_padding = self.style.left_padding + self.style.right_padding
-        cell_widths = [math.ceil(width - h_padding)
-                        for width in self.col_widths]
+        cell_widths = [
+            math.ceil(width - h_padding)
+            for width
+            in self.col_widths
+        ]
         frags: list[list[list[ElementLine]]] = []
         for y, table_row in enumerate(data):
             frag_line: list[list[ElementLine]] = []
@@ -449,19 +470,25 @@ class BasicTable(Table):
                     cell_width = sum(cell_widths[x:x + col_span - 1])
                 else:
                     cell_width = cell_widths[x]
+
                 elements = elem_line.elements
                 for element in elements:
                     if not element.is_styled():
                         element.style = self.get_style(x, y)
-                frag_line.append(wrap_elements(elem_line.elements,
-                                               max_width=cell_width))
+
+                frag_line.append(
+                    wrap_elements(elem_line.elements, max_width=cell_width)
+                )
+
             frags.append(frag_line)
+
         return frags
 
-    def __convert_data(self,
-                       data: list[list[ElementLine]]
-                      ) -> list[list[TableCell | str]]:
-        frags = self.__wrap_data(data)
+    def _convert_data(
+        self,
+        data: list[list[ElementLine]]
+    ) -> list[list[TableCell | str]]:
+        frags = self._wrap_data(data)
         table_cells: list[list[TableCell | str]] = []
         for y, frag_line in enumerate(frags):
             cells: list[TableCell | str] = []
@@ -471,18 +498,25 @@ class BasicTable(Table):
                 else:
                     cell_lines: list[ParagraphLine] = []
                     for element_line in table_cell:
-                        para_line = ParagraphLine(element_line=element_line,
-                                                  measure=self.measure)
+                        para_line = ParagraphLine(
+                            element_line=element_line,
+                            measure=self.measure
+                        )
                         cell_lines.append(para_line)
+
                     _, col_span = self.span_dict.get(str((y, x)), (0, 0))
                     if col_span > 1:
                         col_width = sum(self.col_widths[x:x + col_span - 1])
                     else:
                         col_width = self.col_widths[x]
+
                     col_width -= self.h_padding
                     cell = TableCell(cell_lines, width=col_width)
+
                 cells.append(cell)
+
             table_cells.append(cells)
+
         return table_cells
 
 
