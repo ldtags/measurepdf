@@ -1,7 +1,17 @@
 from __future__ import annotations
+import datetime as dt
 from typing import Any
 
 from src.utils import JSONObject
+
+
+def convert_from_utc(date_string: str) -> dt.datetime:
+    return dt.datetime.strptime(
+        date_string,
+        r"%Y-%m-%dT%H:%M:%SZ"
+    ).replace(
+        tzinfo=dt.timezone.utc
+    )
 
 
 class ObjectInfo(JSONObject):
@@ -70,3 +80,12 @@ class EmbeddedImage(JSONObject):
         self.obj_info = self.get('objInfo', ImgObjectInfo)
         self.caption = self.get('caption', str)
         self.align = self.get('align', str)
+
+
+class Revision(JSONObject):
+    def __init__(self, _json: str | dict[str, Any]) -> None:
+        super().__init__(_json)
+        self.version = self.get("version", float)
+        self.publish_date = convert_from_utc(self.get("publish_date", str))
+        self.description = self.get("description", str)
+        self.owner = self.get("owner", str)
