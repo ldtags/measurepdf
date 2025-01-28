@@ -1,0 +1,35 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema",
+    "title": "Revisions",
+    "description": "Summary generator revision history list descriptior",
+    "type": "object",
+    "properties": {
+        "revisions": {
+            "description": "List of revisions",
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "version": {
+                        "description": "The revision version",
+                        "type": "number"
+                    },
+                    "publish_date": {
+                        "description": "The date (in UTC) that the version was published",
+                        "type": "string"
+                    },
+                    "description": {
+                        "description": "The description (in HTML) of generator updates implemented in the new version",
+                        "type": "string"
+                    },
+                    "owner": {
+                        "description": "The owner of the new version",
+                        "type": "string"
+                    }
+                },
+                "required": ["version", "publish_date", "description", "owner"]
+            }
+        }
+    },
+    "required": ["revisions"]
+}
