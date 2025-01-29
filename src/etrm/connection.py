@@ -3,7 +3,7 @@ import time
 import logging
 import requests
 import http.client as httpc
-from typing import TypeVar, Callable, overload
+from typing import TypeVar, Callable, overload, Any
 
 from src import utils
 from src.etrm import sanitizers
@@ -398,12 +398,21 @@ class ETRMConnection:
         If sorted, the list of versions will be sorted from most-recent to least-recent.
         """
 
-        res = self.get(f"/shared-parameters/{api_name}")
-        content = res.json()
-        try:
-            results: list[dict[str, str]] = content["results"]
-        except KeyError:
-            return []
+        results: list[dict[str, str]] = []
+        url = f"/shared-parameters/{api_name}"
+        while url is not None:
+            res = self.get(url)
+            content: dict[str, Any] = res.json()
+            next_url = content.get("next")
+            if next_url is not None:
+                prev_url = utils.parse_url(url)
+                prev_offset = prev_url.query.get("offset", "")
+                parsed_url = utils.parse_url(next_url)
+                url_offset = parsed_url.query.get("offset", "")
+                if prev_offset == url_offset:
+                    break
+
+            results.extend(content.get("results", []))
 
         versions: list[SharedParameterVersion] = []
         for result in results:
