@@ -17,7 +17,6 @@ from src.summarygen.rlobjects import (
 )
 from src.summarygen.flowables.general import Spacer
 from src.summarygen.flowables.paragraph import SummaryParagraph
-from src.summarygen.exceptions import SummaryGenError
 
 
 class BulletOption(Enum):
