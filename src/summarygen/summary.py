@@ -635,8 +635,15 @@ class MeasureSummary:
             logger.warning("No revisions found in the revisions JSON file")
             return
 
-        data = [["Version", "Publish Date", "Description of Revisions", "Owner"]]
-        col_widths = [INNER_WIDTH * 0.13, INNER_WIDTH * 0.15, INNER_WIDTH * 0.47, INNER_WIDTH * 0.25]
+        style = PSTYLES["Paragraph"]
+        header = Paragraph("Revision Log", style=PSTYLES["h6"])
+        data = []
+        data.append([
+            Paragraph(table_header, style.bold)
+            for table_header
+            in ["Version", "Publish Date", "Description of Revisions", "Owner"]
+        ])
+        col_widths = [INNER_WIDTH * 0.13, INNER_WIDTH * 0.2, INNER_WIDTH * 0.47, INNER_WIDTH * 0.2]
         for revision_json in revisions:
             try:
                 revision = Revision(revision_json)
@@ -656,7 +663,6 @@ class MeasureSummary:
                 colWidths=(col_widths[2]),
                 style=TSTYLES["ElementLine"]
             )
-            style = PSTYLES["Base"]
             data.append([
                 Paragraph(str(revision.version), style=style),
                 Paragraph(revision.publish_date.strftime(r"%Y/%m/%d"), style=style),
@@ -664,7 +670,8 @@ class MeasureSummary:
                 Paragraph(revision.owner, style=style)
             ])
 
-        self.story.add(Table(data, colWidths=col_widths, style=TSTYLES["RevisionLog"]))
+        table = Table(data, colWidths=col_widths, style=TSTYLES["RevisionLog"])
+        self.story.add(KeepTogether([header, table]))
         self.story.add(PageBreak())
 
     @overload

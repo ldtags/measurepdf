@@ -338,13 +338,17 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
     )
     style_sheet.add(
         TableStyle(
-            'RevisionLog',
+            "RevisionLog",
             [
-                ('LEFTPADDING', (0, 0), (-1, -1), 2),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 2),
-                ('TOPPADDING', (0, 0), (-1, -1), 2),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 2),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP')
+                ("LINEABOVE", (0, 0), (-1, 0), 1, COLORS["RevisionLogGridLine"]),
+                ("LINEABOVE", (0, 1), (-1, 1), 1, COLORS["RevisionLogGridLine"]),
+                ("LINEBELOW", (0, -1), (-1, -1), 1, COLORS["RevisionLogGridLine"]),
+                ("BACKGROUND", (0, 0), (-1, 0), COLORS["RevisionLogHeaderBG"]),
+                ("LEFTPADDING", (0, 0), (-1, -1), 2),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 2),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ("VALIGN", (0, 0), (-1, -1), "TOP")
             ]
         )
     )
