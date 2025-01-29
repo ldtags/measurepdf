@@ -23,6 +23,8 @@ from src.summarygen.exceptions import SummaryGenError
 class BulletOption(Enum):
     SQUARE = u"\u25a0"
     DASH = u"\u2014"
+    FILLED_CIRCLE = u"\u25cf"
+    OUTLINED_CIRCLE = u"\u25cb"
 
 
 class BulletList(Table):
