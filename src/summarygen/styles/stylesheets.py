@@ -226,6 +226,21 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             alignment=TA_CENTER
         )
     )
+    style_sheet.add(
+        ParagraphStyle(
+            "SectionHeader1",
+            font_name="Arial",
+            font_size=14,
+            text_color=COLORS["SectionHeader"]
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "SectionHeader2",
+            font_name="Arial",
+            font_size=13
+        )
+    )
 
     return style_sheet
 
