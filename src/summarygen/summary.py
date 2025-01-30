@@ -45,7 +45,7 @@ from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
     TitlePage,
-    BulletOption
+    SQUARE_BULLET
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -518,7 +518,7 @@ class MeasureSummary:
 
         return f'{impact_avg:.2f}'
 
-    def __build_parameters_table(
+    def _build_parameters_table(
         self,
         params: list[tuple[str, str]],
         nd_params: list[tuple[str, str]],
@@ -574,7 +574,7 @@ class MeasureSummary:
             ('Gas Impact Profile ID', 'GasImpactProfileID')
         ]
 
-        table = self.__build_parameters_table(params, nd_params)
+        table = self._build_parameters_table(params, nd_params)
         table_header = Paragraph('Applicable Parameters:', PSTYLES['h6'])
         self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
@@ -655,7 +655,7 @@ class MeasureSummary:
             desc_flowables = desc_parser.parse(
                 revision.description,
                 max_width=col_widths[2] - 8,
-                bullet_option=BulletOption.SQUARE,
+                bullet_option=SQUARE_BULLET,
                 newline_height=_NL_HEIGHT * 0.2
             )
             desc_table = Table(

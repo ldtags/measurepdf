@@ -40,7 +40,10 @@ from src.summarygen.flowables.titlepage import (
 )
 from src.summarygen.flowables.bulletlist import (
     BulletList,
-    BulletOption
+    BulletOption,
+    SQUARE_BULLET,
+    DASH_BULLET,
+    CIRCLE_BULLET
 )
 from src.summarygen.flowables.utils import (
     split_word,

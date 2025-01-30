@@ -255,6 +255,7 @@ class HTMLParser:
         self.measure = measure
         self.connection = connection
         self.width, self.height = PAGESIZE
+        self._cur_bullet_level = 0
 
     def handle_text(self, element: NavigableString) -> list[Flowable]:
         text = element.get_text()
@@ -338,18 +339,21 @@ class HTMLParser:
         max_width: float,
         bullet_option: BulletOption
     ) -> list[Flowable]:
+        self._cur_bullet_level += 1
         elements: list[list[ParagraphElement]] = []
         li_list: ResultSet[Tag] = tag.find_all('li')
         for li in li_list:
             items = convert_element(li)
             elements.append(items)
 
+        self._cur_bullet_level -= 1
         return [
             BulletList(
                 elements,
                 self.measure,
                 max_width=max_width,
-                bullet_choice=bullet_option
+                bullet_choice=bullet_option,
+                level=self._cur_bullet_level
             )
         ]
 
@@ -413,7 +417,7 @@ class HTMLParser:
                 return self.handle_ul(element, max_width, bullet_option)
             case 'pre':
                 return self.handle_pre(element, max_width)
-            case '<br>' | "br":
+            case "br":
                 return [Spacer(1, newline_height, isGlue=True)]
             case tag:
                 raise Exception(f'unsupported HTML tag: {tag}')
@@ -425,6 +429,7 @@ class HTMLParser:
         bullet_option: BulletOption | None = None,
         newline_height: float = _NL_HEIGHT
     ) -> list[Flowable]:
+        self._cur_bullet_level = 1
         soup = BeautifulSoup(html, 'html.parser')
         top_level: ResultSet[PageElement] = soup.find_all(recursive=False)
         flowables: list[Flowable] = []
