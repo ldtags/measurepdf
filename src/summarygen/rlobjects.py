@@ -98,7 +98,9 @@ class ParagraphElement:
                     pass
                 case x:
                     raise ValueError(f'{x} is not a valid TextStyle')
+
             cur_styles.append(style)
+
         return text
 
     @property
@@ -127,6 +129,7 @@ class ParagraphElement:
                     style = style.link
                 case _:
                     pass
+
         return style
 
     @style.setter
@@ -145,6 +148,7 @@ class ParagraphElement:
     def width(self) -> float:
         if self.type == ElemType.NEWLINE:
             return INNER_WIDTH - 0.01
+
         _width = stringWidth(self.text, self.font_name, self.font_size)
         _width += self.style.x_padding
         return _width
@@ -206,43 +210,45 @@ class ParagraphElement:
                 frag_indice = -1
             else:
                 frag_indice = i + size
+
             elem.join(*elem_frags[i + 1:i + frag_indice])
             split_elems.append(elem)
+
         return split_elems
 
     def join(self, *elements: ParagraphElement) -> None:
         for element in elements:
             if self.type == ElemType.REF:
-                raise ElementJoinError('Cannot join reference tags')
+                raise ElementJoinError("Cannot join reference tags")
 
             if element.type == ElemType.SPACE:
-                self.text += ' '
+                self.text += " "
                 continue
 
             if self.type != element.type:
-                raise ElementJoinError('Cannot join elements with'
-                                       ' different types')
+                raise ElementJoinError("Cannot join elements with different types")
 
             if self.styles != element.styles:
-                raise ElementJoinError('Cannot join elements with different'
-                                       ' styles')
+                raise ElementJoinError("Cannot join elements with different styles")
 
             if self.href != element.href:
-                raise ElementJoinError('Cannot join elements with different'
-                                       ' link destinations.')
+                raise ElementJoinError("Cannot join elements with different links")
 
             self.text += element.text
 
-    def copy(self,
-             text: str | None=None,
-             type: ElemType | None=None,
-             styles: list[TextStyle] | None=None,
-             style: ParagraphStyle | None=None
-            ) -> ParagraphElement:
-        return ParagraphElement(text or self.text,
-                                type or self.type,
-                                styles or self.styles,
-                                style or self.style)
+    def copy(
+        self,
+        text: str | None=None,
+        type: ElemType | None=None,
+        styles: list[TextStyle] | None=None,
+        style: ParagraphStyle | None=None
+    ) -> ParagraphElement:
+        return ParagraphElement(
+            text or self.text,
+            type or self.type,
+            styles or self.styles,
+            style or self.style
+        )
 
 
 class ElementLine:
@@ -276,6 +282,7 @@ class ElementLine:
             elem_types = [elem.type for elem in self._elements[i:]]
             if all([elem_type == ElemType.SPACE for elem_type in elem_types]):
                 break
+
             elements.append(element.copy())
 
         return elements
@@ -288,6 +295,7 @@ class ElementLine:
     def height(self) -> float:
         if self.elements == []:
             return 0
+
         return max([elem.height for elem in self.elements])
 
     @property
@@ -358,9 +366,11 @@ class ElementLine:
 
 
 class Story:
-    def __init__(self,
-                 inner_height: float=INNER_HEIGHT,
-                 inner_width: float=INNER_WIDTH):
+    def __init__(
+        self,
+        inner_height: float=INNER_HEIGHT,
+        inner_width: float=INNER_WIDTH
+    ) -> None:
         self.inner_height = inner_height
         self.inner_width = inner_width
         self.__contents: list[Flowable] = []
@@ -386,6 +396,7 @@ class Story:
             _, height = flowable.wrap(INNER_WIDTH, 0)
         else:
             _, height = flowable.wrap(0, 0)
+
         return height
 
     def add(self, *flowables: Flowable):
