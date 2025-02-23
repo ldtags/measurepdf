@@ -14,20 +14,20 @@ from reportlab.platypus import (
     BaseDocTemplate,
     KeepTogether,
     PageTemplate,
-    NextPageTemplate
+    NextPageTemplate,
+    Spacer
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
-from src import lookups, patterns, utils, resources, _SYSTEM, _NOW
+from src import lookups, patterns, utils, resources, _SYSTEM, _NOW, TMP_DIR
 from src.etrm.models import Measure
 from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import (
     ETRMConnectionError,
     ETRMResponseError
 )
-from src.summarygen.models import Revision
-from src.summarygen.parser import HTMLParser, TMP_DIR
+from src.summarygen.models import Revision, KeyTerminology, Story
 from src.summarygen.styles import (
     TableStyle,
     ParagraphStyle,
@@ -40,7 +40,6 @@ from src.summarygen.styles import (
     TSTYLES,
     _NL_HEIGHT
 )
-from src.summarygen.rlobjects import Story
 from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
@@ -48,6 +47,7 @@ from src.summarygen.flowables import (
     SQUARE_BULLET
 )
 from src.summarygen.exceptions import SummaryGenError
+from src.summarygen.html_parser import HTMLParser
 
 
 logger = logging.getLogger(__name__)
@@ -674,6 +674,26 @@ class MeasureSummary:
         self.story.add(KeepTogether([header, table]))
         self.story.add(PageBreak())
 
+    def add_key_terminology_item(self, item: KeyTerminology) -> None:
+        parser = HTMLParser()
+        content = f"<kth>{item.name}: </kth>{item.content}"
+        self.story.add(*parser.parse(content))
+        self.story.add(Spacer(0.01, _NL_HEIGHT // 2))
+
+    def add_key_terminology(self) -> None:
+        data = resources.get_json("key_terminology.json")
+        parameters = data.get("parameters")
+        if parameters is None:
+            raise SummaryGenError("No key terminology parameters found")
+
+        terminology_items: list[KeyTerminology] = []
+        for parameter in parameters:
+            terminology_items.append(KeyTerminology(parameter))
+
+        for terminology_item in terminology_items:
+            self.add_key_terminology_item(terminology_item)
+
+
     @overload
     def add_measure(self, measure_id: str) -> None:
         ...
@@ -802,17 +822,15 @@ class MeasureSummary:
         self.summary.addPageTemplates(template)
         self.story.add(NextPageTemplate(summary_measure.full_version_id))
 
-        if not self.is_first(summary_measure):
-            self.story.add(PageBreak())
-
         self.add_title_page()
         self.add_parameters_table()
         self.add_impact_table()
+        self.story.add(PageBreak())
 
         self.__cur_measure = None
 
     def build(self, toc: bool=False) -> None:
-        self.add_revision_log()
+        # self.add_revision_log()
         if toc:
             self.add_table_of_contents()
 
@@ -820,6 +838,7 @@ class MeasureSummary:
             for measure in self.measures[use_category]:
                 self._build_summary(measure)
 
+        self.add_key_terminology()
         if self.story.contents == []:
             raise RuntimeError("Cannot create an empty summary")
 

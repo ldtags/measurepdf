@@ -11,7 +11,7 @@ from src.summarygen.styles import (
     TSTYLES,
     INNER_WIDTH
 )
-from src.summarygen.rlobjects import (
+from src.summarygen.models import (
     ParagraphElement
 )
 from src.summarygen.flowables.general import Spacer

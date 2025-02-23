@@ -1,6 +1,5 @@
-from __future__ import annotations
-import datetime as dt
 from typing import Any
+import datetime as dt
 
 from src.utils import JSONObject
 
@@ -89,3 +88,19 @@ class Revision(JSONObject):
         self.publish_date = convert_from_utc(self.get("publish_date", str))
         self.description = self.get("description", str)
         self.owner = self.get("owner", str)
+
+
+class KeyTerminology(JSONObject):
+    def __init__(self, _json: str | dict[str, Any]) -> None:
+        super().__init__(_json)
+        self.name = self.get("name", str)
+        self.api_name = self.get("api_name", str | None)
+        self.content = self.get("content", str)
+        self.contains_table = self.get("contains_table", bool)
+        self.columns = self.get("columns", list[str] | None)
+        self.column_mappings = self.get("column_mappings", dict[str, str] | None)
+        self.data = self.get("data", list[list[str]] | None)
+        self.append = self.get("append", str | None)
+        self.sub_sections = self.get("sub_sections", list[KeyTerminology] | None)
+        self.row_split = self.get("row_split", int | None, None)
+        self.caption = self.get("caption", str | None, None)

@@ -1,0 +1,1484 @@
+{
+    "$schema": "./key_terminology.schema.json",
+    "parameters": [
+        {
+            "name": "Building HVAC",
+            "api_name": "BldgHVAC",
+            "content": "Building HVAC system describes if the measure savings are applicable to a specific type of HVAC system. If a weighted average approach is followed, special IDs designate the weighted average residential building HVAC (rWtd) or commercial building HVAC (cWtd).<br>The first letter of each HVAC type indicates the applicable customer sector - \"a\" for agriculture, \"c\" for commercial, \"r\" for residential, etc.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "HVAC",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Building Location",
+            "api_name": "BldgLoc",
+            "content": "Describes the location of the building according to a California climate zone within a utility service territory. \"Any\" is used to describe cases for which savings are not weather dependant.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Building Type",
+            "api_name": "BldgType",
+            "content": "Refers to a prototypical building that is meant to represent the typical instance of a particular building type in California.<br>The \"Com\" and \"Res\" building types represent the weighted average of all commercial or all residential building types, respectively. \"Any\" building type is used in measures for which savings do not depend on Building Type.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Building Vintage",
+            "api_name": "BldgVint",
+            "content": "Describes the construction of the building, which is typically limited to existing (Ex) or new (New). However, existing buildings are representative of a weighted average of code-based cintage constructions that could also be represented as old (Old) or recent (Rec).<br>\"Any\" describes cases for which savings do not depend upon vintage; however, effective of PY2024, \"Any\" building vintage is no longer allowed per CPUC Resolution E-5221.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Combustion Type",
+            "api_name": null,
+            "content": "An optional cost effectiveness tool's field to define the combustion type used. eTRM is not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "DEER Measure ID",
+            "api_name": "DEERMeasureID",
+            "content": "The DEER Measure ID is an identifier specified to link the measure with impacts in the ex-ante database. Effective PY2026, this field will no longer be in use as energy models are moved to EneryPlus; field will remain in the permutations data table but set to blank.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Delivery Type",
+            "api_name": "DelivType",
+            "content": "Refers to the market channel to which program services are targeted (also referred to as the \"delivery channel\").",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Delivery Type",
+                "description": "Delivery Type Description"
+            },
+            "data": [
+                ["Any", "All Delivery Strategies"]
+            ],
+            "append": "before",
+            "sub_sections": null
+        },
+        {
+            "name": "Effective Start Date",
+            "api_name": null,
+            "content": "The first day the measure version and its data are active and ready to be used in California energy programs. The Effective Date is set to follow the approval or activation of the measure version and should not overlap with the previous published version of the measure package (MP).",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Effective Useful Life (EUL) ID",
+            "api_name": "EULID",
+            "content": "The EUL describes an estimate of the median number of years that the measures installed under the program are still in place and operable. This field specifies the identifier that maps to the appropriate effective useful life (EUL) year of the measure.<br>See Data Table for list of EUL IDs and the EUL years.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Electric Benefits (USD)",
+            "api_name": null,
+            "content": "Field represents the Net Electric Benefits and is based on the avoided cost associated both with generation and with transmission and distribution; thus, this value represents the summation over the life of the measure of the product of avoided costs and electric savings. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.<br>The measure developer populates this field in the measure permutation table by uploading the CET #####_output.csv file via the \"Upload CET Output File\" feature in eTRM.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Electric Impact Profile ID",
+            "api_name": "electricImpactProfileID",
+            "content": "Specifies the identifiers of load shapes used for portfolio lifecycle cost analysis. A load shape indicates the distribution (typically hourly) of a measure energy savings over one year. A load shape is also often normalized to a set of fractions summing to unity, with one fraction per hour (or other time period). Multiplying a savings value by the load shape value for a particular hour will yield the energy savings for that hour of the year.<br>Only DEER load shapes are allowed in deemed measures.",
+            "contains_table": true,
+            "columns": ["Sector", "Description"],
+            "column_mappings": null,
+            "data": [
+                [
+                    "Com",
+                    "HVAC_Chillers<br>HVAC_Split-Package_AC<br>HVAC_Split-Package_HP<br>Indoor_Non-CFL_Ltg"
+                ],
+                [
+                    "Res",
+                    "HVAC_Eff_AC<br>HVAC_Eff_HP<br>Refg_Chrg_Duct_Seal<br>RefgFzzr_HighEff<br>RefgFzzr_Recyc-Conditioned<br>RefgFzzr_Recycling<br>RefgFzzr_Recyc-UnConditioned"
+                ],
+                [
+                    "Any",
+                    "HVAC_Duct_Sealing<br>HVAC_Refrig_Charge<br>Indoor_CFL_Ltg<br>DEER:Indoor_Non-CFL_Ltg<br>Res_BldgShell_Ins<br>Res_ClothesDishWasher"
+                ]
+            ],
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "End Date",
+            "api_name": null,
+            "content": "The End Date is the date after which the measure version is no longer active or eligible to be implemented in any California program. An End Date is not always specified in the eTRM but should be considered to trigger review of measure parameters and/or supporting data or assumptions.<br><em>This TRM will add a default End Date of 3 years after the Start Date if the eTRM does not have an End Date.</em>",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "ETP First Year Introduced to Programs",
+            "api_name": null,
+            "content": "The ETP First Year Introduced to Programs field documents the year an ETP-funded technology was first approved as a deemed measure. See \"ETP Flag\"",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "ETP Flag",
+            "api_name": null,
+            "content": "The ETP Flag indicates measure offerings were supported by research funded through the Emerging Technologies Program (ETP). This field lists the ET Project Numbers that are associated with this permutation or set of permutations.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "EUL Years (yr)",
+            "api_name": null,
+            "content": "Measure life, in years, applicable to first baseline period. For the AR, NR, NC, BRO, and BW Measure Application Types, the value is equal to the EUL Years of the EUL ID. For the AOE Measure Application Type the value equal to the First Baseline - Life Cycle.<br>Note that this is the field reported within the CET input file (EUL_Yrs).<br>See Data Table for list of EUL IDs and the EUL Years.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Existing (or Pre-existing)",
+            "api_name": null,
+            "content": "Existing condition refers to the existing or as-is state and/or technology without any program intervention such as an incentivized early replacement and/or alteration. This is the first baseline of accelerated replacement (AR), add-on equipment (AOE), building weatherization (BW), and Behavioral-Retrocommissioning-Operational (BRO) measure application types (MAT).",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": [
+                {
+                    "name": "Existing Description",
+                    "api_name": null,
+                    "content": "Description of the existing condition that is used to characterize the first baseline of AR, AOE, BW, and BRO.<br>As an example, for SWWH002-03 Residential Low-Flow Showerhead, the existing condition would be \"Inefficient showerhead, 2.25 gpm.\"",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Existing Technology Group",
+                    "api_name": null,
+                    "content": "Technology Group defines the highest level of technology categorization of the pre-existing base case.<br>See Data Table for the list of Technology Group.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Existing Technology ID",
+                    "api_name": null,
+                    "content": "Technology ID is a subset of Technology Type, describing the pre-existing base case technology. For modeled measures, this ID provides insight into the prototype model used to estimate the energy usage of the pre-existing case.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Existing Technology Type",
+                    "api_name": null,
+                    "content": "Technology Type is a subcategory to Technology Group to further characterize the pre-existing base case. This field facilitates categorization of claims data but is expected to also help specify load shape data. This field also defines the default normalization unit that should be used for the measure.<br>See Data Table for the list of Technology Type.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                }
+            ]
+        },
+        {
+            "name": "First Baseline",
+            "api_name": null,
+            "content": "Baseline refers to the condition that is being altered by a proposed measure case with the purpose to improve energy efficiency (EE). The energy or other savings achieved by the measure case are effective for the duration of the measure case lifetime. California operates on a dual baseline treatment for accelerated replacement (AR). The first baseline is the first period of the measure case lifetime and can either be the code/standard practice if the measure application type (MAT) is new construction (NC) or normal replacement (NR) or the pre-existing condition for other MATs.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": [
+                {
+                    "name": "First Baseline Case",
+                    "api_name": null,
+                    "content": "Class categorization of the measure first baseline based on the measure application type (MAT). More detail information on this field can be found in the \"<a href=\"https://cedars.cpuc.ca.gov/deer-resources/deemed-measure-packages/guidance/resource/23/history/\">Acceptance of Deviation from Resolution E-5152, Section C.11</a>\" CPUC memo.",
+                    "contains_table": true,
+                    "columns": ["Measure Application Type", "Class First Baseline"],
+                    "column_mappings": null,
+                    "data": [
+                        [
+                            "Add-on equipment (AOE)",
+                            "Existing or Standard Practice"
+                        ],
+                        [
+                            
+                            "Accelerated replacement (AR)<br>Behavioral-Retrocommissioning-Operational (BRO)<br>Building weatherization (BW)",
+                            "Existing"
+                        ],
+                        [
+                            "New construction (NC)<br>Normal replacement (NR)",
+                            "Standard Practice"
+                        ]
+                    ],
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Base Case Description",
+                    "api_name": null,
+                    "content": "Concatenated description of the first baseline + parameters that vary impacts (e.g., savings, cost, life, net results, cost effectiveness).<br>For example, a First Base Case Description for the Residential Low-flow Showerhead (SWWH002-03) would be \"Showerhead, 2.25 gpm, electric, DMo, AOE, CZ01\".",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - Electric Savings (kWh/yr)",
+                    "api_name": null,
+                    "content": "Annual electric unit energy savings (UES) per normalized unit during first baseline period.<br>The field is stored as decimal data type and always maintains the same number of decimal places as is entered. The value that is display to the user and available for download (through API, CSV, SQL database) is additionally rounded to 3 significant figures. Examples are shown below:<br><img src=\"./assets/images/fbl_es_kt.png\"/>",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - Gas Savings (therms/yr)",
+                    "api_name": null,
+                    "content": "Annual gas UES per normalized unit during first baseline period. Methodology is included in the Gas Savings Characterization field.<br>The field is stored as a decimal data type and always maintains the same number of decimal places as is entered. The value that is displayed to the user and available for download (through API, CSV, SQL database) is rounded to 3 significant figures. See First Baseline - Electric Savings (kWh/yr).",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - IOU Embedded Water Energy Savings (kWh/yr)",
+                    "api_name": null,
+                    "content": "The water management cycle requires significant amounts of energy. This \"embedded\" energy represents the energy required for the extraction, conveyance, treatment, and distribution of water, as well as collection and treatment of wastewater. Much of the embedded energy is supplied by IOUs, but some of the energy is supplied by other sources.<br>This field represents the IOU portion of the embedded water energy savings (kWh/yr) associated with the measure (if applicable), during the first baseline period. Field is calculated using the water energy intensity ratio from the Water Energy Calculator (WEN).",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline Labor Cost (USD)",
+                    "api_name": null,
+                    "content": "Labor cost per normalized unit to install the base case technology, applicable to first baseline period.<br>Cost is \"0\" if an existing conditions base case is used to represent full measure cost (for example, MAT = AR, AOE, BRO-RCx, or BW).",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - Life Cycle (yrs)",
+                    "api_name": null,
+                    "content": "Measure life, in years, applicable to first baseline period.<br>For NR, NC, BRO, and BW MAT, the value is equal to the EUL Years. For AR, the value is equal to the RUL value. For AOE, the value could either: 1) be calculated as the minimum of the host equipment's RUL Years and the measure equipment EUL Years OR 2) for special cases, equal to the full EUL Years of the measure equipment.<br>In special cases, such as lighting and some HVAC measures, the life is calculated based on the annual hours of use that is linked to the Building Type.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline Material Cost (USD)",
+                    "api_name": null,
+                    "content": "Material cost per normalized unit to install the base case technology, applicable to first baseline period.<br>Cost is equal to \"0\" if an existing conditions base case is used to represent full measure cost (for example, Measure Application Types of AR, AOE, BRO-RCx, or BW).",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - Peak Electric Demand Reduction",
+                    "api_name": null,
+                    "content": "Peak demand reduction per normalized unit during first baseline period. Conform to the current California peak demand definition.<br>The field is stored as a decimal data type and always maintains the same number of decimal places as is entered. The value that is displayed to the user and available for download (through API, CSV, SQL database) is rounded to 3 significant figures. See First Baseline - Electric Savings (kWh/yr).",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - Total Embedded Water Energy Savings (kWh/yr)",
+                    "api_name": null,
+                    "content": "The water management cycle requires significant amounts of energy. This \"embedded\" energy represents the energy required for the extraction, conveyance, treatment, and distribution of water, as well as collection and treatment of wastewater. Much of the embedded energy is supplied by IOUs, but some of the energy is supplied by other sources.<br>This field represents the sum of IOU and non-IOU embedded water energy savings (kWh/yr) associated with the measure (if applicable) during the first baseline period.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - UEC kW (kW)",
+                    "api_name": null,
+                    "content": "UEC means unit energy consumption. This field is the base case peak demand value per normalized unit during first baseline period. The calculation of this value should conform to the California peak demand definition.<br>If only whole-building data is available, effort should be made to isolate the usage associated with the specific measure. If this is not possible, UECkWBase1 should equal UnitkW1stBaseline (in other words, the base case peak demand equal to the peak demand reduction and the measure case peak demand is 0, such that savings = base case UEC - measure case UEC).<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - UEC kWh (kWh/yr)",
+                    "api_name": null,
+                    "content": "Base case electric annual energy consumption (UEC) per normalized unit during first baseline period.<br>If only whole-building data is available, efforts should be made to isolate the usage associated with the specific measure. If this is not possible, UECkWhBase1 equal UnitkWh1stBaseline (in other words, the base case usage equal to the savings and the measure case usage is 0, such that savings = base case UEC - measure case UEC).<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - UEC therm (therms/yr)",
+                    "api_name": null,
+                    "content": "Base case gas annual energy consumption (UEC) per normalized unit during first baseline period.<br>If only whole-building data is available, efforts should be made to isolate the usage associated with the specific measure. If this is not possible, UECThermBase1 equal UnitTherm1stBaseline (in other words, the base case usage equal to the savings and the measure case usage is 0, such that savings = base case UEC - measure case UEC).<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "First Baseline - Water Savings (gal/yr)",
+                    "api_name": null,
+                    "content": "Annual water savings (gal/yr) associated with the measure (if applicable) during the first baseline period.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                }
+            ]
+        },
+        {
+            "name": "Gas Benefits (USD)",
+            "api_name": null,
+            "content": "This field represents Net Gas Benefits and is based on the avoided costs associated with natural gas consumption; thus, this value represents the summation over the life of the measure of the product of avoided cost and gas savings. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Gas Impact Profile ID",
+            "api_name": "GasImpactProfileID",
+            "content": "This field specifies the identifiers of the gas load shapes used for portfolio lifecycle cost analysis. A load shape indicates the distribution of a measure energy savings over one year. A load shape is a set of fractions summing to unity, with one fraction per hour (or other time period). Multiplying a savings value by the load shape value for a particular hour will yield the energy savings for that particular hour.",
+            "contains_table": true,
+            "columns": ["Gas Impact Profile ID", "Description"],
+            "column_mappings": null,
+            "data": [
+                ["Annual", ""],
+                ["Annual-FuelSub-ToElec", "Fuel Sub designation of \"Annual\""],
+                ["SummerOnly", ""],
+                ["SummerOnly-FuelSub-ToElec", "Fuel Sub designation of \"SummerOnly\""],
+                ["WinterOnly", ""],
+                ["WinterOnly-FuelSub-ToElec", "Fuel Sub designation of \"WinterOnly\""]
+            ],
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "GSIA ID",
+            "api_name": "GSIAID",
+            "content": "The gross savings installation adjustment (GSIA) represents the ratio of the number of verified installations of the measure to the number of claimed installations reported by the utility. This field specifies the identifier that maps to the GSIA value for the measure.<br>This factor varies by end use, sector, technology, application, and delivery method. The \"default\" rate of \"1\" is used for measures for which an alternative GSIA has not been estimated and approved.<br>See Data Table for list of GSIA IDs and the GSIA Values.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "GSIA Value (ratio)",
+            "api_name": null,
+            "content": "The GSIA value associated with the GSIA ID. This ratio will be applied to the measure unit energy savings.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Locational Cost Adjustment ID",
+            "api_name": null,
+            "content": "eTRM is currently not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "IE Table Name",
+            "api_name": null,
+            "content": "Names of the interactive effects (IE) value tables used for the measure (ex. 2020-Com-InLtg or 2020-Res-InLtg). See \"Is IE Factor Applied\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Is IE Factor Applied?",
+            "api_name": null,
+            "content": "This yes/no flag designates whether interactive effects are applied to the measure.<br>Interactive effects are defined as the secondary energy and demand impacts that result from a measure to a secondary system or equipment not directly involved in the retrofit activity (e.g., cooling or heating energy impacts resulting from the installation of efficient lighting fixtures).",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Market Effects Benefits",
+            "api_name": null,
+            "content": "An optional cost effectiveness tool's (CET) field to set the market effect rate. eTRM is currently not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Market Effects Cost",
+            "api_name": null,
+            "content": "An optional CET field to set the market effect rate. eTRM is currently not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Application Type (MAT)",
+            "api_name": "MeasAppType",
+            "content": "A categorization scheme based on the circumstances and timing of the measure installation. It classifies an energy efficiency activity and dictates the appropriate baseline treatment, cost basis, useful life, eligibility, and documentation requirements.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Case Description",
+            "api_name": null,
+            "content": "Concatenated description of the measure case + parameters that vary impacts (e.g., savings, cost, life, net results, cost effectiveness).",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Cost ID",
+            "api_name": null,
+            "content": "eTRM is currently not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Detail ID",
+            "api_name": null,
+            "content": "This field is a unique identifier for each permutation. This field is populated with an auto-generated identifier created as a concatenation of:<br><img src=\"./assets/images/meas_det_id_kt.png\"/>",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Impact Calculation Type",
+            "api_name": "MeasImpactCalcType",
+            "content": "Defines the calculation methodology used to quantify measure savings. Five valid options are available, but almost all values are \"Standard\".",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Measure Impact Calculation Type",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Impact Type",
+            "api_name": "MeasImpactType",
+            "content": "Measure Impact Type designates the type of measure, which could include qualities like:<br><ul><li>Deemed or custom</li><li>CPUC Created or PA Created</li><li>Fuel Substitution, Normalized Metered Energy Consumption (NMEC), Randomized-Control Trail (RCT) or Strategic Energy Management (SEM)</li></ul><br>Effective PY2026, the Measure Impact Types for deemed measures are consolidated to just \"Deem\"",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Label",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null,
+            "row_split": 8
+        },
+        {
+            "name": "Measure Inflation",
+            "api_name": null,
+            "content": "An optional cost effectiveness tool (CET) field to set the inflation rate. eTRM is currently not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Inflation",
+            "api_name": null,
+            "content": "An optional cost effectiveness tool (CET) field to set the inflation rate. eTRM is currently not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure - Labor Cost",
+            "api_name": null,
+            "content": "Labor cost per normalized unit to install the measure case technology. (Generally, Measure and Base Labor cost are identical, in which case they would cancel out of the incremental measure cost calculation, so labor costs sometimes are not reported).",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure - Material Cost",
+            "api_name": null,
+            "content": "Material cost per normalized unit to install the measure case technology.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Name",
+            "api_name": null,
+            "content": "A short concise descriptor of the technology, with Fuel Type, Sector and/or other necessary attributes to distinguish the measure from other available products. The convention for designating a measure name is provided below. A comma is used as the delimiter.<br><img src=\"./assets/images/meas_name_kt.png\"/>",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Qualifier",
+            "api_name": null,
+            "content": "eTRM is currently not utilizing this field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Total Cost 1st Baseline",
+            "api_name": null,
+            "content": "Calculated value of incremental cost per normalized unit, applicable to the 1st baseline period.<br><img src=\"./assets/images/mtc_1b_kt.png\"/><br>For MAT = AR, AOE, BRO, and BW, the first baseline costs equal 0, so this field is equivalent to the \"Full Measure Cost\".<br>This value is reported directly for both claims and cost-effectiveness runs.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Technology ID",
+            "api_name": null,
+            "content": "Technology ID is a subset of Technology Type, describing the measure case technology. For modeled measures, this ID provides insight into the prototype model used to estimate the energy usage of the measure case.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure Total Cost 2nd Baseline",
+            "api_name": null,
+            "content": "Calculated value of incremental cost per normalized unit, applicable to the 2nd baseline period.<br>Values equal \"0\" for measure without a second baseline (all measure application types, except AR)",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure UEC kW (kW)",
+            "api_name": null,
+            "content": "Measure case peak demand per normalized unit. The calculation of this value should conform to the California peak demand definition.<br>If only whole-building data is available, effort should be made to isolate the UEC associated with the specific measure. If this is not possible, the value of UECkWmeas should equal \"0\". See \"First Baseline - UEC kW\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure UEC kWh (kWh)",
+            "api_name": null,
+            "content": "Measure case electric annual unit energy consumption per normalized unit.<br>If only whole-building data is available, effort should be made to isolate the UEC associated with the specific measure. If this is not possible, the value of UECkWhmeas should equal \"0\". See \"First Baseline - UEC kWh\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Measure UEC therm (therm/yr)",
+            "api_name": null,
+            "content": "Measure case gas annual unit energy consumption per normalized unit.<br>If only whole-building data is available, efforts should be made to isolate the UEC associated with the specific measure. If this is not possible, the value of UECthermmeas should equal \"0\". See \"First Baseline - UEC therm\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Normalized Unit",
+            "api_name": "NormUnit",
+            "content": "Savings and costs are expressed by a unit of measure referred to as the Normalized Unit.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null,
+            "row_split": 14
+        },
+        {
+            "name": "Measure Version ID",
+            "api_name": null,
+            "content": "The Measure Version ID identifies a unique measure package (MP) + its update iteration. The field is built from a concatenation of: Measure ID, (Major) Version Number, and Minor Version. <em>See Statewide Measure ID.</em><br><img src=\"./assets/images/meas_vid_kt.png\"/><br>Major version number represents the MP release cycle, major measure update that goes through formal review/approval process and is published with a new effective date. See Effective Start Date and End Date fields.<br>Minor version number is auto generated by the eTRM when a measure developer creates and commits/saves a new draft to edit the MP. Each major version update goes through multiple revisions, so there can be multiple minor versions. However, only one final minor version can be published for the major version and the minor version number only appears in the Version History Log.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Miscellaneous Cost Description",
+            "api_name": null,
+            "content": "Description of miscellaneous costs (MiscCostDesc) to provide context for the costs included. See \"Unit Miscellaneous Costs (USD)\" field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Miscellaneous Benefit Description",
+            "api_name": null,
+            "content": "Description of miscellaneous benefits (MiscBensDesc) to provide context for the benefits included. See \"Unit Miscellaneous Benefits (USD)\" field.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Net to Gross Ratio ID",
+            "api_name": null,
+            "content": "Portion of gross impacts that are determined to be directly attributed to a specific program intervention. The NTG ratio represents the extent of free-ridership, or the portion of energy or demand impacts that would have occurred in the absence of the program. The NTG ratio typically varies by Sector but can also vary by other parameters like Delivery Type.<br>This field specifies the identifier that maps to the value of the NTG ratio in the Net to Gross Ratio table.<br>See Data Table for list of NTG IDs and the NTGRs.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "NTGR Cost (ratio)",
+            "api_name": null,
+            "content": "The cost net to gross ratio associated with the NTG ID. This ratio will be applied to the gross cost value.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "NTGR kW (ratio)",
+            "api_name": null,
+            "content": "The peak demand net to gross ratio associated with the NTG ID. This ratio will be applied to the gross peak demand reduction.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "NTGR kWh (ratio)",
+            "api_name": null,
+            "content": "The electric net to gross ratio associated with the NTG ID. This ratio will be applied to the gross electric savings.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "NTGR Therms (ratio)",
+            "api_name": null,
+            "content": "The gas net to gross ratio associated with the NTG ID. This ratio will be applied to the gross gas savings.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Offering Description",
+            "api_name": null,
+            "content": "(or \"Measure Offering Description\" in the Offering ID table). This is the description of the Offering ID. See \"Offering ID\".<br>Offering ID should be tied to the Offering ID Description in a one-to-one relationship that also spans measure versions.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Offering ID",
+            "api_name": null,
+            "content": "Offering ID, or Statewide Measure Offering ID, is a unique identifier for each unique measure offering, based on combinations of measure determinants defined for each measure. For example, the \"SWHC020-04 Air-Cooled Screw Chiller\" measure can be characterized by  \"Capacity\", \"Energy Efficiency Ratio\", and \"Integrated Part Load Value\", creating multiple distinct offerings for this measure (see example image below). Offerings are then assigned an ID token for identification, using the alphabet system (i.e., A, B, …, Z, AA, AB, …).<br><img src=\"./assets/images/off_id_kt.png\"/>",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Other Benefits",
+            "api_name": null,
+            "content": "This field represents the Net Other Benefits. This term includes the Avoided Gas Infrastructure Cost (AGIC) and refrigerant and miscellaneous benefits. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.<br>The measure developer populates this field in the measure permutation table by uploading the CET #####_output.csv file via the \"Upload CET Output File\" feature in eTRM.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Other Costs",
+            "api_name": null,
+            "content": "This field represents the Net Other Costs. This term includes the refrigerant and miscellaneous costs. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.<br>The measure developer populates this field in the measure permutation table by uploading the CET #####_output.csv file via the \"Upload CET Output File\" feature in eTRM.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "PA Lead",
+            "api_name": null,
+            "content": "Program Administrator (PA) Lead is the designated publicly owned utility (POU) or investor-owned utility (IOU) that sponsors and oversees the measure package development.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "PAC Cost - No Administrative Cost (USD)",
+            "api_name": null,
+            "content": "This field represents the Net Program Administrator Cost without Administrator Cost. The field is calculated identically as the TRC Cost – No Administrator Cost but without including participant cost. This calculation is described in the CPUC Cost Effectiveness Test Reference Manual and includes costs for the measure, electric and gas benefits, as well as refrigerant and miscellaneous costs.<br>The \"no administrative cost\" version is included in the eTRM to provide a directional and best-case view of permutation cost effectiveness without the consideration for the needs of a specific program.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "PAC Ratio - No Administrative Cost",
+            "api_name": null,
+            "content": "Cost effectiveness tests are defined in the California Standard Practice Manual and updates have been made in CPUC decisions. The Program Administrator Cost (PAC) test considers net costs from just the program administrator perspectives, while the net benefits are the same as the TRC test. This calculation is described in the CPUC Cost Effectiveness Test Reference Manual.<br>The \"no administrative cost\" version is included in the eTRM to provide a directional and best-case view of permutation cost effectiveness without the consideration for the needs of a specific program.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Pre-Existing Technology Group",
+            "api_name": null,
+            "content": "See \"Existing Technology Group\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Pre-Existing Technology ID",
+            "api_name": null,
+            "content": "See \"Existing Technology ID\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Pre-Existing Technology Type",
+            "api_name": null,
+            "content": "See \"Existing Technology Type\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Program Administrator",
+            "api_name": "PA",
+            "content": "If Program Administrator (PA) Type is 'IOU' (i.e., not a statewide measure), this field designates the specific California IOUs or RENs (i.e., PA-dependent) in which the permutations are applicable. In general, statewide measures are intended to be PA-independent, so all efforts should be made to assign PA = \"Any\" value.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null,
+            "row_split": 8
+        },
+        {
+            "name": "Program Administrator Type",
+            "api_name": "PAType",
+            "content": "This field designates if the permutations are specific to an IOU or to 'POU' only. If impacts do not vary by IOU/POU area (i.e., statewide measure), designate \"Any\".",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Restricted Permutation (Number)",
+            "api_name": null,
+            "content": "This field was created in response to the CPUC's Gas Decision - D.23-04-035 to document the TRCRatio for non-exempt natural gas, new construction, and Res or Com permutations.<br>Field has value of 0 if TRCRatio ≥ 1 and value of 1 if TRCRatio < 1.<br>For measures/permutations that are not non-exempt gas, new construction, or Res/Com sector, this field has a value of 0.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Restricted Useful Life ID",
+            "api_name": null,
+            "content": "Remaining useful life (RUL) is an estimate of the median number of years that a measure being replaced under the program would remain in place and operable if the program intervention had not caused the replacement.<br>This field specifies the identifier that maps to the appropriate RUL of the energy efficiency measure. This field will be used to calculate the life in years that can be claimed so that the calculation is transparent to a user.<br>RUL is only applicable to AOE and AR MAT. For an AR, the RUL ID refers to the base case equipment. For the AOE, the RUL ID typically refers to the host equipment unless the measure is not typically replaced or removed from service at the same time as the host equipment. For other MATs (NR, NC, BW, and BRO), the field is blank.<br>See Data Table for list of RUL IDs (which is the same as EUL IDs in the table) and the RUL Years.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "RUL Years (yr)",
+            "api_name": null,
+            "content": "The assigned remaining useful life, in years, of the RUL ID. By default, it equals 1/3 of the effective useful life (EUL) years.<br>For AR, the value is equal to the RUL Years taken from the DEER Effective Useful Life table. For all other Measure Application Types, this value is zero. <em>For AOE, RUL Years may be needed to calculate the first and second baseline lifecycle, but the value is not reported in the permutation.</em><br>Note that this is the field reported within the CET input file (RUL_Yrs).<br>See Data Table for list of RUL IDs (which is the same as EUL IDs in the table) and the RUL Years.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Second Baseline",
+            "api_name": null,
+            "content": "The second period of the accelerated replacement (AR) measure application type (MAT) lifecycle. See \"First Baseline\". The second baseline is code/industry standard if the MAT is AR and is not applicable for all the other MATs since they only have one baseline.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": [
+                {
+                    "name": "Second Baseline Case",
+                    "api_name": null,
+                    "content": "Class categorization of the measure second baseline based on the measure application type",
+                    "contains_table": true,
+                    "columns": ["Measure Application Type", "Class First Baseline"],
+                    "column_mappings": null,
+                    "data": [
+                        [
+                            "Accelerated replacement (AR)",
+                            "Code/Standard Practice"
+                        ],
+                        [
+                            "Add-on equipment (AOE)<br>Behavioral-Retrocommissioning-Operational (BRO)<br>Building weatherization (BW)<br>New construction (NC)<br>Normal replacement (NR)",
+                            "None"
+                        ]
+                    ],
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Base Case Description",
+                    "api_name": null,
+                    "content": "Concatenated description of the second baseline + parameters that vary impacts (e.g., savings, cost, life, net results, cost effectiveness).",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Electric Savings (kWh/yr)",
+                    "api_name": null,
+                    "content": "Annual electric UES per normalized unit during second baseline period. Values equal \"0\" for non-AR permutations.<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Gas Savings (therms/yr)",
+                    "api_name": null,
+                    "content": "Annual gas UES per normalized unit during second baseline period. Values equal \"0\" for non-AR permutations.<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - IOU Embedded Water Energy Savings (kWh/yr)",
+                    "api_name": null,
+                    "content": "This field represents the IOU portion of the embedded water energy savings (kWh/yr) associated with the measure (if applicable) during the second baseline period. See \"First Baseline - IOU Embedded Water Energy Savings\".<br>Values equal \"0\" for non-AR permutations.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Labor Cost (USD)",
+                    "api_name": null,
+                    "content": "Labor cost per normalized unit to install the base case technology, applicable to second baseline period. Values equal 0 for non-AR permutations.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Life Cycle (Years)",
+                    "api_name": null,
+                    "content": "Measure life, in years, applicable to the second baseline period.<br>For AR MAT, field is the portion of EUL Years after RUL Years, calculated as EUL Years - RUL Years). For other MATs, the field should be \"0\".",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Material Cost (USD)",
+                    "api_name": null,
+                    "content": "Material cost per normalized unit to install the base case technology, applicable to second baseline period. Values equal \"0\" for non-AR permutations.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Peak Electric Demand Reduction (kW)",
+                    "api_name": null,
+                    "content": "Peak demand reduction per normalized unit during second baseline period. Conform to the current California peak demand definition. Values equal \"0\" for non-AR permutations.<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Total Embedded Water Energy Savings (kWh/yr)",
+                    "api_name": null,
+                    "content": "This field represents the sum of IOU and non-IOU embedded water energy savings (kWh/yr) associated with the measure (if applicable) during the second baseline period. See \"First Baseline - Total Embedded Water Energy Savings\".",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - UEC kW (kW)",
+                    "api_name": null,
+                    "content": "Base case peak demand value per normalized unit during second baseline period.<br>For AR, the calculation of this value should conform to the California peak demand definition. If only whole-building data is available, effort should be made to isolate the usage associated with the specific measure. If this is not possible, UECkWbase2 should equal UnitkW2ndBaseline. See \"First Baseline - UEC kW\".<br>For other MATs, field should equal \"0\".<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - UEC kWh (kWh/yr)",
+                    "api_name": null,
+                    "content": "Base case electric annual energy consumption per normalized unit during second baseline period.<br>For AR, if only whole-building data is available, efforts should be made to isolate the usage associated with the specific measure. If this is not possible, UECkWhbase2 equal UnitkWh2ndBaseline. See \"First Baseline - UEC kWh\".<br>For other MATs, field should equal \"0\".<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - UEC therm (therms/yr)",
+                    "api_name": null,
+                    "content": "Base case gas annual energy consumption per normalized unit during second baseline period.<br>For accelerated replacement, if only whole-building data is available, efforts should be made to isolate the usage associated with the specific measure. If this is not possible, UECThermbase2 equal UnitTherm2ndBaseline. See \"First Baseline - UEC therm\".<br>For other measure application types, field should equal \"0\".<br>Rules for storing, displaying, and downloading this data match the rules for the First Baseline - Electric Savings.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Second Baseline - Water Savings (Gal/yr)",
+                    "api_name": null,
+                    "content": "Annual water savings (gal/yr) associated with the measure (if applicable) during the second baseline period. Non-accelerated replacement permutations should equal \"0\".",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                }
+            ]
+        },
+        {
+            "name": "Sector",
+            "api_name": "Sector",
+            "content": "A group of customers that share common characteristics and barriers upon which energy efficiency strategies are based. The primary sectors are consistent with CEDARS: Residential, Commercial, Industrial, and Agricultural.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Source Description",
+            "api_name": null,
+            "content": "Field equals the \"Measure Version ID\". See \"Measure Version ID\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Standard",
+            "api_name": null,
+            "content": "The standard condition refers to the code / industry standard practice - the market-minimum condition/equipment that would have replaced the non-functioning or non-existent existing condition instead of the energy efficient measure. This is the 1st baseline of normal replacement (NR) and new construction (NC) and the 2nd baseline of accelerated replacement (AR).",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": [
+                {
+                    "name": "Standard Description",
+                    "api_name": null,
+                    "content": "Description of the standard condition that is used to characterize the first baseline of NR and NC and the second baseline of AR.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Standard Technology Group",
+                    "api_name": null,
+                    "content": "Technology Group defines the highest level of measure technology categorization of the standard base case.<br>See Data Table for the list of Technology Group.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Standard Technology ID",
+                    "api_name": null,
+                    "content": "Technology ID is a subset of Technology Type, describing the Standard Base Case technology. For modeled measures, this ID provides insight into the prototype model used to estimate the energy usage of the standard case.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                },
+                {
+                    "name": "Standard Technology Type",
+                    "api_name": null,
+                    "content": "Technology Type is a subcategory to Technology Group to further characterize the standard base case. This field facilitates categorization of claims data but is expected to also help specify load shape data. This field also defines the default normalization unit that should be used for the measure.<br>See Data Table for the list of Technology Types.",
+                    "contains_table": false,
+                    "columns": null,
+                    "column_mappings": null,
+                    "data": null,
+                    "append": null,
+                    "sub_sections": null
+                }
+            ]
+        },
+        {
+            "name": "Statewide Measure ID",
+            "api_name": null,
+            "content": "The ID identifies a unique measure package and is assigned based on the Use Category at the time of the measure shell creation.<br>The nomenclature of this identifier is shown below. This convention is tied to CEDARS categories.<br><img src=\"./assets/images/sw_meas_id_kt.png\"/>",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Technology Group",
+            "api_name": null,
+            "content": "Technology Group defines the highest level of measure technology categorization of the measure case.<br>See Data Table for the list of Technology Group.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Technology Type (USD)",
+            "api_name": null,
+            "content": "Technology Type is a subcategory to Technology Group to further characterize the measure case.<br>This field facilitates categorization of claims data but is expected to also help specify load shape data. This field also defines the default normalization unit that should be used for the measure.<br>See Data Table for the list of Technology Type.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Total System Benefit (USD)",
+            "api_name": null,
+            "content": "This field represents the Net Total System Benefits (TSB). TSB is defined as the sum of all net energy benefits less the sum of all net additional supply costs. These terms include electric, gas, water, and refrigerant benefits and costs. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.<br>The measure developer populates this field in the measure permutation table by uploading the CET #####_output.csv file via the \"Upload CET Output File\" feature in eTRM.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "TRC Cost - No Administrative Cost (USD)",
+            "api_name": null,
+            "content": "This field represents the Net Total Resource Cost (TRC) without Administrator Cost, which is calculated identically as the Net TRC Cost with Administrator Cost but without including program-level costs. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.<br>The \"no administrative cost\" version is included in the eTRM to provide a directional and best-case view of a permutation cost effectiveness without the consideration for the needs of a specific program.<br>The measure developer populates this field in the measure permutation table by uploading the CET #####_output.csv file via the \"Upload CET Output File\" feature in eTRM.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "TRC Ratio - No Administrative Cost (USD)",
+            "api_name": null,
+            "content": "This field represents the Total Resource Cost (TRC) Ratio, which is a ratio of benefits / cost. The Total Resource Cost Ratio considers both net costs and net benefits from both the program administrator and customer perspective. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>. Cost effectiveness tests are defined in the California Standard Practice Manual and updates have been made in CPUC decisions.<br>The \"no administrative cost\" version is included in the eTRM to provide a directional and best-case view of permutation cost effectiveness without the consideration for the needs of a specific program.<br>The measure developer populates this field in the measure permutation table by uploading the CET #####_output.csv file via the \"Upload CET Output File\" feature in eTRM.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Unit Gas Infrastructure Benefits (USD)",
+            "api_name": null,
+            "content": "Per-unit benefits in dollars due to offsetting natural gas infrastructure costs, referred to as avoided gas infrastructure costs (AGIC), which is only applicable for new construction.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Unit Miscellaneous Benefits (USD)",
+            "api_name": null,
+            "content": "Per-Unit miscellaneous benefits expressed in present-value dollars. The eTRM is not utilizing this field currently and values equal \"0\". In the future, this field can be used to report any other energy benefits, such as load shifting benefits, that have not been accounted for already.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Unit Miscellaneous Costs (USD)",
+            "api_name": null,
+            "content": "Per-unit miscellaneous costs expressed in present-value dollars. The eTRM is not utilizing this field currently and values equal \"0\". In the future, this field can be used to report any other energy costs that have not been accounted for already.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Unit Refrigerant Benefits (USD)",
+            "api_name": null,
+            "content": "Per-unit benefits in dollars due to decreased refrigerant use or use of refrigerant with lower global warming potential. The unit refrigerant benefits are outputs of the refrigerant avoided cost calculator; latest tool version can be found on <a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Unit Refrigerant Costs (USD)",
+            "api_name": null,
+            "content": "Per-unit costs in dollars due to increased refrigerant use or use of refrigerant with higher global warming potential. The unit refrigerant costs are outputs of the refrigerant avoided cost calculator (RACC); latest tool version can be found on <a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Upstream Flag (True/False)",
+            "api_name": null,
+            "content": "Flag to indicate availability of upstream delivery channels. Field equal \"True\" for \"UpDeemed\" delivery type and \"False\" for other delivery types.<br><em>Note: Effective in PY2026, field will no longer be in use due to being redundant of the Delivery Type field. Field will remain in eTRM permutations but set to blank.</em>",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Use Subcategory",
+            "api_name": null,
+            "content": "Use Subcategory is a subsidiary of Use Category to further specify the measure in terms of how the measure is used.<br>See Data Table for the list of Use Subcategories.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Use Category",
+            "api_name": "UseCategory",
+            "content": "End-use category for the measure.",
+            "contains_table": true,
+            "columns": ["name", "description"],
+            "column_mappings": {
+                "name": "Name",
+                "description": "Description"
+            },
+            "data": null,
+            "append": null,
+            "sub_sections": null,
+            "row_split": 7,
+            "caption": "† The no savings measure offerings are for the purpose of processing third-party bonus payments, fixing processing errors and correcting reporting records by referencing \"NonSav\" data parameter value for the express purpose of processing CEDARS reports and CEDARS CET zip files."
+        },
+        {
+            "name": "Version",
+            "api_name": null,
+            "content": "This field designates the version of the energy impacts based on CPUC policy. Version is a concatenation of the measure source (DEER or ExAnte = non-DEER) and the effective year.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Version Source",
+            "api_name": null,
+            "content": "The Version Source field is used to further define energy impacts beyond the Version field. For measures that adopted DEER savings values, this field equals the version source of the DEER energy impacts. For measures that derived savings from other sources, field equals \"IOU Workpaper\".<br>See Data Table for the current list of Version Sources.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Water Energy Benefits (USD)",
+            "api_name": null,
+            "content": "This field represents the Net Water Energy Benefits and is based on the Net Electric Benefits attributable to water energy savings; thus, this value represents the summation over the life of the measure of the product of avoided costs and embedded water energy savings. See \"First/Second Baseline - Total Embedded Water Energy Savings\". Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.<br>The measure developer populates this field in the measure permutation table by uploading the CET #####_output.csv file via the \"Upload CET Output File\" feature in eTRM.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Water Measure Type",
+            "api_name": null,
+            "content": "This field specifies whether a water savings measure is:<br><ul><li>Outdoor - Embedded water energy usage includes energy required for extraction, conveyance, treatment and distribution.</li><li>Indoor - Includes the same sources as Outdoor, but also captures includes the collection and treatment of wastewater.</li></ul><br>If no water savings exist for the measure, the field is left blank.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        }
+    ]
+}

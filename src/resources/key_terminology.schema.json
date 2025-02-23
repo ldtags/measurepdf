@@ -1,0 +1,79 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema",
+    "title": "Key Terminology",
+    "description": "Summary generator key terminology data store",
+    "type": "object",
+    "properties": {
+        "parameters": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "description": "The verbose name of the shared parameter"
+                    },
+                    "api_name": {
+                        "type": ["string", "null"],
+                        "description": "The API name of the shared parameter"
+                    },
+                    "content": {
+                        "type": "string",
+                        "description": "The table description, formatted as HTML"
+                    },
+                    "contains_table": {
+                        "type": "boolean",
+                        "description": "Specifies if a table is created alongside the data"
+                    },
+                    "columns": {
+                        "type": ["array", "null"],
+                        "items": {
+                            "type": "string",
+                            "description": "Column name"
+                        },
+                        "description": "The column names from the API table to get data from"
+                    },
+                    "column_mappings": {
+                        "type": ["object", "null"],
+                        "description": "The actual column names that will be used"
+                    },
+                    "data": {
+                        "type": ["array", "null"],
+                        "items": {
+                            "type": "array",
+                            "items": {
+                                "type": "string",
+                                "description": "Specifies the table cell, formatted as HTML"
+                            },
+                            "description": "Specifies the table rows"
+                        },
+                        "description": "Alternate data to be used instead of the API data"
+                    },
+                    "append": {
+                        "type": ["string", "null"],
+                        "enum": ["before", "after", null],
+                        "description": "Inserts the data from the data table before or after the table"
+                    },
+                    "sub_sections": {
+                        "type": ["array", "null"],
+                        "items": {
+                            "type": "object",
+                            "$ref": "#/properties/parameters/items"
+                        },
+                        "description": "Sections that will follow this section and will be indented"
+                    },
+                    "row_split": {
+                        "type": "integer",
+                        "description": "The maximum number of rows that a table can display before splitting"
+                    },
+                    "caption": {
+                        "type": "string",
+                        "description": "The caption displayed below the table (or content if no table is used)"
+                    }
+                },
+                "required": ["name", "api_name", "content", "contains_table", "columns", "column_mappings", "data", "append", "sub_sections"]
+            }
+        }
+    },
+    "required": ["parameters"]
+}

@@ -2,12 +2,10 @@ from src.summarygen.styles import (
     ParagraphStyle,
     INNER_WIDTH
 )
-from src.summarygen.rlobjects import (
+from src.summarygen.exceptions import WidthExceededError
+from src.summarygen.models import (
     ParagraphElement,
     ElementLine
-)
-from src.summarygen.exceptions import (
-    WidthExceededError
 )
 
 

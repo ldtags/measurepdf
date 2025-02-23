@@ -7,7 +7,8 @@ from reportlab.platypus import (
 
 from src import utils
 from src.etrm.models import Measure
-from src.summarygen.types import _TABLE_ORIENT, _TABLE_SPAN
+from src.summarygen.models.enums import ElementType
+from src.summarygen.types import _TableOrient, _TableSpan
 from src.summarygen.styles import (
     ParagraphStyle,
     TableStyle,
@@ -16,11 +17,10 @@ from src.summarygen.styles import (
     INNER_WIDTH,
     get_table_style
 )
-from src.summarygen.models import VTObjectInfo
-from src.summarygen.rlobjects import (
+from src.summarygen.models import (
+    VTObjectInfo,
     ParagraphElement,
-    ElementLine,
-    ElemType
+    ElementLine
 )
 from src.summarygen.flowables.utils import wrap_elements
 from src.summarygen.flowables.paragraph import ParagraphLine
@@ -81,8 +81,8 @@ class BasicTable(Table):
         data: list[list[str | ElementLine]],
         headers: int = 1,
         measure: Measure | None = None,
-        spans: list[_TABLE_SPAN] | None = None,
-        header_orient: _TABLE_ORIENT = "top",
+        spans: list[_TableSpan] | None = None,
+        header_orient: _TableOrient = "top",
         header_styles: _TABLE_STYLES = PSTYLES["ValueTableHeader"],
         body_styles: _TABLE_STYLES = PSTYLES["ValueTableDeterminant"],
         table_style: TableStyle | None = None,
@@ -526,7 +526,7 @@ class ValueTable(BasicTable):
                  measure: Measure | None=None,
                  headers: int=1,
                  determinants: int=0,
-                 spans: list[_TABLE_SPAN] | None=None,
+                 spans: list[_TableSpan] | None=None,
                  **kwargs):
         if kwargs.get('normalizedData') is not None:
             Table.__init__(self, data, **kwargs)
@@ -600,7 +600,7 @@ class EmbeddedValueTable(ValueTable):
             element_line.add(element)
             for ref in column.reference_refs:
                 ref_element = ParagraphElement(text=ref,
-                                               type=ElemType.REF,
+                                               type=ElementType.Reference,
                                                style=PSTYLES['VTHeaderRefTag'])
                 element_line.add(ref_element)
             headers.append(element_line)

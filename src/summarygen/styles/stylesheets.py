@@ -4,8 +4,8 @@ from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import getSampleStyleSheet
 
 from src.summarygen.types import (
-    _TABLE_SPAN,
-    _TABLE_ORIENT
+    _TableSpan,
+    _TableOrient
 )
 from src.summarygen.styles.config import (
     _DEF_FONT_NAME,
@@ -214,7 +214,6 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'BulletPoint',
-            font_name='SourceSansPro',
             font_size=18
         )
     )
@@ -239,6 +238,13 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             "SectionHeader2",
             font_name="Arial",
             font_size=13
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "TerminologyHeader",
+            text_color=COLORS["LightBrown"],
+            parent=style_sheet["Paragraph"]
         )
     )
 
@@ -346,8 +352,10 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
             [
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('TOPPADDING', (1, 0), (1, -1), -10),
-                ('VALIGN', (1, 0), (1, -1), 'TOP')
+                ('TOPPADDING', (0, 0), (-1, -1), 0),
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
+                ('VALIGN', (0, 0), (0, -1), 'TOP'),
+                ("ALIGN", (0, 0), (0, -1), "RIGHT")
             ]
         )
     )
@@ -374,10 +382,10 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
 STYLES = getSampleStyleSheet()
 PSTYLES = __gen_pstyles()
 TSTYLES = __gen_tstyles()
-DEF_PSTYLE = PSTYLES['Paragraph']
+DEF_PSTYLE = PSTYLES["Paragraph"]
 
 
-def is_spanned(x: int, y: int, spans: list[_TABLE_SPAN]) -> bool:
+def is_spanned(x: int, y: int, spans: list[_TableSpan]) -> bool:
     for span in spans:
         y_min, x_min = span[0]
         y_inc, x_inc = span[1]
@@ -392,8 +400,8 @@ def get_table_style(
     data: list[list],
     headers: int = 1,
     determinants: int = 0,
-    spans: list[_TABLE_SPAN] = [],
-    orient: _TABLE_ORIENT = "top"
+    spans: list[_TableSpan] = [],
+    orient: _TableOrient = "top"
 ) -> TableStyle:
     table_style = copy.deepcopy(TSTYLES["ValueTable"])
     table_styles = table_style.getCommands()
