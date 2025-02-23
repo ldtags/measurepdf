@@ -1,4 +1,5 @@
 import copy
+import logging
 import warnings
 from bs4 import BeautifulSoup, PageElement, NavigableString, Tag, ResultSet
 from typing import Literal
@@ -22,11 +23,16 @@ from src.summarygen.models import (
 from src.summarygen.styles import (
     ParagraphStyle,
     PSTYLES,
-    DEF_PSTYLE
+    DEF_PSTYLE,
+    NL_HEIGHT,
+    INNER_WIDTH
 )
 from src.summarygen.constants import TAG_STYLE_MAP
 from src.summarygen.exceptions import SummaryGenError
 from src.summarygen.html_parser.generator import FlowableGenerator
+
+
+logger = logging.getLogger(__name__)
 
 
 def _apply_spans(rows: list[ResultSet[Tag]]) -> list[ResultSet[Tag | None]]:
@@ -326,11 +332,15 @@ class HTMLParser:
         html: str,
         bullet_option: BulletOption = CIRCLE_BULLET,
         indents: int = 0,
-        base_style: ParagraphStyle = DEF_PSTYLE
+        base_style: ParagraphStyle = DEF_PSTYLE,
+        newline_height: float = NL_HEIGHT,
+        max_width: float = INNER_WIDTH,
     ) -> list[Flowable]:
         """Converts HTML into HTML sections that can be converted into
         reportlab Flowables.
         """
+
+        logger.info("Parsing HTML...")
 
         self._bullet_option = bullet_option
         self._indents = indents
@@ -338,8 +348,13 @@ class HTMLParser:
 
         soup = BeautifulSoup(html, "html.parser")
         sections = self.convert_elements(soup.contents)
-        generator = FlowableGenerator(sections)
-        flowables = generator.generate()
+        generator = FlowableGenerator()
+        flowables = generator.generate(
+            sections,
+            newline_height=newline_height,
+            max_width=max_width
+        )
 
         self._set_defaults()
+
         return flowables

@@ -47,7 +47,7 @@ class TableCell(Table):
                        self.line_matrix,
                        colWidths=self.width,
                        rowHeights=self.row_heights,
-                       style=TSTYLES['ElementLine'],
+                       style=TSTYLES['Unstyled'],
                        hAlign='LEFT')
 
     @property

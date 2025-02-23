@@ -11,10 +11,9 @@ from reportlab.platypus import (
 )
 
 from src import (
-    utils,
     lookups,
     _SYSTEM,
-    _NOW
+    START_TIME
 )
 from src.etrm.models import Measure
 from src.summarygen.styles import (
@@ -23,8 +22,7 @@ from src.summarygen.styles import (
     TSTYLES,
     COLORS,
     INNER_WIDTH,
-    INNER_HEIGHT,
-    _NL_HEIGHT
+    INNER_HEIGHT
 )
 from src.summarygen.exceptions import SummaryGenError
 from src.summarygen.flowables.general import Spacer
@@ -310,7 +308,7 @@ class TitlePage(KeepTogether):
         else:
             fmt = '-'
 
-        download_date = _NOW.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
+        download_date = START_TIME.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
         download_section = TitleSection(
             'DOWNLOADED',
             download_date,

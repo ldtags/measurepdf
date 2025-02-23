@@ -26,8 +26,8 @@ from reportlab.rl_config import (
 
 from src import asset_path
 from src.summarygen.styles.config import (
-    _DEF_FONT_NAME,
-    _DEF_FONT_SIZE
+    DEFAULT_FONT_NAME,
+    DEFAULT_FONT_SIZE
 )
 from src.summarygen.styles.colors import COLORS
 
@@ -106,17 +106,17 @@ class Font:
 
 class ParagraphStyle(PropertySet):
     defaults = {
-        'fontName': _DEF_FONT_NAME,
-        'fontSize': _DEF_FONT_SIZE,
-        'leading': _DEF_FONT_SIZE * 1.2,
+        'fontName': DEFAULT_FONT_NAME,
+        'fontSize': DEFAULT_FONT_SIZE,
+        'leading': DEFAULT_FONT_SIZE * 1.2,
         'leftIndent': 0,
         'rightIndent': 0,
         'firstLineIndent': 0,
         'alignment': TA_LEFT,
         'spaceBefore': 0,
         'spaceAfter': 0,
-        'bulletFontName': _DEF_FONT_NAME,
-        'bulletFontSize': _DEF_FONT_SIZE,
+        'bulletFontName': DEFAULT_FONT_NAME,
+        'bulletFontSize': DEFAULT_FONT_SIZE,
         'bulletIndent': 0,
         'textColor': colors.black,
         'backColor': None,
@@ -343,7 +343,7 @@ class TableStyle(_TableStyle):
     }
 
     defaults = {
-        'font_name': _DEF_FONT_NAME,
+        'font_name': DEFAULT_FONT_NAME,
         'font_size': 10,
         'leading': 12,
         'left_padding': 6,

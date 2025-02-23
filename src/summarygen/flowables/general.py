@@ -11,7 +11,7 @@ from src.summarygen.styles import (
     ParagraphStyle,
     PSTYLES,
     COLORS,
-    _NL_HEIGHT
+    NL_HEIGHT
 )
 
 
@@ -25,7 +25,7 @@ class Spacer(_Spacer):
         return (availWidth, height)
 
 
-NEWLINE = Spacer(1, _NL_HEIGHT, isGlue=True)
+NEWLINE = Spacer(1, NL_HEIGHT, isGlue=True)
 
 
 class Reference(Flowable):

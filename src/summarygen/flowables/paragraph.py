@@ -49,7 +49,7 @@ class ParagraphLine(Table):
             self._cached_matrix,
             colWidths=self.col_widths,
             rowHeights=element_line.height,
-            style=TSTYLES["ElementLine"]
+            style=TSTYLES["Unstyled"]
         )
 
     @property
@@ -173,7 +173,7 @@ class SummaryParagraph(Table):
             self._lines,
             colWidths=col_widths,
             rowHeights=row_heights,
-            style=TSTYLES["ElementLine"],
+            style=TSTYLES["Unstyled"],
             hAlign="LEFT"
         )
 

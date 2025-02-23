@@ -136,8 +136,8 @@ class ListSection(HTMLSection):
         bullet_option: BulletOption = CIRCLE_BULLET,
         indent_level: int = DEFAULT_INDENT_LEVEL,
         indent_size: int = DEFAULT_INDENT_SIZE,
-        space_before: int = DEFAULT_SPACE_BEFORE,
-        space_after: int = DEFAULT_SPACE_AFTER,
+        space_before: int = 4,
+        space_after: int = 5,
         alignment: Alignment = DEFAULT_ALIGNMENT
     ) -> None:
         super().__init__(

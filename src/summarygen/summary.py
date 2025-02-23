@@ -20,14 +20,14 @@ from reportlab.platypus import (
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
-from src import lookups, patterns, utils, resources, _SYSTEM, _NOW, TMP_DIR
+from src import lookups, patterns, utils, resources, _SYSTEM, START_TIME, TMP_DIR
 from src.etrm.models import Measure
 from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import (
     ETRMConnectionError,
     ETRMResponseError
 )
-from src.summarygen.models import Revision, KeyTerminology, Story
+from src.summarygen.models import Revision, KeyTerminology, Story, SQUARE_BULLET
 from src.summarygen.styles import (
     TableStyle,
     ParagraphStyle,
@@ -38,13 +38,12 @@ from src.summarygen.styles import (
     INNER_HEIGHT,
     INNER_WIDTH,
     TSTYLES,
-    _NL_HEIGHT
+    NL_HEIGHT
 )
 from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
-    TitlePage,
-    SQUARE_BULLET
+    TitlePage
 )
 from src.summarygen.exceptions import SummaryGenError
 from src.summarygen.html_parser import HTMLParser
@@ -283,7 +282,7 @@ class SummaryPageTemplate(PageTemplate):
             fmt = '#'
         else:
             fmt = '-'
-        cur_dt = _NOW.strftime(rf'%{fmt}m/%{fmt}d/%y, %{fmt}I:%M%p')
+        cur_dt = START_TIME.strftime(rf'%{fmt}m/%{fmt}d/%y, %{fmt}I:%M%p')
         style = PSTYLES['SmallBase']
         time_header = Paragraph(cur_dt, style=style)
         _, h = time_header.wrap(INNER_WIDTH + X_MARGIN, Y_MARGIN)
@@ -382,6 +381,7 @@ class MeasureSummary:
             raise FileExistsError(f"File already exists at {self.file_path}")
 
         self.summary = SummaryDocTemplate(self.file_path)
+        self.parser = HTMLParser()
 
     @property
     def dir_path(self) -> str:
@@ -629,6 +629,8 @@ class MeasureSummary:
         self.story.add(PageBreak())
 
     def add_revision_log(self) -> None:
+        logger.info("Generating revision log...")
+
         data = resources.get_json("revisions.json")
         revisions = data.get("revisions", [])
         if not isinstance(revisions, list):
@@ -651,17 +653,16 @@ class MeasureSummary:
                 logger.warning("Invalid revision detected, skipping revision...")
                 continue
 
-            desc_parser = HTMLParser(self.__cur_measure, self.connection)
-            desc_flowables = desc_parser.parse(
+            desc_flowables = self.parser.parse(
                 revision.description,
                 max_width=col_widths[2] - 8,
                 bullet_option=SQUARE_BULLET,
-                newline_height=_NL_HEIGHT * 0.2
+                newline_height=NL_HEIGHT * 0.2
             )
             desc_table = Table(
                 [[flowable] for flowable in desc_flowables],
                 colWidths=(col_widths[2]),
-                style=TSTYLES["ElementLine"]
+                style=TSTYLES["Unstyled"]
             )
             data.append([
                 Paragraph(str(revision.version), style=style),
@@ -675,12 +676,15 @@ class MeasureSummary:
         self.story.add(PageBreak())
 
     def add_key_terminology_item(self, item: KeyTerminology) -> None:
-        parser = HTMLParser()
+        logger.info(f"Generating key terminology section for {item.name}...")
+
         content = f"<kth>{item.name}: </kth>{item.content}"
-        self.story.add(*parser.parse(content))
-        self.story.add(Spacer(0.01, _NL_HEIGHT // 2))
+        self.story.add(*self.parser.parse(content))
+        self.story.add(Spacer(0.01, NL_HEIGHT // 2))
 
     def add_key_terminology(self) -> None:
+        logger.info("Generating key terminology sections...")
+
         data = resources.get_json("key_terminology.json")
         parameters = data.get("parameters")
         if parameters is None:
@@ -692,6 +696,7 @@ class MeasureSummary:
 
         for terminology_item in terminology_items:
             self.add_key_terminology_item(terminology_item)
+
 
 
     @overload
@@ -804,16 +809,14 @@ class MeasureSummary:
     def _build_summary(self, measure: Measure | None = None) -> None:
         if measure is None:
             if self.__cur_measure is None:
-                raise SummaryGenError(
-                    'Missing Measure: no measure provided to build a summary with'
-                )
+                raise SummaryGenError("Cannot generate a summary without a measure")
 
             summary_measure = self.__cur_measure
         else:
             summary_measure = measure
             self.__cur_measure = measure
 
-        logger.info(f'Building summary for measure {summary_measure.full_version_id}')
+        logger.info(f"Building summary for measure {summary_measure.full_version_id}")
 
         template = SummaryPageTemplate(
             id=summary_measure.full_version_id,
@@ -829,8 +832,8 @@ class MeasureSummary:
 
         self.__cur_measure = None
 
-    def build(self, toc: bool=False) -> None:
-        # self.add_revision_log()
+    def build(self, toc: bool = False) -> None:
+        self.add_revision_log()
         if toc:
             self.add_table_of_contents()
 

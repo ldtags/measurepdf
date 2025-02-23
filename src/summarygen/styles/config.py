@@ -4,9 +4,9 @@ __all__ = [
     "Y_MARGIN",
     "INNER_WIDTH",
     "INNER_HEIGHT",
-    "_DEF_FONT_SIZE",
-    "_DEF_FONT_NAME",
-    "_NL_HEIGHT"
+    "DEFAULT_FONT_SIZE",
+    "DEFAULT_FONT_NAME",
+    "NL_HEIGHT"
 ]
 
 
@@ -19,6 +19,6 @@ X_MARGIN = 0.45 * inch
 Y_MARGIN = 1 * inch
 INNER_WIDTH = PAGESIZE[0] - X_MARGIN * 2 - 12
 INNER_HEIGHT = PAGESIZE[1] - Y_MARGIN * 2
-_DEF_FONT_SIZE = 10
-_DEF_FONT_NAME = 'SourceSansPro'
-_NL_HEIGHT = 0.3 * inch
+DEFAULT_FONT_SIZE = 10
+DEFAULT_FONT_NAME = 'SourceSansPro'
+NL_HEIGHT = 0.3 * inch

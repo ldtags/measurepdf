@@ -5,9 +5,9 @@ __all__ = [
     "PAGESIZE",
     "X_MARGIN",
     "Y_MARGIN",
-    "_DEF_FONT_NAME",
-    "_DEF_FONT_SIZE",
-    "_NL_HEIGHT",
+    "DEFAULT_FONT_NAME",
+    "DEFAULT_FONT_SIZE",
+    "NL_HEIGHT",
     "Font",
     "FontType",
     "ParagraphStyle",
@@ -16,7 +16,8 @@ __all__ = [
     "PSTYLES",
     "TSTYLES",
     "DEF_PSTYLE",
-    "get_table_style"
+    "get_table_style",
+    "get_list_style"
 ]
 
 
@@ -27,9 +28,9 @@ from .config import (
     PAGESIZE,
     X_MARGIN,
     Y_MARGIN,
-    _DEF_FONT_NAME,
-    _DEF_FONT_SIZE,
-    _NL_HEIGHT
+    DEFAULT_FONT_NAME,
+    DEFAULT_FONT_SIZE,
+    NL_HEIGHT
 )
 from .objects import (
     Font,
@@ -42,7 +43,8 @@ from .stylesheets import (
     PSTYLES,
     TSTYLES,
     DEF_PSTYLE,
-    get_table_style
+    get_table_style,
+    get_list_style
 )
 
 

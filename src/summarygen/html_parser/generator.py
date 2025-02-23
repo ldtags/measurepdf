@@ -1,5 +1,6 @@
 import os
 import shutil
+import logging
 import requests
 import warnings
 from reportlab.platypus import (
@@ -13,11 +14,12 @@ from reportlab.platypus import (
 from src import assets, utils, TMP_DIR
 from src.summarygen.styles import (
     get_table_style,
+    get_list_style,
     INNER_WIDTH,
     INNER_HEIGHT,
-    PSTYLES,
     TSTYLES,
-    STYLES
+    STYLES,
+    NL_HEIGHT
 )
 from src.summarygen.models.enums import Alignment
 from src.summarygen.models import (
@@ -33,38 +35,45 @@ from src.summarygen.flowables.paragraph import (
 )
 
 
+logger = logging.getLogger(__name__)
+
+
 class FlowableGenerator:
-    def __init__(self, html_sections: list[HTMLSection]) -> None:
-        self.html_sections = html_sections
-        self.bullet_spacing: int = 7
-        self.bullet_level: int = 0
+    def __init__(self) -> None:
+        self.bullet_level: int
+        self.newline_height: float
+        self.max_width: float
+        self._set_defaults()
 
-    @property
-    def html_sections(self) -> list[HTMLSection]:
-        return self._html_sections
+    def _set_defaults(self) -> None:
+        self.bullet_level = 0
+        self.newline_height = NL_HEIGHT
+        self.max_width = INNER_WIDTH
 
-    @html_sections.setter
-    def html_sections(self, sections: list[HTMLSection]) -> None:
+    def _join_sections(self, sections: list[HTMLSection]) -> list[HTMLSection]:
+        """Joins as many adjacent HTML sections as possible and returns the
+        joint sections.
+        """
+
         if len(sections) <= 1:
-            self._html_sections = sections
-            return
+            return sections
 
-        _html_sections: list[HTMLSection] = []
+        html_sections: list[HTMLSection] = []
         cur_section = sections[0]
         for section in sections[1:]:
             if isinstance(cur_section, ParagraphSection) and type(section) == type(cur_section):
                 cur_section.join(section)
             else:
-                _html_sections.append(cur_section)
+                html_sections.append(cur_section)
                 cur_section = section
 
-        _html_sections.append(cur_section)
-        self._html_sections = _html_sections
+        html_sections.append(cur_section)
+        return html_sections
 
     def handle_paragraph(self, section: ParagraphSection) -> SummaryParagraph:
         return SummaryParagraph(
             elements=section.elements,
-            max_width=INNER_WIDTH - section.indent_size * self.bullet_level,
+            max_width=self.max_width - section.indent_size * self.bullet_level,
             space_after=section.space_after,
             space_before=section.space_before,
             indents=section.indent_level,
@@ -73,7 +82,6 @@ class FlowableGenerator:
 
     def handle_list(self, section: ListSection) -> Table:
         data: list[list[Flowable | str]] = []
-        bullet_text = section.bullet_option.get_bullet(self.bullet_level + 1)
         self.bullet_level += 1
         for list_item_sections in section.list_items:
             flowables = self.convert_sections(list_item_sections)
@@ -95,14 +103,16 @@ class FlowableGenerator:
                 for flowable in flowables[1:]:
                     data.append(["", flowable])
 
+        # Apply indentation
         self.bullet_level -= 1
         col_widths = [section.indent_size]
-        for _ in range(self.bullet_level):
+        bullet_index = self.bullet_level + section.indent_level + 1
+        for _ in range(bullet_index):
             col_widths.append(section.indent_size)
             for row in data:
                 row.insert(0, "")
 
-        col_widths.append(INNER_WIDTH - sum(col_widths))
+        col_widths.append(self.max_width - sum(col_widths))
         row_heights: list[float] = []
         for row in data:
             flowable = row[-1]
@@ -111,12 +121,19 @@ class FlowableGenerator:
             else:
                 raise SummaryGenError(f"Cannot get height of flowable type: {type(flowable)}")
 
-        return Table(
+        list_flowable = Table(
             data,
             colWidths=col_widths,
             rowHeights=row_heights,
             hAlign="LEFT",
-            style=TSTYLES["SummaryList"]
+            style=get_list_style(bullet_index)
+        )
+        return Table(
+            data=[[""], [list_flowable], [""]],
+            colWidths=[sum(col_widths)],
+            rowHeights=[section.space_before, sum(row_heights), section.space_after],
+            hAlign="LEFT",
+            style=TSTYLES["Unstyled"]
         )
 
     def _get_image(self, section: ImageSection, max_width: float) -> Image:
@@ -142,7 +159,7 @@ class FlowableGenerator:
 
     def handle_image(self, section: ImageSection) -> Table:
         max_width = (
-            INNER_WIDTH
+            self.max_width
             - section.indent_level * section.indent_size
             - self.bullet_level * section.indent_size
         )
@@ -168,7 +185,7 @@ class FlowableGenerator:
             colWidths=col_widths,
             rowHeights=[image.imageHeight],
             hAlign="LEFT",
-            style=TSTYLES["ElementLine"]
+            style=TSTYLES["Unstyled"]
         )
 
     def _convert_table_cell(
@@ -189,7 +206,7 @@ class FlowableGenerator:
         return Table(
             data=[[flowable] for flowable in flowables],
             colWidths=[max_width],
-            style=TSTYLES["ElementLine"],
+            style=TSTYLES["Unstyled"],
             hAlign="LEFT"
         )
 
@@ -209,7 +226,7 @@ class FlowableGenerator:
         return data
 
     def handle_table(self, section: TableSection) -> Flowable:
-        max_width = INNER_WIDTH - section.indent_level * section.indent_size
+        max_width = self.max_width - section.indent_level * section.indent_size
         headers = self._convert_table_rows(section.headers, max_width)
         rows = self._convert_table_rows(section.rows, max_width)
         data=[*headers, *rows]
@@ -248,5 +265,22 @@ class FlowableGenerator:
             )
         )
 
-    def generate(self) -> list[Flowable]:
-        return self.convert_sections(self.html_sections)
+    def generate(
+        self,
+        sections: list[HTMLSection],
+        newline_height: float | None = None,
+        max_width: float | None = None
+    ) -> list[Flowable]:
+        logger.info("Generating flowables from HTML sections...")
+
+        self.newline_height = newline_height or self.newline_height
+        self.max_width = max_width or self.max_width
+
+        sections = self._join_sections(sections)
+        flowables = self.convert_sections(sections)
+
+        self._set_defaults()
+
+        logger.info(f"Flowables generated: {len(flowables)}")
+
+        return flowables

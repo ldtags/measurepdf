@@ -38,13 +38,6 @@ from src.summarygen.flowables.titlepage import (
     TitleSectionContainer,
     TitleSectionSubContainer
 )
-from src.summarygen.flowables.bulletlist import (
-    BulletList,
-    BulletOption,
-    SQUARE_BULLET,
-    DASH_BULLET,
-    CIRCLE_BULLET
-)
 from src.summarygen.flowables.utils import (
     split_word,
     wrap_elements

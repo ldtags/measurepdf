@@ -8,8 +8,8 @@ from src.summarygen.types import (
     _TableOrient
 )
 from src.summarygen.styles.config import (
-    _DEF_FONT_NAME,
-    _DEF_FONT_SIZE
+    DEFAULT_FONT_NAME,
+    DEFAULT_FONT_SIZE
 )
 from src.summarygen.styles.colors import COLORS
 from src.summarygen.styles.objects import (
@@ -24,22 +24,22 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'Base',
-            font_name=_DEF_FONT_NAME,
-            font_size=_DEF_FONT_SIZE
+            font_name=DEFAULT_FONT_NAME,
+            font_size=DEFAULT_FONT_SIZE
         )
     )
     style_sheet.add(
         ParagraphStyle(
             'SmallBase',
-            font_name=_DEF_FONT_NAME,
-            font_size=_DEF_FONT_SIZE - 1
+            font_name=DEFAULT_FONT_NAME,
+            font_size=DEFAULT_FONT_SIZE - 1
         )
     )
     style_sheet.add(
         ParagraphStyle(
             'SmallerBase',
-            font_name=_DEF_FONT_NAME,
-            font_size=_DEF_FONT_SIZE - 2
+            font_name=DEFAULT_FONT_NAME,
+            font_size=DEFAULT_FONT_SIZE - 2
         )
     )
     style_sheet.add(
@@ -52,7 +52,7 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'SmallParagraph',
-            font_size=_DEF_FONT_SIZE - 1,
+            font_size=DEFAULT_FONT_SIZE - 1,
             parent=style_sheet['Paragraph']
         )
     )
@@ -119,8 +119,8 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'ReferenceTag',
-            font_name=f'{_DEF_FONT_NAME}B',
-            font_size=_DEF_FONT_SIZE - 3,
+            font_name=f'{DEFAULT_FONT_NAME}B',
+            font_size=DEFAULT_FONT_SIZE - 3,
             text_color=colors.white,
             backColor=COLORS['ReferenceTagBG'],
             space_before=1,
@@ -145,7 +145,7 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'ValueTableHeader',
-            font_name=f'{_DEF_FONT_NAME}B',
+            font_name=f'{DEFAULT_FONT_NAME}B',
             parent=style_sheet['ValueTableHeaderThin']
         )
     )
@@ -158,15 +158,15 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'ValueTableItem',
-            font_name=f'{_DEF_FONT_NAME}B',
+            font_name=f'{DEFAULT_FONT_NAME}B',
             parent=style_sheet['SmallBase']
         )
     )
     style_sheet.add(
         ParagraphStyle(
             'TableHeader',
-            font_name=f'{_DEF_FONT_NAME}B',
-            font_size=_DEF_FONT_SIZE + 3.5
+            font_name=f'{DEFAULT_FONT_NAME}B',
+            font_size=DEFAULT_FONT_SIZE + 3.5
         )
     )
     style_sheet.add(
@@ -298,13 +298,13 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
     )
     style_sheet.add(
         TableStyle(
-            'ElementLine',
+            "Unstyled",
             [
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                ('VALIGN', (0, 0), (-1, -1), 'MIDDLE')
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE")
             ]
         )
     )
@@ -353,9 +353,7 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
                 ('LEFTPADDING', (0, 0), (-1, -1), 0),
                 ('RIGHTPADDING', (0, 0), (-1, -1), 0),
                 ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                ('VALIGN', (0, 0), (0, -1), 'TOP'),
-                ("ALIGN", (0, 0), (0, -1), "RIGHT")
+                ('BOTTOMPADDING', (0, 0), (-1, -1), 0)
             ]
         )
     )
@@ -395,6 +393,20 @@ def is_spanned(x: int, y: int, spans: list[_TableSpan]) -> bool:
             return True
 
     return False
+
+
+def get_list_style(bullet_index: int) -> TableStyle:
+    style = copy.deepcopy(TSTYLES["SummaryList"])
+    cmds = style.getCommands()
+    cmds.append((
+        "VALIGN",
+        (bullet_index, 0),
+        (bullet_index, -1),
+        "TOP"
+    ))
+
+    return TableStyle(style.name, cmds)
+
 
 def get_table_style(
     data: list[list],
