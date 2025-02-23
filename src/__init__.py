@@ -20,13 +20,6 @@ IS_DEBUG_MODE: bool = False
 
 TMP_DIR = os.path.join(_ROOT, "assets", "images", "tmp")
 
-_LOG_FILE_NAME = "summarygen.log"
-logging.basicConfig(
-    filename=_LOG_FILE_NAME,
-    level=logging.INFO,
-    filemode="w"
-)
-
 def _configure_logger() -> None:
     date_str = dt.now().strftime(r"%Y-%m-%d_%H-%M-%S")
     logging.basicConfig(
