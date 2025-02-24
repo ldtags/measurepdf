@@ -99,26 +99,26 @@ def parse_args() -> ap.Namespace:
 
 if __name__ == '__main__':
     args = parse_args()
-    measures = getattr(args, 'measures', [])
-    use_categories = getattr(args, 'use_category', [])
-    name = getattr(args, 'name', 'measure_summary')
-    _all = getattr(args, 'all', False)
+    measures = getattr(args, "measures", [])
+    use_categories = getattr(args, "use_category", [])
+    name = getattr(args, "name", "measure_summary")
+    _all = getattr(args, "all", False)
     if _all and (measures or use_categories):
-        print('Usage: ./cli [-a | -m -u -n]')
+        print("Usage: ./cli [-a | -m -u -n]")
         exit(1)
 
     builder = TestBuilder()
     start = time.time()
     if _all:
-        blacklist = ['WB']
+        blacklist = ["WB"]
         use_categories = list(lookups.USE_CATEGORIES.keys())
         for use_category in use_categories:
             if use_category in blacklist:
                 continue
             
-            print(f'Building summary for {use_category}')
+            print(f"Building summary for {use_category}")
             builder.build(
-                f'SW{use_category}_Summary',
+                f"SW{use_category}_Summary",
                 use_categories=use_category
             )
     else:
@@ -129,4 +129,4 @@ if __name__ == '__main__':
         )
 
     elapsed = time.time() - start
-    print(f'took {elapsed}s', file=sys.stderr)
+    logger.info(f"Generation took {elapsed}s")
