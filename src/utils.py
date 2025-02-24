@@ -202,39 +202,6 @@ def get_tkimage(light_image: str,
                         size=size)
 
 
-def get_rlimage(img_path: str,
-                max_width: float | None=None,
-                max_height: float | None=None,
-                **kwargs) -> RLImage:
-    img = RLImage(img_path, **kwargs)
-    img_width = img.imageWidth
-    img_height = img.imageHeight
-
-    if max_width is not None:
-        assert max_width > 0
-        scalar = img_width / (max_width - 1)
-        if scalar > 1:
-            img_width /= scalar
-            img_height /= scalar
-            img = RLImage(img_path,
-                          width=img_width,
-                          height=img_height,
-                          **kwargs)
-
-    if max_height is not None:
-        assert max_height > 0
-        scalar = img_height / (max_height - 1)
-        if scalar > 1:
-            img_height /= scalar
-            img_width /= scalar
-            img = RLImage(img_path,
-                          width=img_width,
-                          height=img_height,
-                          **kwargs)
-
-    return img
-
-
 def rotate_matrix(matrix: list[list[_T]]) -> list[list[_T]]:
     """Assumes non-ragged rows on the 2D plane of
     the matrix

@@ -1,7 +1,12 @@
 from __future__ import annotations
+import math
+from abc import ABCMeta, abstractmethod
+from PIL import Image
 
-from src.summarygen.models.enums import Alignment, TextStyle
+from src import assets
+from src.summarygen import utils
 from src.summarygen.types import _TableSpan
+from src.summarygen.models.enums import Alignment, TextStyle
 from src.summarygen.models.general import BulletOption
 from src.summarygen.models.elements import ParagraphElement
 from src.summarygen.models.constants import (
@@ -15,7 +20,7 @@ from src.summarygen.models.constants import (
 from src.summarygen.exceptions import SummaryGenError
 
 
-class HTMLSection:
+class HTMLSection(metaclass=ABCMeta):
     def __init__(
         self,
         indent_level: int = DEFAULT_INDENT_LEVEL,
@@ -74,6 +79,14 @@ class HTMLSection:
 
         self._space_after = val
 
+    @property
+    @abstractmethod
+    def height(self) -> float: ...
+
+    @property
+    @abstractmethod
+    def width(self) -> float: ...
+
 
 class ParagraphSection(HTMLSection):
     """Defines an HTML paragraph section.
@@ -120,6 +133,16 @@ class ParagraphSection(HTMLSection):
         for element in self.elements:
             element.add_text_style(style)
 
+    @property
+    def height(self) -> float:
+        height = max([element.height for element in self.elements])
+        return height
+
+    @property
+    def width(self) -> float:
+        width = max([element.width for element in self.elements])
+        return width
+
 
 class ListSection(HTMLSection):
     """Defines an HTML unordered list section.
@@ -151,6 +174,22 @@ class ListSection(HTMLSection):
         self.list_items = list_items
         self.bullet_option = bullet_option
 
+    @property
+    def height(self) -> float:
+        heights: list[float] = []
+        for list_item in self.list_items:
+            heights.append(max([section.height for section in list_item]))
+
+        return math.fsum(heights)
+
+    @property
+    def width(self) -> float:
+        widths: list[float] = []
+        for list_item in self.list_items:
+            widths.append(max([section.width for section in list_item]))
+
+        return max(widths)
+
 
 class ImageSection(HTMLSection):
     """Defines an HTML img section.
@@ -178,9 +217,19 @@ class ImageSection(HTMLSection):
 
         self.url = url
         if url.startswith("./"):
-            self.is_local = True
+            self.img_path = assets.get_path(url[2:])
         else:
-            self.is_local = False
+            self.img_path = utils.download_image(url)
+
+        self._image_width, self._image_height = Image.open(self.img_path).size
+
+    @property
+    def height(self) -> float:
+        return float(self._image_height)
+
+    @property
+    def width(self) -> float:
+        return float(self._image_width)
 
 
 class TableSection(HTMLSection):
@@ -212,3 +261,27 @@ class TableSection(HTMLSection):
         self.headers = headers or []
         self.rows = rows
         self.spans = spans or []
+
+    @property
+    def height(self) -> float:
+        height: float = 0
+        for row in [*self.headers, *self.rows]:
+            heights: list[float] = []
+            for item in row:
+                heights.append(math.fsum([section.height for section in item]))
+
+            height += max(heights)
+
+        return height
+
+    @property
+    def width(self) -> float:
+        width: float = 0
+        for row in [*self.headers, *self.rows]:
+            row_width: float = 0
+            for item in row:
+                row_width += max([section.width for section in item])
+
+            width = max(width, row_width)
+
+        return width
