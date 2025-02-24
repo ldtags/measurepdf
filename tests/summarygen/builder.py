@@ -4,7 +4,7 @@ import time
 import logging
 import argparse as ap
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src import utils, lookups, _ROOT
 from src.etrm import ETRMConnection
 from src.summarygen import MeasureSummary
@@ -15,7 +15,7 @@ logger = logging.getLogger(__name__)
 
 class TestBuilder:
     def __init__(self):
-        api_key = utils.get_api_key(role='user')
+        api_key = utils.get_api_key(role="user")
         self.connection = ETRMConnection(api_key)
 
     def build(
