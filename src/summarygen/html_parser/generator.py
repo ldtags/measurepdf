@@ -1,22 +1,17 @@
-import os
-import shutil
 import logging
-import requests
 import warnings
 from reportlab.platypus import (
     Flowable,
     Paragraph,
     Table,
-    Image,
     XPreformatted
 )
 
-from src import assets, utils, TMP_DIR
+from src.summarygen import utils
 from src.summarygen.styles import (
     get_table_style,
     get_list_style,
     INNER_WIDTH,
-    INNER_HEIGHT,
     TSTYLES,
     STYLES,
     NL_HEIGHT
@@ -105,10 +100,10 @@ class FlowableGenerator:
 
         # Apply indentation
         self.bullet_level -= 1
-        col_widths = [section.indent_size]
+        col_widths = [section.bullet_indent_size]
         bullet_index = self.bullet_level + section.indent_level + 1
         for _ in range(bullet_index):
-            col_widths.append(section.indent_size)
+            col_widths.append(section.bullet_indent_size)
             for row in data:
                 row.insert(0, "")
 
@@ -136,34 +131,13 @@ class FlowableGenerator:
             style=TSTYLES["Unstyled"]
         )
 
-    def _get_image(self, section: ImageSection, max_width: float) -> Image:
-        if section.is_local:
-            img_path = assets.get_path(section.url[2:])
-        else:
-            response = requests.get(section.url, stream=True)
-            if response.status_code != 200:
-                raise SummaryGenError(f"Could not download image at {section.url}")
-
-            if not os.path.exists(TMP_DIR):
-                os.mkdir(TMP_DIR)
-
-            img_path = f"{TMP_DIR}/{section.url[section.url.rindex('/') + 1:]}"
-            with open(img_path,  "wb+") as fp:
-                shutil.copyfileobj(response.raw, fp)
-
-        return utils.get_rlimage(
-            img_path,
-            max_width=max_width - section.indent_level * section.indent_size,
-            max_height=INNER_HEIGHT
-        )
-
     def handle_image(self, section: ImageSection) -> Table:
         max_width = (
             self.max_width
             - section.indent_level * section.indent_size
             - self.bullet_level * section.indent_size
         )
-        image = self._get_image(section, max_width)
+        image = utils.get_image(section.img_path, max_width=max_width)
         data = [image]
         col_widths = [image.imageWidth]
         rem_space = max_width - image.imageWidth
@@ -179,6 +153,10 @@ class FlowableGenerator:
             case Alignment.Right:
                 data.insert(0, "")
                 col_widths.insert(0, rem_space)
+
+        if section.indent_level > 0:
+            data.insert(0, "")
+            col_widths.insert(0, section.indent_size)
 
         return Table(
             data=[data],

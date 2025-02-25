@@ -1,6 +1,18 @@
 {
     "$schema": "./key_terminology.schema.json",
+    "introduction": "This section is to aid in the understanding of each data specification field needed to describe the permutations for a measure. Definitions in this section also include common terms used throughout this TRM document.<br>Note: The section may include tables synced in eTRM with other data sources and may include changes since publication of this TRM version. <em>Please refer to <a href=\"https://www.caetrm.com/cpuc/\">ETRM | CPUC Support Tables</a> for the most up-to-date versions of such tables</em>.",
     "parameters": [
+        {
+            "name": "AOE Years",
+            "api_name": null,
+            "content": "This field represents the measure life of an add-on equipment (AOE) measure application type. It is equal to First Baseline - Life Cycle, calculated for AOE, which is either:<ul><li>The lower of the EUL Years of the add-on equipment or the RUL Years of the host equipment</li><li>OR the full EUL Years of the add-on equipment if measure meets E-5221 AOE eligibility</li></ul><br>In the eTRM, to accommodate the cost-effectiveness tool calculation, the AOE Years are reported under the EUL_Years field. In this TRM, AOE Years are extracted out and placed into the RUL Years. See \"EUL Years, except AOE Years\" and \"RUL Years/AOE Years\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
         {
             "name": "Building HVAC",
             "api_name": "BldgHVAC",
@@ -13,7 +25,8 @@
             },
             "data": null,
             "append": null,
-            "sub_sections": null
+            "sub_sections": null,
+            "row_split": 15
         },
         {
             "name": "Building Location",
@@ -41,7 +54,8 @@
             },
             "data": null,
             "append": null,
-            "sub_sections": null
+            "sub_sections": null,
+            "row_split": 34
         },
         {
             "name": "Building Vintage",
@@ -188,7 +202,18 @@
         {
             "name": "EUL Years (yr)",
             "api_name": null,
-            "content": "Measure life, in years, applicable to first baseline period. For the AR, NR, NC, BRO, and BW Measure Application Types, the value is equal to the EUL Years of the EUL ID. For the AOE Measure Application Type the value equal to the First Baseline - Life Cycle.<br>Note that this is the field reported within the CET input file (EUL_Yrs).<br>See Data Table for list of EUL IDs and the EUL Years.",
+            "content": "Measure life, in years, applicable to first baseline period. For the accelerated replacement (AR), normal replacement (NR), new construction (NC), building weatherization (BW), and Behavioral-Retrocommissioning-Operational (BRO) measure application types, the value is equal to the EUL Years of the EUL ID. For the add-on equipment (AOE) Measure Application Type the value equal to the First Baseline - Life Cycle. See \"First Baseline - Life Cycle\".<br>Note that this is the field reported within the CET input file (EUL_Yrs).<br>See Data Table for list of EUL IDs and the EUL Years.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "EUL Years, except AOE Years (yr)",
+            "api_name": null,
+            "content": "This field contains just strictly the full EUL Years for accelerated replacement (AR), normal replacement (NR), new construction (NC), building weatherization (BW), and Behavioral-Retrocommissioning-Operational (BRO) measure application types. The life or EUL Years of add-on equipment (AOE) is excluded and will be instead reported with the RUL Years. See \"RUL Years/AOE Years\" field.",
             "contains_table": false,
             "columns": null,
             "column_mappings": null,
@@ -433,6 +458,17 @@
             ]
         },
         {
+            "name": "Full Measure Cost (USD)",
+            "api_name": null,
+            "content": "The total cost of the measure case; the sum of measure case labor cost, measure case material cost, costs to convert fuel infrastructure (e.g., costs to install electric wiring) if measure is a fuel substitution measure.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
             "name": "Gas Benefits (USD)",
             "api_name": null,
             "content": "This field represents Net Gas Benefits and is based on the avoided costs associated with natural gas consumption; thus, this value represents the summation over the life of the measure of the product of avoided cost and gas savings. Field is calculated by the California Energy Data and Reporting System (<a href=\"https://cedars.cpuc.ca.gov/deer-resources/tools/supporting-files/\">CEDARS</a>) cost-effectiveness tool (CET), and the calculation methodology is described in the <a href=\"https://cedars.cpuc.ca.gov/cet_ui/cet-user-guide/\">CET User Guide - CEDARS</a>.",
@@ -498,6 +534,17 @@
             "name": "IE Table Name",
             "api_name": null,
             "content": "Names of the interactive effects (IE) value tables used for the measure (ex. 2020-Com-InLtg or 2020-Res-InLtg). See \"Is IE Factor Applied\".",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "Incremental Cost (USD)",
+            "api_name": null,
+            "content": "A calculated field that equals the difference between the measure case costs - material, labor, and infrastructure costs (if measure is a fuel substitution measure) - and the base case costs - material and labor.",
             "contains_table": false,
             "columns": null,
             "column_mappings": null,
@@ -705,7 +752,7 @@
         {
             "name": "Measure Total Cost 2nd Baseline",
             "api_name": null,
-            "content": "Calculated value of incremental cost per normalized unit, applicable to the 2nd baseline period.<br>Values equal \"0\" for measure without a second baseline (all measure application types, except AR)",
+            "content": "Calculated value of incremental cost per normalized unit, applicable to the 2nd baseline period.<br>Values equal \"0\" for measure without a second baseline (i.e., all measure application types, except AR).",
             "contains_table": false,
             "columns": null,
             "column_mappings": null,
@@ -1014,6 +1061,17 @@
             "name": "RUL Years (yr)",
             "api_name": null,
             "content": "The assigned remaining useful life, in years, of the RUL ID. By default, it equals 1/3 of the effective useful life (EUL) years.<br>For AR, the value is equal to the RUL Years taken from the DEER Effective Useful Life table. For all other Measure Application Types, this value is zero. <em>For AOE, RUL Years may be needed to calculate the first and second baseline lifecycle, but the value is not reported in the permutation.</em><br>Note that this is the field reported within the CET input file (RUL_Yrs).<br>See Data Table for list of RUL IDs (which is the same as EUL IDs in the table) and the RUL Years.",
+            "contains_table": false,
+            "columns": null,
+            "column_mappings": null,
+            "data": null,
+            "append": null,
+            "sub_sections": null
+        },
+        {
+            "name": "RUL Years / AOE Years (yr)",
+            "api_name": null,
+            "content": "This field contains either the RUL Years or the AOE Years. This life duration is applicable to the existing savings and consumption.",
             "contains_table": false,
             "columns": null,
             "column_mappings": null,

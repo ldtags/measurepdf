@@ -104,3 +104,33 @@ class KeyTerminology(JSONObject):
         self.sub_sections = self.get("sub_sections", list[KeyTerminology] | None)
         self.row_split = self.get("row_split", int | None, None)
         self.caption = self.get("caption", str | None, None)
+
+        for i, section in enumerate(self.sub_sections or []):
+            self.sub_sections[i] = KeyTerminology(section)
+
+    def requires_etrm_table(self) -> bool:
+        if self.api_name is None:
+            return False
+
+        if self.columns is None:
+            return False
+
+        if self.data is not None and self.append is None:
+            return False
+
+        return True
+
+    def get_table_headers(self) -> list[str] | None:
+        if self.columns is None:
+            return None
+
+        headers = self.columns.copy()
+        if self.column_mappings is None:
+            return headers
+
+        for i, header in enumerate(headers):
+            mapping = self.column_mappings.get(header)
+            if mapping is not None:
+                headers[i] = mapping
+
+        return headers

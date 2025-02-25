@@ -4,6 +4,7 @@
 __pycache__
 summaries
 summaries/*
+p_cache.json
 
 # security
 config.ini

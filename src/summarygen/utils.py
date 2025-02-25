@@ -23,7 +23,7 @@ def download_image(url: str) -> str:
     if not os.path.exists(TMP_DIR):
         os.mkdir(TMP_DIR)
 
-    img_name = url[url.rindex('/') + 1:]
+    img_name = url[url.rindex("/") + 1:]
     img_path = f"{TMP_DIR}/{img_name}"
     with open(img_path,  "wb+") as fp:
         shutil.copyfileobj(response.raw, fp)
@@ -31,10 +31,12 @@ def download_image(url: str) -> str:
     return img_path
 
 
-def get_rlimage(img_path: str,
-                max_width: float | None=None,
-                max_height: float | None=None,
-                **kwargs) -> Image:
+def get_image(
+    img_path: str,
+    max_width: float | None = None,
+    max_height: float | None = None,
+    **kwargs
+) -> Image:
     img = Image(img_path, **kwargs)
     img_width = img.imageWidth
     img_height = img.imageHeight
@@ -45,10 +47,12 @@ def get_rlimage(img_path: str,
         if scalar > 1:
             img_width /= scalar
             img_height /= scalar
-            img = Image(img_path,
-                          width=img_width,
-                          height=img_height,
-                          **kwargs)
+            img = Image(
+                img_path,
+                width=img_width,
+                height=img_height,
+                **kwargs
+            )
 
     if max_height is not None:
         assert max_height > 0
@@ -56,10 +60,12 @@ def get_rlimage(img_path: str,
         if scalar > 1:
             img_height /= scalar
             img_width /= scalar
-            img = Image(img_path,
-                          width=img_width,
-                          height=img_height,
-                          **kwargs)
+            img = Image(
+                img_path,
+                width=img_width,
+                height=img_height,
+                **kwargs
+            )
 
     return img
 

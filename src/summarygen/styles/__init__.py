@@ -17,7 +17,8 @@ __all__ = [
     "TSTYLES",
     "DEF_PSTYLE",
     "get_table_style",
-    "get_list_style"
+    "get_list_style",
+    "get_kt_table_style",
 ]
 
 
@@ -44,7 +45,8 @@ from .stylesheets import (
     TSTYLES,
     DEF_PSTYLE,
     get_table_style,
-    get_list_style
+    get_list_style,
+    get_kt_table_style
 )
 
 

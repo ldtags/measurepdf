@@ -18,7 +18,8 @@ from src.summarygen.models import (
     ImageSection,
     TableSection,
     BulletOption,
-    CIRCLE_BULLET
+    CIRCLE_BULLET,
+    DEFAULT_INDENT_SIZE
 )
 from src.summarygen.styles import (
     ParagraphStyle,
@@ -134,13 +135,14 @@ class HTMLParser:
     def __init__(self) -> None:
         self._indents: int
         self._indent_size: int
+        self._bullet_indent_size: int
         self._bullet_option: BulletOption | None
         self._set_defaults()
 
     def _set_defaults(self) -> None:
         self._indents = 0
-        self._indent_size = 11
-        self._style = PSTYLES["Paragraph"]
+        self._indent_size = DEFAULT_INDENT_SIZE
+        self._style = DEF_PSTYLE
         self._bullet_option = None
 
     def handle_text(self, element: NavigableString) -> ParagraphSection:
@@ -267,7 +269,9 @@ class HTMLParser:
 
     def handle_kth(self, tag: Tag) -> ParagraphSection:
         return ParagraphSection(
-            [ParagraphElement(text=tag.get_text(), type=ElementType.TerminologyHeader)]
+            [ParagraphElement(text=tag.get_text(), type=ElementType.TerminologyHeader)],
+            indent_level=self._indents,
+            indent_size=self._indent_size
         )
 
     def handle_br(self) -> ParagraphSection:
@@ -332,10 +336,8 @@ class HTMLParser:
         html: str,
         bullet_option: BulletOption = CIRCLE_BULLET,
         indents: int = 0,
-        base_style: ParagraphStyle = DEF_PSTYLE,
-        newline_height: float = NL_HEIGHT,
-        max_width: float = INNER_WIDTH,
-    ) -> list[Flowable]:
+        base_style: ParagraphStyle = DEF_PSTYLE
+    ) -> list[HTMLSection]:
         """Converts HTML into HTML sections that can be converted into
         reportlab Flowables.
         """
@@ -348,13 +350,7 @@ class HTMLParser:
 
         soup = BeautifulSoup(html, "html.parser")
         sections = self.convert_elements(soup.contents)
-        generator = FlowableGenerator()
-        flowables = generator.generate(
-            sections,
-            newline_height=newline_height,
-            max_width=max_width
-        )
 
         self._set_defaults()
 
-        return flowables
+        return sections

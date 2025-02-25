@@ -1,5 +1,7 @@
 import re
+import os
 import time
+import json
 import logging
 import requests
 import http.client as httpc
@@ -32,6 +34,8 @@ logger = logging.getLogger(__name__)
 
 _T = TypeVar('_T')
 
+_PCACHE_FNAME = "p_cache.json"
+
 
 _DEC_TYPE = Callable[..., _T | None]
 def etrm_cache_request(func: _DEC_TYPE) -> _DEC_TYPE:
@@ -44,11 +48,30 @@ def etrm_cache_request(func: _DEC_TYPE) -> _DEC_TYPE:
     def wrapper(*args, **kwargs) -> _T | None:
         value = func(*args, **kwargs)
         if value is not None:
-            logger.info('Cache HIT')
+            logger.info("Cache HIT")
         else:
-            logger.info('Cache MISS')
+            logger.info("Cache MISS")
+
         return value
+
     return wrapper
+
+
+def get_persistent_cache() -> dict[str, Any]:
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    file_path = os.path.join(dir_path, _PCACHE_FNAME)
+    if not os.path.exists(file_path):
+        return {}
+
+    with open(file_path, "r") as fp:
+        return json.load(fp)
+
+
+def update_persistent_cache(cache: dict[str, Any]) -> None:
+    dir_path = os.path.dirname(os.path.realpath(__file__))
+    file_path = os.path.join(dir_path, _PCACHE_FNAME)
+    with open(file_path, "w") as fp:
+        json.dump(cache, fp)
 
 
 class ETRMCache:
@@ -57,11 +80,17 @@ class ETRMCache:
     Used to decrease eTRM API connection layer latency on repeat calls
     """
 
-    def __init__(self):
+    def __init__(self, use_persistent_cache: bool = False) -> None:
+        self._use_persistent_cache = use_persistent_cache
+        if use_persistent_cache:
+            self._p_cache = get_persistent_cache()
+        else:
+            self._p_cache = {}
+
         self.id_cache: list[str] = []
-        self.__id_count: int = -1
+        self._id_count: int = -1
         self.uc_id_caches: dict[str, list[str]] = {}
-        self.__uc_id_counts: dict[str, int] = {}
+        self._uc_id_counts: dict[str, int] = {}
         self.version_cache: dict[str, list[str]] = {}
         self.measure_cache: dict[str, Measure] = {}
         self.references: dict[str, Reference] = {}
@@ -78,12 +107,12 @@ class ETRMCache:
         if use_category != None:
             try:
                 id_cache = self.uc_id_caches[use_category]
-                count = self.__uc_id_counts[use_category]
+                count = self._uc_id_counts[use_category]
             except KeyError:
                 return None
         else:
             id_cache = self.id_cache
-            count = self.__id_count
+            count = self._id_count
 
         try:
             cached_ids = id_cache[offset:offset + limit]
@@ -91,6 +120,7 @@ class ETRMCache:
                 return (cached_ids, count)
         except IndexError:
             return None
+
         return None
 
     def add_ids(
@@ -107,22 +137,24 @@ class ETRMCache:
             except KeyError:
                 self.uc_id_caches[use_category] = []
                 id_cache = self.uc_id_caches[use_category]
-            self.__uc_id_counts[use_category] = count
+
+            self._uc_id_counts[use_category] = count
         else:
             id_cache = self.id_cache
-            self.__id_count = count
+            self._id_count = count
 
         cache_len = len(id_cache)
         if offset == cache_len:
             id_cache.extend(measure_ids)
         elif offset > cache_len:
-            id_cache.extend([''] * (offset - cache_len))
+            id_cache.extend([""] * (offset - cache_len))
             id_cache.extend(measure_ids)
         elif offset + limit > cache_len:
             new_ids = measure_ids[cache_len - offset:limit]
             for i in range(offset, cache_len):
-                if id_cache[i] == '':
+                if id_cache[i] == "":
                     id_cache[i] = measure_ids[i - offset]
+
             id_cache.extend(new_ids)
 
     @etrm_cache_request
@@ -152,7 +184,7 @@ class ETRMCache:
         table_name: str,
         version: str
     ) -> SharedValueTable | None:
-        return self.shared_value_tables.get(f'{table_name}-{version}')
+        return self.shared_value_tables.get(f"{table_name}-{version}")
 
     def add_shared_value_table(
         self,
@@ -160,7 +192,7 @@ class ETRMCache:
         version: str,
         value_table: SharedValueTable
     ) -> None:
-        self.shared_value_tables[f'{table_name}-{version}'] = value_table
+        self.shared_value_tables[f"{table_name}-{version}"] = value_table
 
     @etrm_cache_request
     def get_shared_parameter(
@@ -168,24 +200,45 @@ class ETRMCache:
         param_type: str,
         version: str
     ) -> SharedParameter | None:
-        return self.shared_parameters.get(f"{param_type}-{version}")
+        key = f"{param_type}-{version}"
+        if self._use_persistent_cache:
+            params: dict[str, Any] = self._p_cache.get("shared_parameters", {})
+            param_dict = params.get(key)
+            if param_dict is None:
+                return None
+
+            return SharedParameter(param_dict)
+        else:
+            return self.shared_parameters.get(key)
 
     def add_shared_parameter(self, parameter: SharedParameter) -> None:
-        self.shared_parameters[parameter.version] = parameter
+        if self._use_persistent_cache:
+            if "shared_parameters" not in self._p_cache:
+                self._p_cache["shared_parameters"] = {}
+
+            self._p_cache["shared_parameters"][parameter.version] = parameter.as_dict()
+            update_persistent_cache(self._p_cache)
+        else:
+            self.shared_parameters[parameter.version] = parameter
 
 class ETRMConnection:
     """eTRM API connection layer"""
 
-    def __init__(self, auth_token: str, stage: bool=False):
+    def __init__(
+        self,
+        auth_token: str,
+        stage: bool = False,
+        use_persistent_cache: bool = False
+    ) -> None:
         self.auth_token = sanitizers.sanitize_auth_token(auth_token)
         self.api = STAGE_API if stage else PROD_API
         self.headers = {
-            'Authorization': auth_token
+            "Authorization": auth_token
         }
-        self.cache = ETRMCache()
+        self.cache = ETRMCache(use_persistent_cache=use_persistent_cache)
 
     def extract_id(self, url: str) -> str | None:
-        URL_RE = re.compile(f'{self.api}/measures/([a-zA-Z0-9]+)/')
+        URL_RE = re.compile(f"{self.api}/measures/([a-zA-Z0-9]+)/")
         re_match = re.search(URL_RE, url)
         if len(re_match.groups()) != 1:
             return None
@@ -196,26 +249,27 @@ class ETRMConnection:
 
         return id_group
 
-    def get(self,
-            endpoint: str,
-            headers: dict[str, str] | None=None,
-            params: dict[str, str] | None=None,
-            stream: bool=True,
-            **kwargs
-           ) -> requests.Response:
-        _endpoint = endpoint.replace(self.api, '')
-        if not _endpoint.startswith('/'):
-            _endpoint = '/' + _endpoint
+    def get(
+        self,
+        endpoint: str,
+        headers: dict[str, str] | None = None,
+        params: dict[str, str] | None = None,
+        stream: bool = True,
+        **kwargs
+    ) -> requests.Response:
+        _endpoint = endpoint.replace(self.api, "")
+        if not _endpoint.startswith("/"):
+            _endpoint = "/" + _endpoint
 
-        if not _endpoint.endswith('/'):
-            _endpoint += '/'
+        if not _endpoint.endswith("/"):
+            _endpoint += "/"
 
         req_headers: dict[str, str] = {**self.headers}
         if headers != None:
             req_headers |= headers
 
-        _url = f'{self.api}{_endpoint}'
-        logger.info(f'Making request to {_url}')
+        _url = f"{self.api}{_endpoint}"
+        logger.info(f"Making request to {_url}")
         for i in range(4):
             try:
                 response = requests.get(_url,
@@ -223,14 +277,15 @@ class ETRMConnection:
                                         headers=req_headers,
                                         stream=stream,
                                         **kwargs)
-                logger.info(f'Request complete: {response.status_code}')
+                logger.info(f"Request complete: {response.status_code}")
                 break
             except httpc.IncompleteRead:
-                logger.info('Request failed')
+                logger.info("Request failed")
                 if i == 3:
                     raise
+
                 time.sleep(i)
-                logger.info('Trying again...')
+                logger.info("Trying again...")
             except requests.exceptions.ConnectionError as err:
                 raise ConnectionError() from err
 
@@ -260,11 +315,12 @@ class ETRMConnection:
         self.cache.add_measure(measure)
         return measure
 
-    def get_measure_ids(self,
-                        offset: int=0,
-                        limit: int=25,
-                        use_category: str | None=None
-                       ) -> tuple[list[str], int]:
+    def get_measure_ids(
+        self,
+        offset: int = 0,
+        limit: int = 25,
+        use_category: str | None = None
+    ) -> tuple[list[str], int]:
         logger.info(f'Retrieving measure IDs')
 
         cache_response = self.cache.get_ids(offset, limit, use_category)
@@ -403,11 +459,11 @@ class ETRMConnection:
         while url is not None:
             res = self.get(url)
             content: dict[str, Any] = res.json()
-            next_url = content.get("next")
-            if next_url is not None:
-                prev_url = utils.parse_url(url)
+            prev_url = utils.parse_url(url)
+            url = content.get("next")
+            if url is not None:
                 prev_offset = prev_url.query.get("offset", "")
-                parsed_url = utils.parse_url(next_url)
+                parsed_url = utils.parse_url(url)
                 url_offset = parsed_url.query.get("offset", "")
                 if prev_offset == url_offset:
                     break

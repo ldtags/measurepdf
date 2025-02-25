@@ -16,7 +16,7 @@ logger = logging.getLogger(__name__)
 class TestBuilder:
     def __init__(self):
         api_key = utils.get_api_key(role="user")
-        self.connection = ETRMConnection(api_key)
+        self.connection = ETRMConnection(api_key, use_persistent_cache=True)
 
     def build(
         self,

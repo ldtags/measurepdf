@@ -1,5 +1,6 @@
 import math
 from typing import Literal
+from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Table,
     Paragraph
@@ -58,6 +59,9 @@ class TableCell(Table):
     def width(self) -> float:
         return max([line.width for line in self.elements])
 
+    def get_min_width(self) -> float:
+        return max([line.width for line in self.elements])
+
     @property
     def row_heights(self) -> list[float]:
         return [elem.height for elem in self.elements]
@@ -90,6 +94,11 @@ class BasicTable(Table):
         row_heights: list[float] | float | None = None,
         h_align: Literal["left", "center", "right"] = "left",
         repeat_rows: int = 1,
+        max_width: float = INNER_WIDTH,
+        min_col_widths: bool = False,
+        x_padding: int = 0,
+        y_padding: int = 0,
+        uniform_columns: bool = False,
         **kwargs
     ) -> None:
         """Constructs a ReportLab `Table` with the provided data.
@@ -159,10 +168,11 @@ class BasicTable(Table):
 
         assert row_len is not None
 
+        self.uniform_columns = uniform_columns
         self.header_count = headers
         self.header_orient = header_orient
         self.measure = measure
-        self.max_width = INNER_WIDTH
+        self.max_width = max_width
         self.spans = spans or []
         self.span_dict = {
             str((y, x)): span_sizes
@@ -195,26 +205,26 @@ class BasicTable(Table):
             assert len(body_styles) == style_count
             self.body_styles = body_styles
 
+        self.data = self._sanitize_data(data)
+
         # Ensures that each column has a defined width
         if isinstance(col_widths, float):
-            self._col_widths = [col_widths] * row_len
+            self.col_widths = [col_widths] * row_len
+        elif col_widths is not None:
+            assert row_len == len(col_widths)
+            self.col_widths = col_widths
         else:
-            if col_widths is not None:
-                assert row_len == len(col_widths)
-
-            self._col_widths = col_widths
+            self.col_widths = self._calc_col_widths(self.data)
 
         # Ensures that each row has a defined height
         if isinstance(row_heights, float):
-            self._row_heights = [row_heights] * len(data)
+            self.row_heights = [row_heights] * len(data)
+        elif row_heights is not None:
+            assert len(data) == len(row_heights)
+            self.row_heights = row_heights
         else:
-            if row_heights is not None:
-                assert len(data) == len(row_heights)
+            self.row_heights = self._calc_row_heights(self.data)
 
-            self._row_heights = row_heights
-
-        # Cleans up and processes data into table cells
-        self.data = self._sanitize_data(data)
         self.table_cells = self._convert_data(self.data)
 
         # Pulls headers from the table data
@@ -223,6 +233,31 @@ class BasicTable(Table):
             self.headers = columns[0:headers]
         else:
             self.headers = self.table_cells[0:headers]
+
+        for i, val in enumerate(self.col_widths):
+            self.col_widths[i] = val + x_padding
+
+        for i, val in enumerate(self.row_heights):
+            self.row_heights[i] = val + y_padding
+
+        _min_col_widths = [0] * len(self.col_widths)
+        if min_col_widths:
+            for row in self.table_cells:
+                for i, item in enumerate(row):
+                    if isinstance(item, TableCell):
+                        width = item.get_min_width()
+                    else:
+                        width = stringWidth(
+                            item,
+                            self.body_styles[0].font_name,
+                            self.body_styles[0].font_size
+                        )
+
+                    width += x_padding
+                    if width > _min_col_widths[i]:
+                        _min_col_widths[i] = width
+
+            self.col_widths = _min_col_widths
 
         super().__init__(
             data=self.table_cells,
@@ -233,45 +268,6 @@ class BasicTable(Table):
             repeatRows=repeat_rows,
             **kwargs
         )
-
-    @property
-    def col_widths(self) -> list[float]:
-        if self._col_widths is not None:
-            return self._col_widths
-
-        col_widths = self._calc_col_widths(self.data)
-        widths_len = len(col_widths)
-        for y, row in enumerate(self.data):
-            try:
-                assert len(row) == widths_len
-            except AssertionError as err:
-                raise SummaryGenError(
-                    f'the number of column widths {widths_len} does not'
-                    f' match the amount of columns in row {y}'
-                ) from err
-
-        self._col_widths = col_widths
-        return self._col_widths
-
-    @property
-    def row_heights(self) -> list[float]:
-        if self._row_heights is not None:
-            return self._row_heights
-
-        row_heights = self._calc_row_heights(self.data)
-        rows = [row for row in zip(*self.data)]
-        heights_len = len(row_heights)
-        for x, col in enumerate(rows):
-            try:
-                assert len(col) == heights_len
-            except AssertionError as err:
-                raise SummaryGenError(
-                    f'the number of row heights {heights_len} does not'
-                    f' match the amount of rows in column {x}'
-                ) from err
-
-        self._row_heights = row_heights
-        return self._row_heights
 
     def get_style(self, x: int, y: int) -> ParagraphStyle:
         if self.header_orient == 'left':

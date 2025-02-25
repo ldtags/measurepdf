@@ -12,6 +12,7 @@ from src.summarygen.models.elements import ParagraphElement
 from src.summarygen.models.constants import (
     DEFAULT_INDENT_LEVEL,
     DEFAULT_INDENT_SIZE,
+    DEFAULT_BULLET_INDENT_SIZE,
     DEFAULT_SPACE_BEFORE,
     DEFAULT_SPACE_AFTER,
     DEFAULT_ALIGNMENT,
@@ -21,6 +22,7 @@ from src.summarygen.exceptions import SummaryGenError
 
 
 class HTMLSection(metaclass=ABCMeta):
+    @abstractmethod
     def __init__(
         self,
         indent_level: int = DEFAULT_INDENT_LEVEL,
@@ -81,11 +83,13 @@ class HTMLSection(metaclass=ABCMeta):
 
     @property
     @abstractmethod
-    def height(self) -> float: ...
+    def height(self) -> float:
+        return 0
 
     @property
     @abstractmethod
-    def width(self) -> float: ...
+    def width(self) -> float:
+        return 0
 
 
 class ParagraphSection(HTMLSection):
@@ -159,6 +163,7 @@ class ListSection(HTMLSection):
         bullet_option: BulletOption = CIRCLE_BULLET,
         indent_level: int = DEFAULT_INDENT_LEVEL,
         indent_size: int = DEFAULT_INDENT_SIZE,
+        bullet_indent_size: int = DEFAULT_BULLET_INDENT_SIZE,
         space_before: int = 4,
         space_after: int = 5,
         alignment: Alignment = DEFAULT_ALIGNMENT
@@ -173,6 +178,7 @@ class ListSection(HTMLSection):
 
         self.list_items = list_items
         self.bullet_option = bullet_option
+        self.bullet_indent_size = bullet_indent_size
 
     @property
     def height(self) -> float:

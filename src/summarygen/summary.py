@@ -4,7 +4,7 @@ import math
 import shutil
 import logging
 import datetime
-from typing import overload
+from typing import overload, TypeVar
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
@@ -15,7 +15,8 @@ from reportlab.platypus import (
     KeepTogether,
     PageTemplate,
     NextPageTemplate,
-    Spacer
+    Spacer,
+    Flowable
 )
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
@@ -27,7 +28,13 @@ from src.etrm.exceptions import (
     ETRMConnectionError,
     ETRMResponseError
 )
-from src.summarygen.models import Revision, KeyTerminology, Story, SQUARE_BULLET
+from src.summarygen.models import (
+    Revision,
+    KeyTerminology,
+    Story,
+    SQUARE_BULLET,
+    DEFAULT_INDENT_SIZE
+)
 from src.summarygen.styles import (
     TableStyle,
     ParagraphStyle,
@@ -38,7 +45,9 @@ from src.summarygen.styles import (
     INNER_HEIGHT,
     INNER_WIDTH,
     TSTYLES,
-    NL_HEIGHT
+    NL_HEIGHT,
+    DEF_PSTYLE,
+    get_kt_table_style
 )
 from src.summarygen.flowables import (
     NEWLINE,
@@ -46,10 +55,12 @@ from src.summarygen.flowables import (
     TitlePage
 )
 from src.summarygen.exceptions import SummaryGenError
-from src.summarygen.html_parser import HTMLParser
+from src.summarygen.html_parser import HTMLParser, FlowableGenerator
 
 
 logger = logging.getLogger(__name__)
+
+_T = TypeVar("_T")
 
 
 def clean():
@@ -382,6 +393,7 @@ class MeasureSummary:
 
         self.summary = SummaryDocTemplate(self.file_path)
         self.parser = HTMLParser()
+        self.generator = FlowableGenerator()
 
     @property
     def dir_path(self) -> str:
@@ -653,14 +665,17 @@ class MeasureSummary:
                 logger.warning("Invalid revision detected, skipping revision...")
                 continue
 
-            desc_flowables = self.parser.parse(
+            sections = self.parser.parse(
                 revision.description,
-                max_width=col_widths[2] - 8,
-                bullet_option=SQUARE_BULLET,
-                newline_height=NL_HEIGHT * 0.2
+                bullet_option=SQUARE_BULLET
+            )
+            flowables = self.generator.generate(
+                sections,
+                newline_height=NL_HEIGHT * 0.2,
+                max_width=col_widths[2] - 8
             )
             desc_table = Table(
-                [[flowable] for flowable in desc_flowables],
+                [[flowable] for flowable in flowables],
                 colWidths=(col_widths[2]),
                 style=TSTYLES["Unstyled"]
             )
@@ -675,12 +690,142 @@ class MeasureSummary:
         self.story.add(KeepTogether([header, table]))
         self.story.add(PageBreak())
 
-    def add_key_terminology_item(self, item: KeyTerminology) -> None:
+    def get_shared_key_terminology_table(self, item: KeyTerminology) -> list[list[str]]:
+        if not item.requires_etrm_table():
+            return []
+
+        if item.api_name is None or item.columns is None:
+            raise SummaryGenError(f"Incorrectly required eTRM table for {item.name}")
+
+        table_content: list[list[str]] = []
+        param = self.connection.get_shared_parameter(item.api_name)
+        for label in param.labels:
+            row: list[str] = []
+            for col_name in item.columns:
+                try:
+                    content = getattr(label, col_name)
+                except AttributeError:
+                    raise SummaryGenError(
+                        f"Label for {param.name} does not have a {col_name} attribute"
+                    )
+
+                row.append(content)
+
+            table_content.append(row)
+
+        return table_content
+
+    def get_static_key_terminology_table(
+        self,
+        item: KeyTerminology,
+        max_width: float
+    ) -> list[list[Flowable]]:
+        if item.data is None:
+            return []
+
+        static_content: list[list[Flowable]] = []
+        for row in item.data:
+            row_content: list[Flowable] = []
+            for cell in row:
+                sections = self.parser.parse(cell)
+                flowables = self.generator.generate(sections)
+                if flowables == []:
+                    row_content.append(Paragraph(""))
+                else:
+                    row_content.append(
+                        Table(
+                            data=[[flowable] for flowable in flowables],
+                            hAlign="LEFT",
+                            style=TSTYLES["Unstyled"]
+                        )
+                    )
+
+            static_content.append(row_content)
+
+        return static_content
+
+    def split_kt_table_data(self, data: list[list[_T]], row_split: int) -> list[list[_T]]:
+        split_data: list[list[_T]] = []
+        for _ in range(row_split):
+            split_data.append([])
+
+        for i, row in enumerate(data):
+            split_data[i % row_split].extend(row)
+
+        # Fill any empty table cells
+        max_length = max([len(row) for row in split_data])
+        for row in split_data:
+            if len(row) < max_length:
+                row.extend([""] * (max_length - len(row)))
+
+        return split_data
+
+    def add_key_terminology_table(self, item: KeyTerminology, indents: int = 0) -> None:
+        headers = item.get_table_headers()
+        if headers is None:
+            raise SummaryGenError(f"Cannot generate a table for {item.name} without headers")
+
+        max_width = INNER_WIDTH - indents * DEFAULT_INDENT_SIZE
+        data = self.get_shared_key_terminology_table(item)
+        # if item.data is not None:
+        #     static_data = self.get_static_key_terminology_table(item, max_width)
+        #     if item.append == "before":
+        #         data = [*static_data, *data]
+        #     elif item.append == "after":
+        #         data.extend(static_data)
+        #     else:
+        #         data = static_data
+
+        if item.row_split is None:
+            num_cols = 1
+        else:
+            num_cols = math.ceil(len(data) / item.row_split)
+
+        if item.row_split is not None:
+            data = self.split_kt_table_data(data, item.row_split)
+
+        if data == []:
+            return
+
+        data.insert(0, headers * num_cols)
+        self.story.add(
+            BasicTable(
+                data=data,
+                repeat_rows=0,
+                header_styles=DEF_PSTYLE.bold,
+                body_styles=DEF_PSTYLE,
+                table_style=get_kt_table_style(num_cols, len(headers)),
+                max_width=max_width - 10,
+                min_col_widths=True,
+                h_align="center",
+                x_padding=10,
+                y_padding=3
+            )
+        )
+        self.story.add(NEWLINE)
+
+    def add_key_terminology_caption(self, item: KeyTerminology) -> None:
+        sections = self.parser.parse(f"<em>{item.caption}</em>")
+        flowables = self.generator.generate(sections)
+        self.story.add(*flowables)
+
+    def add_key_terminology_item(self, item: KeyTerminology, indents: int = 0) -> None:
         logger.info(f"Generating key terminology section for {item.name}...")
 
         content = f"<kth>{item.name}: </kth>{item.content}"
-        self.story.add(*self.parser.parse(content))
+        sections = self.parser.parse(content, indents=indents)
+        flowables = self.generator.generate(sections)
+        self.story.add(*flowables)
         self.story.add(Spacer(0.01, NL_HEIGHT // 2))
+        if item.contains_table:
+            self.add_key_terminology_table(item, indents=indents)
+
+        if item.caption is not None:
+            self.add_key_terminology_caption(item)
+
+        if item.sub_sections != None:
+            for sub_section in item.sub_sections:
+                self.add_key_terminology_item(sub_section, indents=indents + 1)
 
     def add_key_terminology(self) -> None:
         logger.info("Generating key terminology sections...")
@@ -696,8 +841,6 @@ class MeasureSummary:
 
         for terminology_item in terminology_items:
             self.add_key_terminology_item(terminology_item)
-
-
 
     @overload
     def add_measure(self, measure_id: str) -> None:

@@ -304,7 +304,8 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
-                ("VALIGN", (0, 0), (-1, -1), "MIDDLE")
+                ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+                ("GRID", (0, 0), (-1, -1), 1, colors.black)
             ]
         )
     )
@@ -373,6 +374,22 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
             ]
         )
     )
+    style_sheet.add(
+        TableStyle(
+            "KeyTerminologyTable",
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), COLORS["RevisionLogHeaderBG"]),
+                ("LINEABOVE", (0, 0), (-1, 0), 1, COLORS["RevisionLogGridLine"]),
+                ("LINEABOVE", (0, 1), (-1, 1), 1, COLORS["RevisionLogGridLine"]),
+                ("LEFTPADDING", (0, 0), (-1, -1), 6),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 6),
+                ("TOPPADDING", (0, 0), (-1, -1), 3),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LINEBELOW", (0, 1), (-1, -1), 1, COLORS["RevisionLogGridLine"]),
+                ("VALIGN", (0, 0), (-1, -1), "TOP")
+            ]
+        )
+    )
 
     return style_sheet
 
@@ -404,6 +421,21 @@ def get_list_style(bullet_index: int) -> TableStyle:
         (bullet_index, -1),
         "TOP"
     ))
+
+    return TableStyle(style.name, cmds)
+
+
+def get_kt_table_style(num_cols: int, col_size: int) -> TableStyle:
+    style = copy.deepcopy(TSTYLES["KeyTerminologyTable"])
+    cmds = style.getCommands()
+    for i in range(num_cols - 1):
+        cmds.append((
+            "LINEAFTER",
+            (i * col_size + 1, 0),
+            (i * col_size + 1, -1),
+            1,
+            COLORS["RevisionLogGridLine"]
+        ))
 
     return TableStyle(style.name, cmds)
 

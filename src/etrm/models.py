@@ -540,10 +540,17 @@ class SharedParameterVersion:
         self.version = getc(res_json, "version", str)
         self.versions_url = getc(res_json, "versions_url", str)
         self.url = getc(res_json, "url", str)
-        committed_date = getc(res_json, "committed_date", str)
-        self.committed_date = convert_from_utc(committed_date)
-        last_updated_date = getc(res_json, "last_updated_date", str)
-        self.last_updated_date = convert_from_utc(last_updated_date)
+        committed_date = getc(res_json, "committed_date", str, None)
+        if committed_date != "None":
+            self.committed_date = convert_from_utc(committed_date)
+        else:
+            self.committed_date = None
+
+        last_updated_date = getc(res_json, "last_updated_date", str, None)
+        if last_updated_date != "None":
+            self.last_updated_date = convert_from_utc(last_updated_date)
+        else:
+            self.last_updated_date = None
 
         try:
             _, version_num = self.version.split("-", 1)
@@ -559,6 +566,13 @@ class SharedParameterLabel:
         self.name = getc(res_json, "name", str)
         self.api_name = getc(res_json, "api_name", str)
         self.description = getc(res_json, "description", str)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "api_name": self.api_name,
+            "description": self.description
+        }
 
 
 class SharedParameter(SharedParameterVersion):
@@ -582,6 +596,20 @@ class SharedParameter(SharedParameterVersion):
 
     def get_label(self, label: str) -> SharedParameterLabel | None:
         return self._label_dict.get(label)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "api_name": self.api_name,
+            "labels": [label.as_dict() for label in self.labels],
+            "description": self.description,
+            "references": self.references,
+            "version": self.version,
+            "status": self.status,
+            "change_description": self.change_description,
+            "owner": self.owner,
+            "is_published": self.is_published
+        }
 
 
 class Calculation:

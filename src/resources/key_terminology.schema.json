@@ -4,6 +4,10 @@
     "description": "Summary generator key terminology data store",
     "type": "object",
     "properties": {
+        "introduction": {
+            "type": "string",
+            "description": "The introductory text of the Key Terminology section (formatted as HTML)"
+        },
         "parameters": {
             "type": "array",
             "items": {
