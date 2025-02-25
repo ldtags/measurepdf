@@ -26,10 +26,8 @@ from src.summarygen.models import (
     ImageSection,
     NewlineSection
 )
+from src.summarygen.flowables import SummaryParagraph
 from src.summarygen.exceptions import SummaryGenError
-from src.summarygen.flowables.paragraph import (
-    SummaryParagraph
-)
 
 
 logger = logging.getLogger(__name__)

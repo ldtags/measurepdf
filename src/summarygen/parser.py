@@ -4,10 +4,6 @@ import warnings
 from bs4 import BeautifulSoup, PageElement, NavigableString, Tag, ResultSet
 from typing import Literal
 
-from src.summarygen.models.enums import (
-    ElementType,
-    TextStyle
-)
 from src.summarygen.types import _TableSpan
 from src.summarygen.models import (
     HTMLSection,
@@ -18,6 +14,8 @@ from src.summarygen.models import (
     TableSection,
     NewlineSection,
     BulletOption,
+    ElementType,
+    TextStyle,
     CIRCLE_BULLET
 )
 from src.summarygen.styles import (
