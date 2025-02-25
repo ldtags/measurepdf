@@ -329,7 +329,7 @@ class ElementLine:
         self.__index += 1
         return result
 
-    def __add(self, element: ParagraphElement):
+    def _add(self, element: ParagraphElement) -> None:
         if self.max_width is not None and element.width + self.width > self.max_width:
             raise WidthExceededError(f"Max width of {self.max_width} exceeded")
 
@@ -338,8 +338,8 @@ class ElementLine:
         except (IndexError, ElementJoinError):
             self._elements.append(element)
 
-    def add(self, element: ParagraphElement):
-        if element.text == '':
+    def add(self, element: ParagraphElement) -> None:
+        if element.text == "":
             return
 
         if self.style is not None and element.type != ElementType.Reference:
@@ -351,13 +351,13 @@ class ElementLine:
             new_elem = element
 
         if element.type == ElementType.Reference:
-            self.__add(ParagraphElement(type=ElementType.Space))
-            self.__add(new_elem)
-            self.__add(ParagraphElement(type=ElementType.Space))
+            self._add(ParagraphElement(type=ElementType.Space))
+            self._add(new_elem)
+            self._add(ParagraphElement(type=ElementType.Space))
         else:
-            self.__add(new_elem)
+            self._add(new_elem)
 
-    def get_min_width(self, size: int=1) -> float:
+    def get_min_width(self, size: int = 1) -> float:
         split_elems: list[ParagraphElement] = []
         for elem in self.elements:
             split_elems.extend(elem.split(size))
@@ -367,5 +367,5 @@ class ElementLine:
 
         return max([elem.width for elem in split_elems])
 
-    def pop(self, index: int=-1) -> ParagraphElement:
+    def pop(self, index: int = -1) -> ParagraphElement:
         return self._elements.pop(index)
