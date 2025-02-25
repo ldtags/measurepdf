@@ -227,9 +227,16 @@ class FlowableGenerator:
         )
 
     def handle_newline(self) -> Flowable:
+        """Generates a `Flowable` that acts as a newline.
+
+        Newline height is consistent and defined in the `generate` method.
+        """
+
         return Spacer(0.01, self.newline_height)
 
-    def convert_section(self, section: HTMLSection) -> Flowable | None:
+    def convert_section(self, section: HTMLSection) -> Flowable:
+        """Converts an `HTMLSection` object into a `Flowable` object."""
+
         if isinstance(section, ParagraphSection):
             return self.handle_paragraph(section)
 
@@ -242,17 +249,17 @@ class FlowableGenerator:
         if isinstance(section, NewlineSection):
             return self.handle_newline()
 
-        warnings.warn(f"Unsupported HTML section type: {type(section)}")
-        return None
+        raise SummaryGenError(f"Unsupported HTML section type: {type(section)}")
 
     def convert_sections(self, sections: list[HTMLSection]) -> list[Flowable]:
+        """Converts multiple `HTMLSection` objects into a list of `Flowable`
+        objects.
+        """
+
         return list(
-            filter(
-                lambda flowable: flowable is not None,
-                map(
-                    lambda section: self.convert_section(section),
-                    sections
-                )
+            map(
+                lambda section: self.convert_section(section),
+                sections
             )
         )
 
