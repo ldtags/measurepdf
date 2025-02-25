@@ -1492,7 +1492,7 @@
             "append": null,
             "sub_sections": null,
             "row_split": 7,
-            "caption": "† The no savings measure offerings are for the purpose of processing third-party bonus payments, fixing processing errors and correcting reporting records by referencing \"NonSav\" data parameter value for the express purpose of processing CEDARS reports and CEDARS CET zip files."
+            "caption": "[NonSav] The no savings measure offerings are for the purpose of processing third-party bonus payments, fixing processing errors and correcting reporting records by referencing \"NonSav\" data parameter value for the express purpose of processing CEDARS reports and CEDARS CET zip files."
         },
         {
             "name": "Version",

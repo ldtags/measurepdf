@@ -139,8 +139,8 @@ class FlowableGenerator:
         )
         image = utils.get_image(section.img_path, max_width=max_width)
         data = [image]
-        col_widths = [image.imageWidth]
-        rem_space = max_width - image.imageWidth
+        col_widths = [image.drawWidth]
+        rem_space = max_width - image.drawWidth
         match section.alignment:
             case Alignment.Left:
                 data.append("")
@@ -161,8 +161,8 @@ class FlowableGenerator:
         return Table(
             data=[data],
             colWidths=col_widths,
-            rowHeights=[image.imageHeight],
-            hAlign="LEFT",
+            rowHeights=[image.drawHeight],
+            hAlign=section.alignment.value.upper(),
             style=TSTYLES["Unstyled"]
         )
 

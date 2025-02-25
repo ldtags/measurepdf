@@ -822,6 +822,7 @@ class MeasureSummary:
 
         if item.caption is not None:
             self.add_key_terminology_caption(item)
+            self.story.add(Spacer(0.01, NL_HEIGHT))
 
         if item.sub_sections != None:
             for sub_section in item.sub_sections:
