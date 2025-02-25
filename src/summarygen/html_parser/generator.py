@@ -4,11 +4,13 @@ from reportlab.platypus import (
     Flowable,
     Paragraph,
     Table,
-    XPreformatted
+    XPreformatted,
+    Spacer
 )
 
 from src.summarygen import utils
 from src.summarygen.styles import (
+    Alignment,
     get_table_style,
     get_list_style,
     INNER_WIDTH,
@@ -16,13 +18,13 @@ from src.summarygen.styles import (
     STYLES,
     NL_HEIGHT
 )
-from src.summarygen.models.enums import Alignment
 from src.summarygen.models import (
     HTMLSection,
     ParagraphSection,
     ListSection,
     TableSection,
-    ImageSection
+    ImageSection,
+    NewlineSection
 )
 from src.summarygen.exceptions import SummaryGenError
 from src.summarygen.flowables.paragraph import (
@@ -219,6 +221,9 @@ class FlowableGenerator:
             hAlign="LEFT"
         )
 
+    def handle_newline(self) -> Flowable:
+        return Spacer(0.01, self.newline_height)
+
     def convert_section(self, section: HTMLSection) -> Flowable | None:
         if isinstance(section, ParagraphSection):
             return self.handle_paragraph(section)
@@ -228,6 +233,9 @@ class FlowableGenerator:
 
         if isinstance(section, ImageSection):
             return self.handle_image(section)
+
+        if isinstance(section, NewlineSection):
+            return self.handle_newline()
 
         warnings.warn(f"Unsupported HTML section type: {type(section)}")
         return None

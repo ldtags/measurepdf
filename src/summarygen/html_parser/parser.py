@@ -3,7 +3,6 @@ import logging
 import warnings
 from bs4 import BeautifulSoup, PageElement, NavigableString, Tag, ResultSet
 from typing import Literal
-from reportlab.platypus import Flowable
 
 from src.summarygen.models.enums import (
     ElementType,
@@ -17,20 +16,18 @@ from src.summarygen.models import (
     ListSection,
     ImageSection,
     TableSection,
+    NewlineSection,
     BulletOption,
-    CIRCLE_BULLET,
-    DEFAULT_INDENT_SIZE
+    CIRCLE_BULLET
 )
 from src.summarygen.styles import (
     ParagraphStyle,
     PSTYLES,
     DEF_PSTYLE,
-    NL_HEIGHT,
-    INNER_WIDTH
+    DEFAULT_INDENT_SIZE
 )
 from src.summarygen.constants import TAG_STYLE_MAP
 from src.summarygen.exceptions import SummaryGenError
-from src.summarygen.html_parser.generator import FlowableGenerator
 
 
 logger = logging.getLogger(__name__)
@@ -274,10 +271,8 @@ class HTMLParser:
             indent_size=self._indent_size
         )
 
-    def handle_br(self) -> ParagraphSection:
-        return ParagraphSection(
-            [ParagraphElement(type=ElementType.Newline)]
-        )
+    def handle_br(self) -> NewlineSection:
+        return NewlineSection()
 
     def convert_element(self, element: PageElement) -> HTMLSection | list[HTMLSection]:
         if isinstance(element, NavigableString):

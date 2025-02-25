@@ -6,18 +6,21 @@ from PIL import Image
 from src import assets
 from src.summarygen import utils
 from src.summarygen.types import _TableSpan
-from src.summarygen.models.enums import Alignment, TextStyle
-from src.summarygen.models.general import BulletOption
-from src.summarygen.models.elements import ParagraphElement
-from src.summarygen.models.constants import (
+from src.summarygen.styles import (
+    Alignment,
+    NL_HEIGHT,
+    INNER_WIDTH,
     DEFAULT_INDENT_LEVEL,
     DEFAULT_INDENT_SIZE,
     DEFAULT_BULLET_INDENT_SIZE,
     DEFAULT_SPACE_BEFORE,
     DEFAULT_SPACE_AFTER,
     DEFAULT_ALIGNMENT,
-    CIRCLE_BULLET
 )
+from src.summarygen.models.enums import TextStyle
+from src.summarygen.models.general import BulletOption
+from src.summarygen.models.elements import ParagraphElement
+from src.summarygen.models.constants import CIRCLE_BULLET
 from src.summarygen.exceptions import SummaryGenError
 
 
@@ -90,6 +93,34 @@ class HTMLSection(metaclass=ABCMeta):
     @abstractmethod
     def width(self) -> float:
         return 0
+
+
+class NewlineSection(HTMLSection):
+    """Defines an HTML newline section.
+
+    Used to signify a newline in the HTML.
+    """
+
+    def __init__(
+        self,
+        space_before: int = DEFAULT_SPACE_BEFORE,
+        space_after: int = DEFAULT_SPACE_AFTER
+    ) -> None:
+        super().__init__(
+            indent_level=0,
+            indent_size=0,
+            space_before=space_before,
+            space_after=space_after,
+            alignment=Alignment.Left
+        )
+
+    @property
+    def height(self) -> float:
+        return NL_HEIGHT
+
+    @property
+    def width(self) -> float:
+        return INNER_WIDTH
 
 
 class ParagraphSection(HTMLSection):

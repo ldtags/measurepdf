@@ -21,23 +21,18 @@ __all__ = [
     "ListSection",
     "ImageSection",
     "TableSection",
+    "NewlineSection",
 
     # General models
     "BulletOption",
     "Story",
 
     # Constants
-    "DEFAULT_ALIGNMENT",
-    "DEFAULT_INDENT_LEVEL",
-    "DEFAULT_INDENT_SIZE",
-    "DEFAULT_SPACE_AFTER",
-    "DEFAULT_SPACE_BEFORE",
     "DASH_BULLET",
     "SQUARE_BULLET",
     "CIRCLE_BULLET",
 
     # Enums
-    "Alignment",
     "ElementType",
     "TextStyle",
 ]
@@ -64,24 +59,19 @@ from src.summarygen.models.sections import (
     ParagraphSection,
     ListSection,
     ImageSection,
-    TableSection
+    TableSection,
+    NewlineSection
 )
 from src.summarygen.models.general import (
     BulletOption,
     Story
 )
 from src.summarygen.models.constants import (
-    DEFAULT_ALIGNMENT,
-    DEFAULT_INDENT_LEVEL,
-    DEFAULT_INDENT_SIZE,
-    DEFAULT_SPACE_AFTER,
-    DEFAULT_SPACE_BEFORE,
     DASH_BULLET,
     SQUARE_BULLET,
     CIRCLE_BULLET
 )
 from src.summarygen.models.enums import (
-    Alignment,
     ElementType,
     TextStyle
 )

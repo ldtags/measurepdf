@@ -32,8 +32,7 @@ from src.summarygen.models import (
     Revision,
     KeyTerminology,
     Story,
-    SQUARE_BULLET,
-    DEFAULT_INDENT_SIZE
+    SQUARE_BULLET
 )
 from src.summarygen.styles import (
     TableStyle,
@@ -47,6 +46,7 @@ from src.summarygen.styles import (
     TSTYLES,
     NL_HEIGHT,
     DEF_PSTYLE,
+    DEFAULT_INDENT_SIZE,
     get_kt_table_style
 )
 from src.summarygen.flowables import (
@@ -728,7 +728,7 @@ class MeasureSummary:
             row_content: list[Flowable] = []
             for cell in row:
                 sections = self.parser.parse(cell)
-                flowables = self.generator.generate(sections)
+                flowables = self.generator.generate(sections, newline_height=NL_HEIGHT // 2)
                 if flowables == []:
                     row_content.append(Paragraph(""))
                 else:
@@ -806,7 +806,7 @@ class MeasureSummary:
 
     def add_key_terminology_caption(self, item: KeyTerminology) -> None:
         sections = self.parser.parse(f"<em>{item.caption}</em>")
-        flowables = self.generator.generate(sections)
+        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT // 2)
         self.story.add(*flowables)
 
     def add_key_terminology_item(self, item: KeyTerminology, indents: int = 0) -> None:
@@ -814,7 +814,7 @@ class MeasureSummary:
 
         content = f"<kth>{item.name}: </kth>{item.content}"
         sections = self.parser.parse(content, indents=indents)
-        flowables = self.generator.generate(sections)
+        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT // 2)
         self.story.add(*flowables)
         self.story.add(Spacer(0.01, NL_HEIGHT // 2))
         if item.contains_table:
