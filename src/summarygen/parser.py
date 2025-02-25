@@ -1,3 +1,17 @@
+"""This module is used to parse HTML into objects that can be then used to
+generate reportlab flowables.
+
+The responsibility of this module is strictly the parsing and subsequent
+conversion of HTML into `HTMLElement` objects. All flowable generation should
+be handled in the `generator` module.
+
+To add any specification as to how flowable generation should be handled,
+update the HTMLElement sub-classes to include the desired specification. Then,
+update the `generator` module to reflect those updates. This may require
+creating entirely new HTMLElement sub-classes depending on the use-case.
+"""
+
+
 import copy
 import logging
 import warnings

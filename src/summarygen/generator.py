@@ -1,3 +1,10 @@
+"""This module is used to generate reportlab flowables from the parsed
+HTMLElement objects. Said objects can be parsed via the `parser` module.
+
+The responsibility of this module is strictly flowable generation.
+"""
+
+
 import logging
 import warnings
 from reportlab.platypus import (
