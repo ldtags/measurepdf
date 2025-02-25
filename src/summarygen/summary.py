@@ -49,13 +49,14 @@ from src.summarygen.styles import (
     DEFAULT_INDENT_SIZE,
     get_kt_table_style
 )
+from src.summarygen.parser import HTMLParser
+from src.summarygen.generator import FlowableGenerator
 from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
     TitlePage
 )
 from src.summarygen.exceptions import SummaryGenError
-from src.summarygen.html_parser import HTMLParser, FlowableGenerator
 
 
 logger = logging.getLogger(__name__)
@@ -728,7 +729,7 @@ class MeasureSummary:
             row_content: list[Flowable] = []
             for cell in row:
                 sections = self.parser.parse(cell)
-                flowables = self.generator.generate(sections, newline_height=NL_HEIGHT // 2)
+                flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
                 if flowables == []:
                     row_content.append(Paragraph(""))
                 else:
@@ -767,14 +768,14 @@ class MeasureSummary:
 
         max_width = INNER_WIDTH - indents * DEFAULT_INDENT_SIZE
         data = self.get_shared_key_terminology_table(item)
-        # if item.data is not None:
-        #     static_data = self.get_static_key_terminology_table(item, max_width)
-        #     if item.append == "before":
-        #         data = [*static_data, *data]
-        #     elif item.append == "after":
-        #         data.extend(static_data)
-        #     else:
-        #         data = static_data
+        if item.data is not None:
+            static_data = self.get_static_key_terminology_table(item, max_width)
+            if item.append == "before":
+                data = [*static_data, *data]
+            elif item.append == "after":
+                data.extend(static_data)
+            else:
+                data = static_data
 
         if item.row_split is None:
             num_cols = 1
@@ -806,7 +807,7 @@ class MeasureSummary:
 
     def add_key_terminology_caption(self, item: KeyTerminology) -> None:
         sections = self.parser.parse(f"<em>{item.caption}</em>")
-        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT // 2)
+        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
         self.story.add(*flowables)
 
     def add_key_terminology_item(self, item: KeyTerminology, indents: int = 0) -> None:
@@ -814,15 +815,15 @@ class MeasureSummary:
 
         content = f"<kth>{item.name}: </kth>{item.content}"
         sections = self.parser.parse(content, indents=indents)
-        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT // 2)
+        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
         self.story.add(*flowables)
-        self.story.add(Spacer(0.01, NL_HEIGHT // 2))
+        self.story.add(Spacer(0.01, NL_HEIGHT * 0.35))
         if item.contains_table:
             self.add_key_terminology_table(item, indents=indents)
 
         if item.caption is not None:
             self.add_key_terminology_caption(item)
-            self.story.add(Spacer(0.01, NL_HEIGHT))
+            self.story.add(Spacer(0.01, NL_HEIGHT * 0.35))
 
         if item.sub_sections != None:
             for sub_section in item.sub_sections:
