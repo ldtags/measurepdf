@@ -6,7 +6,6 @@ The responsibility of this module is strictly flowable generation.
 
 
 import logging
-import warnings
 from reportlab.platypus import (
     Flowable,
     Paragraph,
