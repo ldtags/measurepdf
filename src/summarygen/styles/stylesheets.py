@@ -305,7 +305,7 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
                 ("TOPPADDING", (0, 0), (-1, -1), 0),
                 ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
                 ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                ("GRID", (0, 0), (-1, -1), 1, colors.black)
+                # ("GRID", (0, 0), (-1, -1), 1, colors.black)
             ]
         )
     )
