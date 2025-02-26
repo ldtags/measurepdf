@@ -8,8 +8,6 @@ __all__ = [
     "EmbeddedValueTableTag",
     "ImgObjectInfo",
     "EmbeddedImage",
-    "Revision",
-    "KeyTerminology",
 
     # HTML elements
     "ParagraphElement",
@@ -47,9 +45,7 @@ from src.summarygen.models.hooks import (
     VTObjectInfo,
     EmbeddedValueTableTag,
     ImgObjectInfo,
-    EmbeddedImage,
-    Revision,
-    KeyTerminology
+    EmbeddedImage
 )
 from src.summarygen.models.elements import (
     ParagraphElement,

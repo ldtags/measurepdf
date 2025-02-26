@@ -1,0 +1,33 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema",
+    "title": "Section Descriptions",
+    "description": "TRM section descriptions collection",
+    "type": "object",
+    "patternProperties": {
+        "^(?!\\$schema).*$": {
+            "type": "object",
+            "properties": {
+                "Offering ID": {
+                    "type": "string",
+                    "description": "Section description for a measures Offering ID (formatted as HMTL)"
+                },
+                "Base Case Description": {
+                    "type": "string",
+                    "description": "Section description for a measures Base Case Description (formatted as HTML)"
+                },
+                "Other: Program Exclusion / /": {
+                    "type": "string",
+                    "description": "Section description for a measures Program Exclusion (formatted as HTML)"
+                },
+                "Quality Assurance": {
+                    "type": "string",
+                    "description": "Section description for a measures Quality Assurance (formatted as HMTL)"
+                },
+                "Important Notes": {
+                    "type": "string",
+                    "description": "Any important notes for a set of measure descriptions (formatted as HTML)"
+                }
+            }
+        }
+    }
+}

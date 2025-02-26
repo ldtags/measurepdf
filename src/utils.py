@@ -1,23 +1,21 @@
 import re
 import PIL.Image as Image
 import json
-import datetime
+import datetime as dt
 import customtkinter as ctk
 from types import UnionType, NoneType
 from urllib.parse import urlparse
 from typing import (
     Type,
     TypeVar,
-    Literal,
     overload,
     NewType,
     get_args,
     get_origin,
     Any
 )
-from configparser import ConfigParser
 
-from src import asset_path, patterns, resources
+from src import asset_path, patterns
 
 
 _NotDefined = NewType('_NotDefined', None)
@@ -264,7 +262,7 @@ def version_key(full_version_id: str) -> int:
     return key
 
 
-def to_date(date_str: str) -> datetime.date:
+def to_date(date_str: str) -> dt.date:
     """Converts a date string of format `YYYY-MM-DD` to a
     datetime object.
     """
@@ -276,7 +274,7 @@ def to_date(date_str: str) -> datetime.date:
 
     year, month, day = date_str.split('-', 2)
     try:
-        end_date = datetime.date(int(year), int(month), int(day))
+        end_date = dt.date(int(year), int(month), int(day))
     except ValueError as err:
         raise RuntimeError(
             f'Invalid Date Format: {date_str}'
@@ -285,20 +283,13 @@ def to_date(date_str: str) -> datetime.date:
     return end_date
 
 
-def get_api_key(role: Literal['user', 'admin']='user') -> str:
-    match role:
-        case 'user':
-            source = 'etrm'
-        case 'admin':
-            source = 'etrm-admin'
-        case other:
-            raise RuntimeError(f'invalid eTRM role: {other}')
-
-    config = ConfigParser()
-    config.read(resources.get_path('config.ini'))
-    token_type = config[source]['type']
-    token = config[source]['token']
-    return f'{token_type} {token}'
+def convert_from_utc(date_string: str) -> dt.datetime:
+    return dt.datetime.strptime(
+        date_string,
+        r"%Y-%m-%dT%H:%M:%SZ"
+    ).replace(
+        tzinfo=dt.timezone.utc
+    )
 
 
 class ParsedUrl:

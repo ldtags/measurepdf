@@ -1,16 +1,6 @@
 from typing import Any
-import datetime as dt
 
 from src.utils import JSONObject
-
-
-def convert_from_utc(date_string: str) -> dt.datetime:
-    return dt.datetime.strptime(
-        date_string,
-        r"%Y-%m-%dT%H:%M:%SZ"
-    ).replace(
-        tzinfo=dt.timezone.utc
-    )
 
 
 class ObjectInfo(JSONObject):
@@ -79,58 +69,3 @@ class EmbeddedImage(JSONObject):
         self.obj_info = self.get('objInfo', ImgObjectInfo)
         self.caption = self.get('caption', str)
         self.align = self.get('align', str)
-
-
-class Revision(JSONObject):
-    def __init__(self, _json: str | dict[str, Any]) -> None:
-        super().__init__(_json)
-        self.version = self.get("version", float)
-        self.publish_date = convert_from_utc(self.get("publish_date", str))
-        self.description = self.get("description", str)
-        self.owner = self.get("owner", str)
-
-
-class KeyTerminology(JSONObject):
-    def __init__(self, _json: str | dict[str, Any]) -> None:
-        super().__init__(_json)
-        self.name = self.get("name", str)
-        self.api_name = self.get("api_name", str | None)
-        self.content = self.get("content", str)
-        self.contains_table = self.get("contains_table", bool)
-        self.columns = self.get("columns", list[str] | None)
-        self.column_mappings = self.get("column_mappings", dict[str, str] | None)
-        self.data = self.get("data", list[list[str]] | None)
-        self.append = self.get("append", str | None)
-        self.sub_sections = self.get("sub_sections", list[KeyTerminology] | None)
-        self.row_split = self.get("row_split", int | None, None)
-        self.caption = self.get("caption", str | None, None)
-
-        for i, section in enumerate(self.sub_sections or []):
-            self.sub_sections[i] = KeyTerminology(section)
-
-    def requires_etrm_table(self) -> bool:
-        if self.api_name is None:
-            return False
-
-        if self.columns is None:
-            return False
-
-        if self.data is not None and self.append is None:
-            return False
-
-        return True
-
-    def get_table_headers(self) -> list[str] | None:
-        if self.columns is None:
-            return None
-
-        headers = self.columns.copy()
-        if self.column_mappings is None:
-            return headers
-
-        for i, header in enumerate(headers):
-            mapping = self.column_mappings.get(header)
-            if mapping is not None:
-                headers[i] = mapping
-
-        return headers

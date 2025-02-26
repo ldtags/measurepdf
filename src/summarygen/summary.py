@@ -21,20 +21,24 @@ from reportlab.platypus import (
 from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
-from src import lookups, patterns, utils, resources, _SYSTEM, START_TIME, TMP_DIR
+from src import (
+    lookups,
+    patterns,
+    resources,
+    utils,
+    _SYSTEM,
+    START_TIME,
+    TMP_DIR
+)
 from src.etrm.models import Measure
 from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import (
     ETRMConnectionError,
     ETRMResponseError
 )
+from src.resources import KeyTerminology
 from src.summarygen.utils import get_flowable_height, get_flowable_width
-from src.summarygen.models import (
-    Revision,
-    KeyTerminology,
-    Story,
-    SQUARE_BULLET
-)
+from src.summarygen.models import Story, SQUARE_BULLET
 from src.summarygen.styles import (
     TableStyle,
     ParagraphStyle,
@@ -645,12 +649,6 @@ class MeasureSummary:
     def add_revision_log(self) -> None:
         logger.info("Generating revision log...")
 
-        data = resources.get_json("revisions.json")
-        revisions = data.get("revisions", [])
-        if not isinstance(revisions, list):
-            logger.warning("No revisions found in the revisions JSON file")
-            return
-
         style = PSTYLES["Paragraph"]
         header = Paragraph("Revision Log", style=PSTYLES["h6"])
         data = []
@@ -660,13 +658,7 @@ class MeasureSummary:
             in ["Version", "Publish Date", "Description of Revisions", "Owner"]
         ])
         col_widths = [INNER_WIDTH * 0.13, INNER_WIDTH * 0.2, INNER_WIDTH * 0.47, INNER_WIDTH * 0.2]
-        for revision_json in revisions:
-            try:
-                revision = Revision(revision_json)
-            except TypeError | AttributeError:
-                logger.warning("Invalid revision detected, skipping revision...")
-                continue
-
+        for revision in resources.get_revisions():
             sections = self.parser.parse(
                 revision.description,
                 bullet_option=SQUARE_BULLET
@@ -860,27 +852,16 @@ class MeasureSummary:
     def add_key_terminology(self) -> None:
         logger.info("Generating key terminology sections...")
 
-        data = resources.get_json("key_terminology.json")
         self.story.add(Paragraph("KEY TERMINOLOGY", style=PSTYLES["SectionHeader1"]))
         self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
 
-        introduction = data.get("introduction")
-        if introduction is None:
-            raise SummaryGenError("No key terminology introduction found")
+        key_terminology = resources.get_key_terminology()
 
-        sections = self.parser.parse(introduction)
+        sections = self.parser.parse(key_terminology.introduction)
         flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
         self.story.add(*flowables, Spacer(0.01, NL_HEIGHT * 0.35))
 
-        parameters = data.get("parameters")
-        if parameters is None:
-            raise SummaryGenError("No key terminology parameters found")
-
-        terminology_items: list[KeyTerminology] = []
-        for parameter in parameters:
-            terminology_items.append(KeyTerminology(parameter))
-
-        for terminology_item in terminology_items:
+        for terminology_item in key_terminology.items:
             self.add_key_terminology_item(terminology_item)
 
     @overload
