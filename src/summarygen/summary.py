@@ -608,14 +608,14 @@ class MeasureSummary:
 
         data = [
             ["", "Average Value", "Methodology"],
-            ["Standard - Peak Demand Reduction (kW)", f"{std_costs[0]:.2f}", "Link"],
             ["Existing - Peak Demand Reduction (kW)", f"{pre_costs[0]:.2f}", ""],
-            ["Standard - Electric Savings (kWh/yr)", f"{std_costs[1]:.2f}", "Link"],
+            ["Standard - Peak Demand Reduction (kW)", f"{std_costs[0]:.2f}", "Link"],
             ["Existing - Electric Savings (kWh/yr)", f"{pre_costs[1]:.2f}", ""],
-            ["Standard - Gas Savings (therm/yr)", f"{std_costs[2]:.2f}", "Link"],
+            ["Standard - Electric Savings (kWh/yr)", f"{std_costs[1]:.2f}", "Link"],
             ["Existing - Gas Savings (therm/yr)", f"{pre_costs[2]:.2f}", ""],
-            ["Standard - Water Savings (gal/yr)", "", "Link"],
+            ["Standard - Gas Savings (therm/yr)", f"{std_costs[2]:.2f}", "Link"],
             ["Existing - Water Savings (gal/yr)", "", ""],
+            ["Standard - Water Savings (gal/yr)", "", "Link"],
             ["Measure Case Costs ($)", "", "Link"],
             ["Base Case Costs ($)", f"{tot_cost:.2f}", ""],
             ["Incremental Cost ($)", f"{inc_cost:.2f}", ""],
