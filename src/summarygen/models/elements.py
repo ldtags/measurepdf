@@ -58,7 +58,7 @@ class ParagraphElement:
     def style(self, val: ParagraphStyle) -> None:
         match self.type:
             case ElementType.Space:
-                _style = PSTYLES["SmallParagraph"]
+                _style = PSTYLES["Space"]
             case ElementType.TerminologyHeader:
                 _style = PSTYLES["TerminologyHeader"]
             case _:
