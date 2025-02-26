@@ -718,8 +718,18 @@ class MeasureSummary:
         return table_content
 
     def get_static_key_terminology_table(self, item: KeyTerminology) -> list[list[Flowable]]:
+        """Parses the static table from `item` and returns a matrix that can
+        be used to build a reportlab Table flowable.
+
+        Raises:
+            - SummaryGenError
+                : `item` does not contain a static data table.
+        """
+
         if item.data is None:
-            return []
+            raise SummaryGenError(
+                f"Key terminology for {item.name} does not contain a static table"
+            )
 
         static_content: list[list[Flowable]] = []
         for row in item.data:
@@ -751,6 +761,13 @@ class MeasureSummary:
         return static_content
 
     def split_kt_table_data(self, data: list[list[_T]], row_split: int) -> list[list[_T]]:
+        """Applies row splits to the key terminology data by breaking up the
+        table into `len(data) // row_split` columns.
+
+        I probably should have specified the number of columns instead, but
+        whatever.
+        """
+
         split_data: list[list[_T]] = []
         for _ in range(row_split):
             split_data.append([])
@@ -767,6 +784,13 @@ class MeasureSummary:
         return split_data
 
     def add_key_terminology_table(self, item: KeyTerminology, indents: int = 0) -> None:
+        """Adds a table to the key terminology section for `item`.
+
+        Raises:
+            - SummaryGenError
+                : No table headers were provided in the JSON file
+        """
+
         headers = item.get_table_headers()
         if headers is None:
             raise SummaryGenError(f"Cannot generate a table for {item.name} without headers")
