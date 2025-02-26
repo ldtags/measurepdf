@@ -1,6 +1,6 @@
 {
     "$schema": "./key_terminology.schema.json",
-    "introduction": "This section is to aid in the understanding of each data specification field needed to describe the permutations for a measure. Definitions in this section also include common terms used throughout this TRM document.<br>Note: The section may include tables synced in eTRM with other data sources and may include changes since publication of this TRM version. <em>Please refer to <a href=\"https://www.caetrm.com/cpuc/\">ETRM | CPUC Support Tables</a> for the most up-to-date versions of such tables</em>.",
+    "introduction": "This section is to aid in the understanding of each data specification field needed to describe the permutations for a measure. Definitions in this section also include common terms used throughout this TRM document.<br><em>Note: The section may include tables synced in eTRM with other data sources and may include changes since publication of this TRM version. Please refer to <a href=\"https://www.caetrm.com/cpuc/\">ETRM | CPUC Support Tables</a> for the most up-to-date versions of such tables</em>.",
     "parameters": [
         {
             "name": "AOE Years",

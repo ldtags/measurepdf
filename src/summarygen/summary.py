@@ -840,6 +840,17 @@ class MeasureSummary:
         logger.info("Generating key terminology sections...")
 
         data = resources.get_json("key_terminology.json")
+        self.story.add(Paragraph("KEY TERMINOLOGY", style=PSTYLES["SectionHeader1"]))
+        self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
+
+        introduction = data.get("introduction")
+        if introduction is None:
+            raise SummaryGenError("No key terminology introduction found")
+
+        sections = self.parser.parse(introduction)
+        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
+        self.story.add(*flowables, Spacer(0.01, NL_HEIGHT * 0.35))
+
         parameters = data.get("parameters")
         if parameters is None:
             raise SummaryGenError("No key terminology parameters found")
