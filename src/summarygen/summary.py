@@ -479,6 +479,51 @@ class MeasureSummary:
 
         return True
 
+    def add_table_of_contents(self) -> None:
+        self.story.add(NextPageTemplate("TOC"))
+        toc_header = Paragraph("Table of Contents", style=PSTYLES["TOCHeader"])
+        self.story.add(toc_header, NEWLINE)
+        self.story.add(TableOfContents())
+        self.story.add(PageBreak())
+
+    def add_revision_log(self) -> None:
+        logger.info("Generating revision log...")
+
+        style = PSTYLES["Paragraph"]
+        header = Paragraph("Revision Log", style=PSTYLES["h6"])
+        data = []
+        data.append([
+            Paragraph(table_header, style.bold)
+            for table_header
+            in ["Version", "Publish Date", "Description of Revisions", "Owner"]
+        ])
+        col_widths = [INNER_WIDTH * 0.13, INNER_WIDTH * 0.2, INNER_WIDTH * 0.47, INNER_WIDTH * 0.2]
+        for revision in resources.get_revisions():
+            sections = self.parser.parse(
+                revision.description,
+                bullet_option=SQUARE_BULLET
+            )
+            flowables = self.generator.generate(
+                sections,
+                newline_height=NL_HEIGHT * 0.2,
+                max_width=col_widths[2] - 8
+            )
+            desc_table = Table(
+                [[flowable] for flowable in flowables],
+                colWidths=(col_widths[2]),
+                style=TSTYLES["Unstyled"]
+            )
+            data.append([
+                Paragraph(str(revision.version), style=style),
+                Paragraph(revision.publish_date.strftime(r"%Y/%m/%d"), style=style),
+                desc_table,
+                Paragraph(revision.owner, style=style)
+            ])
+
+        table = Table(data, colWidths=col_widths, style=TSTYLES["RevisionLog"])
+        self.story.add(KeepTogether([header, table]))
+        self.story.add(PageBreak())
+
     def add_title_page(self):
         if self._cur_measure is None:
             return
@@ -638,51 +683,6 @@ class MeasureSummary:
         table = BasicTable(data, spans=spans)
         header = Paragraph("Average Impact:", style=PSTYLES["h6"])
         self.story.add(KeepTogether([header, table]), NEWLINE)
-
-    def add_table_of_contents(self) -> None:
-        self.story.add(NextPageTemplate("TOC"))
-        toc_header = Paragraph("Table of Contents", style=PSTYLES["TOCHeader"])
-        self.story.add(toc_header, NEWLINE)
-        self.story.add(TableOfContents())
-        self.story.add(PageBreak())
-
-    def add_revision_log(self) -> None:
-        logger.info("Generating revision log...")
-
-        style = PSTYLES["Paragraph"]
-        header = Paragraph("Revision Log", style=PSTYLES["h6"])
-        data = []
-        data.append([
-            Paragraph(table_header, style.bold)
-            for table_header
-            in ["Version", "Publish Date", "Description of Revisions", "Owner"]
-        ])
-        col_widths = [INNER_WIDTH * 0.13, INNER_WIDTH * 0.2, INNER_WIDTH * 0.47, INNER_WIDTH * 0.2]
-        for revision in resources.get_revisions():
-            sections = self.parser.parse(
-                revision.description,
-                bullet_option=SQUARE_BULLET
-            )
-            flowables = self.generator.generate(
-                sections,
-                newline_height=NL_HEIGHT * 0.2,
-                max_width=col_widths[2] - 8
-            )
-            desc_table = Table(
-                [[flowable] for flowable in flowables],
-                colWidths=(col_widths[2]),
-                style=TSTYLES["Unstyled"]
-            )
-            data.append([
-                Paragraph(str(revision.version), style=style),
-                Paragraph(revision.publish_date.strftime(r"%Y/%m/%d"), style=style),
-                desc_table,
-                Paragraph(revision.owner, style=style)
-            ])
-
-        table = Table(data, colWidths=col_widths, style=TSTYLES["RevisionLog"])
-        self.story.add(KeepTogether([header, table]))
-        self.story.add(PageBreak())
 
     def get_shared_key_terminology_table(self, item: KeyTerminology) -> list[list[str]]:
         if not item.requires_etrm_table():
