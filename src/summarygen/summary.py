@@ -578,22 +578,22 @@ class MeasureSummary:
             return
 
         params = [
-            ('Measure Application Type', 'MeasAppType'),
-            ('Sector', 'Sector'),
-            ('Building Type', 'BldgType'),
-            ('Building Vintage', 'BldgVint'),
-            ('Building Location', 'BldgLoc'),
-            ('Delivery Type', 'DelivType'),
-            ('Normalized Unit', 'NormUnit')
+            ("Measure Application Type", "MeasAppType"),
+            ("Sector", "Sector"),
+            ("Building Type", "BldgType"),
+            ("Building Vintage", "BldgVint"),
+            ("Building Location", "BldgLoc"),
+            ("Delivery Type", "DelivType"),
+            ("Normalized Unit", "NormUnit")
         ]
 
         nd_params = [
-            ('Electric Impact Profile ID', 'electricImpactProfileID'),
-            ('Gas Impact Profile ID', 'GasImpactProfileID')
+            ("Electric Impact Profile ID", "electricImpactProfileID"),
+            ("Gas Impact Profile ID", "GasImpactProfileID")
         ]
 
         table = self._build_parameters_table(params, nd_params)
-        table_header = Paragraph('Applicable Parameters:', PSTYLES['h6'])
+        table_header = Paragraph("Applicable Parameters:", PSTYLES["h6"])
         self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
     def add_impact_table(self):
