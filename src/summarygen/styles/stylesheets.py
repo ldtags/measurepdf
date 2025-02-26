@@ -23,130 +23,100 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet = StyleSheet[ParagraphStyle]()
     style_sheet.add(
         ParagraphStyle(
-            'Base',
+            "Base",
             font_name=DEFAULT_FONT_NAME,
             font_size=DEFAULT_FONT_SIZE
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'SmallBase',
+            "SmallBase",
             font_name=DEFAULT_FONT_NAME,
             font_size=DEFAULT_FONT_SIZE - 1
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'SmallerBase',
+            "SmallerBase",
             font_name=DEFAULT_FONT_NAME,
             font_size=DEFAULT_FONT_SIZE - 2
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'Paragraph',
+            "Paragraph",
             leading=14,
             parent=style_sheet['Base']
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'SmallParagraph',
+            "Space",
             font_size=DEFAULT_FONT_SIZE - 1,
-            parent=style_sheet['Paragraph']
+            parent=style_sheet["Paragraph"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'SummaryTableItem',
-            font_name='SourceSansPro',
-            font_size=9
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            'SummaryTableHeader',
-            font_name='SourceSansProB',
-            font_size=10
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            'TitlePageSubtitle',
-            font_name='SourceSansProB',
-            font_size=17,
-            text_color=COLORS['LightBrown']
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            'TitlePageTitle',
-            font_name='TimesNewRoman',
+            "TitlePageTitle",
+            font_name="TimesNewRoman",
             font_size=32
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'TitleSectionTitle',
-            font_name='SourceSansProB',
+            "TitleSectionTitle",
+            font_name="SourceSansProB",
             font_size=10,
-            text_color=COLORS['LightBrown']
+            text_color=COLORS["LightBrown"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'TitleSectionContent',
-            font_name='SourceSansPro',
+            "TitleSectionContent",
+            font_name="SourceSansPro",
             font_size=12
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'TitleLink',
-            font_name='SourceSansPro',
+            "TitleLink",
+            font_name="SourceSansPro",
             font_size=12,
-            text_color=COLORS['Green']
+            text_color=COLORS["Green"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'Test',
-            parent=style_sheet['Paragraph'],
-            borderWidth=1,
-            borderColor=colors.black
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            'ReferenceTag',
-            font_name=f'{DEFAULT_FONT_NAME}B',
+            "ReferenceTag",
+            font_name=f"{DEFAULT_FONT_NAME}B",
             font_size=DEFAULT_FONT_SIZE - 3,
             text_color=colors.white,
-            backColor=COLORS['ReferenceTagBG'],
+            backColor=COLORS["ReferenceTagBG"],
             space_before=1,
             space_after=1
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'VTHeaderRefTag',
-            parent=style_sheet['SmallerBase'].bold,
+            "VTHeaderRefTag",
+            parent=style_sheet["SmallerBase"].bold,
             text_color=colors.white,
-            backColor=COLORS['Green']
+            backColor=COLORS["Green"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'ValueTableHeaderThin',
+            "ValueTableHeaderThin",
             text_color=colors.white,
-            parent=style_sheet['SmallerBase']
+            parent=style_sheet["SmallerBase"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'ValueTableHeader',
-            font_name=f'{DEFAULT_FONT_NAME}B',
-            parent=style_sheet['ValueTableHeaderThin']
+            "ValueTableHeader",
+            font_name=f"{DEFAULT_FONT_NAME}B",
+            parent=style_sheet["ValueTableHeaderThin"]
         )
     )
     style_sheet.add(
@@ -228,14 +198,14 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             "SectionHeader1",
-            font_name="Arial",
+            font_name="Times New Roman",
             font_size=17
         )
     )
     style_sheet.add(
         ParagraphStyle(
             "SectionSubHeader1",
-            font_name="Arial",
+            font_name="Times New Roman",
             font_size=11
         )
     )
