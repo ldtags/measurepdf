@@ -91,3 +91,7 @@ __Arial.register_family()
 
 __TimesNewRoman = Font("TimesNewRoman", "times-new-roman")
 __TimesNewRoman.register_family()
+
+__Cambria = Font("Cambria", "cambria")
+__Cambria.register_family()
+__Cambria.register(FontType.Math)

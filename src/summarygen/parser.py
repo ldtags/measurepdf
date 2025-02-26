@@ -27,6 +27,7 @@ from src.summarygen.models import (
     ImageSection,
     TableSection,
     NewlineSection,
+    MathSection,
     BulletOption,
     ElementType,
     TextStyle,
@@ -154,15 +155,13 @@ class HTMLParser:
         self._style = DEF_PSTYLE
         self._bullet_option = None
 
-    def handle_text(self, element: NavigableString) -> ParagraphSection:
+    def handle_text(self, element: NavigableString) -> ParagraphSection | NewlineSection:
         text = element.get_text()
         if text == "\n":
-            paragraph_element = ParagraphElement(type=ElementType.Newline)
-        else:
-            paragraph_element = ParagraphElement(text=text, style=self._style)
+            return NewlineSection()
 
         return ParagraphSection(
-            [paragraph_element],
+            [ParagraphElement(text=text, style=self._style)],
             indent_level=self._indents,
             indent_size=self._indent_size
         )
@@ -283,6 +282,15 @@ class HTMLParser:
             indent_size=self._indent_size
         )
 
+    def handle_math(self, tag: Tag) -> MathSection:
+        return MathSection(
+            expression=tag.get_text(),
+            indent_level=self._indents,
+            indent_size=self._indent_size,
+            space_before=3,
+            space_after=3
+        )
+
     def handle_br(self) -> NewlineSection:
         return NewlineSection()
 
@@ -316,6 +324,8 @@ class HTMLParser:
                 return self.handle_img(element)
             case "kth":
                 return self.handle_kth(element)
+            case "math":
+                return self.handle_math(element)
             case "br":
                 return self.handle_br()
             case other:

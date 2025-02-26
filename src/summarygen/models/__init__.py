@@ -22,6 +22,7 @@ __all__ = [
     "ImageSection",
     "TableSection",
     "NewlineSection",
+    "MathSection",
 
     # General models
     "BulletOption",
@@ -60,7 +61,8 @@ from src.summarygen.models.sections import (
     ListSection,
     ImageSection,
     TableSection,
-    NewlineSection
+    NewlineSection,
+    MathSection
 )
 from src.summarygen.models.general import (
     BulletOption,

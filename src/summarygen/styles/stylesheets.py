@@ -247,6 +247,13 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             parent=style_sheet["Paragraph"]
         )
     )
+    style_sheet.add(
+        ParagraphStyle(
+            "Math",
+            font_name="CambriaM",
+            font_size=11
+        )
+    )
 
     return style_sheet
 

@@ -2,6 +2,7 @@ from __future__ import annotations
 import math
 from abc import ABCMeta, abstractmethod
 from PIL import Image
+from reportlab.pdfbase.pdfmetrics import stringWidth
 
 from src import assets
 from src.summarygen import utils
@@ -16,6 +17,7 @@ from src.summarygen.styles import (
     DEFAULT_SPACE_BEFORE,
     DEFAULT_SPACE_AFTER,
     DEFAULT_ALIGNMENT,
+    PSTYLES
 )
 from src.summarygen.models.enums import TextStyle
 from src.summarygen.models.general import BulletOption
@@ -177,6 +179,41 @@ class ParagraphSection(HTMLSection):
     def width(self) -> float:
         width = max([element.width for element in self.elements])
         return width
+
+
+class MathSection(HTMLSection):
+    """Defines a custom HTML math section.
+
+    Displays the math section on its own line with a specific font.
+    """
+
+    def __init__(
+        self,
+        expression: str,
+        indent_level: int = DEFAULT_INDENT_LEVEL,
+        indent_size: int = DEFAULT_INDENT_SIZE,
+        space_before: int = DEFAULT_SPACE_BEFORE,
+        space_after: int = DEFAULT_SPACE_AFTER,
+        alignment: Alignment = Alignment.Center
+    ) -> None:
+        super().__init__(
+            indent_level=indent_level,
+            indent_size=indent_size,
+            space_before=space_before,
+            space_after=space_after,
+            alignment=alignment
+        )
+
+        self.expression = expression
+
+    @property
+    def height(self) -> float:
+        return PSTYLES["Math"].leading
+
+    @property
+    def width(self) -> float:
+        style = PSTYLES["Math"]
+        return stringWidth(self.expression, style.font_name, style.font_size)
 
 
 class ListSection(HTMLSection):

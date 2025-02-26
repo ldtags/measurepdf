@@ -45,6 +45,7 @@ class FontType(Enum):
     ExtraLightItalic = 'ELI'
     Black = 'Bl'
     BlackItalic = 'BlI'
+    Math = 'M'
 
 
 class Font:
