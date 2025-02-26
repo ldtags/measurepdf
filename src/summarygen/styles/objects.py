@@ -49,7 +49,7 @@ def tokenize_ft_name(ft_name: str) -> list[str]:
         char: str = ft_name[i]
         if is_upper(char) and cur_token != "" and cur_token not in FONT_TYPE_DESCRIPTORS:
             tokens.append(cur_token)
-            cur_token = ""
+            cur_token = char
         else:
             cur_token += char
 

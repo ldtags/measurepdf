@@ -52,6 +52,7 @@ from src.summarygen.styles import (
     NL_HEIGHT,
     DEF_PSTYLE,
     DEFAULT_INDENT_SIZE,
+    DEFAULT_PARA_SPACING,
     get_kt_table_style
 )
 from src.summarygen.parser import HTMLParser
@@ -479,6 +480,19 @@ class MeasureSummary:
 
         return True
 
+    def convert_html(
+        self,
+        html: str,
+        newline_height: float = NL_HEIGHT,
+        max_width: float = INNER_WIDTH
+    ) -> list[Flowable]:
+        sections = self.parser.parse(html)
+        return self.generator.generate(
+            sections,
+            newline_height=newline_height,
+            max_width=max_width
+        )
+
     def add_table_of_contents(self) -> None:
         self.story.add(NextPageTemplate("TOC"))
         toc_header = Paragraph("Table of Contents", style=PSTYLES["TOCHeader"])
@@ -489,7 +503,7 @@ class MeasureSummary:
     def add_revision_log(self) -> None:
         logger.info("Generating revision log...")
 
-        style = PSTYLES["Paragraph"]
+        style = DEF_PSTYLE
         header = Paragraph("Revision Log", style=PSTYLES["h6"])
         data = []
         data.append([
@@ -524,11 +538,69 @@ class MeasureSummary:
         self.story.add(KeepTogether([header, table]))
         self.story.add(PageBreak())
 
-    def add_title_page(self):
+    def add_title_page(self) -> None:
         if self._cur_measure is None:
             return
 
         self.story.add(TitlePage(self._cur_measure))
+
+    def _add_value_table(self, api_name: str) -> None:
+        measure_id = self._cur_measure.full_version_id
+        table = self._cur_measure.get_value_table(api_name)
+        if table is None:
+            raise SummaryGenError(f"Missing table for {api_name} in {measure_id}")
+
+        headers: list[str] = []
+        for api_name in table.determinants:
+            determinant = self._cur_measure.get_determinant(api_name)
+            if determinant is None:
+                raise SummaryGenError(f"Missing determinant for {api_name} in {measure_id}")
+
+            headers.append(determinant.name)
+
+        for column in table.columns:
+            headers.append(column.name)
+
+        data = [headers]
+        for row in table.values:
+            table_row: list[str] = []
+            for cell in row:
+                if cell is None:
+                    table_row.append("")
+                else:
+                    table_row.append(cell)
+
+            data.append(table_row)
+
+        self.story.add(BasicTable(data))
+
+    def add_bc_mc_section(self) -> None:
+        measure_id = self._cur_measure.full_version_id
+        desc_obj = resources.get_section_description(measure_id)
+        if desc_obj is None:
+            raise SummaryGenError(f"Could not find a section description for {measure_id}")
+
+        self.story.add(
+            Paragraph(
+                "Measure Case and Base Case Description:",
+                style=PSTYLES["SectionHeader1"]
+            )
+        )
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+
+        self.story.add(Paragraph("Offering ID", style=PSTYLES["SectionSubHeader1"]))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+        self.story.add(*self.convert_html(desc_obj.offering_id))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+        self._add_value_table("offerId")
+        self.story.add(NEWLINE)
+
+        self.story.add(Paragraph("Base Case Description", style=PSTYLES["SectionSubHeader1"]))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+        self.story.add(*self.convert_html(desc_obj.base_case))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+        self._add_value_table("description")
+        self.story.add(NEWLINE)
 
     def _get_shared_avg(
         self,
@@ -538,21 +610,21 @@ class MeasureSummary:
     ) -> str:
         shared_param = measure.get_shared_parameter(param_name)
         if shared_param is None:
-            return ''
+            return ""
 
         try:
             table_name = lookups.SHARED_VALUE_TABLES[shared_param.name]
         except KeyError:
-            return ''
+            return ""
 
         shared_lookup = measure.get_shared_lookup(table_name)
         if shared_lookup is None:
-            return ''
+            return ""
 
         try:
             value_table = self.connection.get_shared_value_table(shared_lookup)
         except ETRMConnectionError:
-            return ''
+            return ""
 
         impacts: list[float] = []
         for label in shared_param.active_labels:
@@ -573,13 +645,13 @@ class MeasureSummary:
                 continue
 
         if len(impacts) == 0:
-            return ''
+            return ""
 
         impact_avg = sum(impacts) / len(impacts)
         if impact_avg == 0:
-            return ''
+            return ""
 
-        return f'{impact_avg:.2f}'
+        return f"{impact_avg:.2f}"
 
     def _build_parameters_table(
         self,
@@ -827,7 +899,7 @@ class MeasureSummary:
 
     def add_key_terminology_caption(self, item: KeyTerminology) -> None:
         sections = self.parser.parse(f"<em>{item.caption}</em>")
-        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
+        flowables = self.generator.generate(sections, newline_height=DEFAULT_PARA_SPACING)
         self.story.add(*flowables)
 
     def add_key_terminology_item(self, item: KeyTerminology, indents: int = 0) -> None:
@@ -835,15 +907,15 @@ class MeasureSummary:
 
         content = f"<kth>{item.name}: </kth>{item.content}"
         sections = self.parser.parse(content, indents=indents)
-        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
+        flowables = self.generator.generate(sections, newline_height=DEFAULT_PARA_SPACING)
         self.story.add(*flowables)
-        self.story.add(Spacer(0.01, NL_HEIGHT * 0.35))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         if item.contains_table:
             self.add_key_terminology_table(item, indents=indents)
 
         if item.caption is not None:
             self.add_key_terminology_caption(item)
-            self.story.add(Spacer(0.01, NL_HEIGHT * 0.35))
+            self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
 
         if item.sub_sections != None:
             for sub_section in item.sub_sections:
@@ -852,14 +924,14 @@ class MeasureSummary:
     def add_key_terminology(self) -> None:
         logger.info("Generating key terminology sections...")
 
-        self.story.add(Paragraph("KEY TERMINOLOGY", style=PSTYLES["SectionHeader1"]))
+        self.story.add(Paragraph("KEY TERMINOLOGY", style=PSTYLES["SectionHeader2"]))
         self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
 
         key_terminology = resources.get_key_terminology()
 
         sections = self.parser.parse(key_terminology.introduction)
-        flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
-        self.story.add(*flowables, Spacer(0.01, NL_HEIGHT * 0.35))
+        flowables = self.generator.generate(sections, newline_height=DEFAULT_PARA_SPACING)
+        self.story.add(*flowables, Spacer(0.01, DEFAULT_PARA_SPACING))
 
         for terminology_item in key_terminology.items:
             self.add_key_terminology_item(terminology_item)
@@ -991,6 +1063,7 @@ class MeasureSummary:
         self.story.add(NextPageTemplate(summary_measure.full_version_id))
 
         self.add_title_page()
+        self.add_bc_mc_section()
         self.add_parameters_table()
         self.add_impact_table()
         self.story.add(PageBreak())

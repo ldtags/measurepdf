@@ -46,12 +46,12 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
         ParagraphStyle(
             "Paragraph",
             leading=14,
-            parent=style_sheet['Base']
+            parent=style_sheet["Base"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            "Space",
+            "SmallParagraph",
             font_size=DEFAULT_FONT_SIZE - 1,
             parent=style_sheet["Paragraph"]
         )
@@ -198,14 +198,14 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             "SectionHeader1",
-            font_name="Times New Roman",
+            font_name="TimesNewRoman",
             font_size=17
         )
     )
     style_sheet.add(
         ParagraphStyle(
             "SectionSubHeader1",
-            font_name="Times New Roman",
+            font_name="TimesNewRoman",
             font_size=11
         )
     )
