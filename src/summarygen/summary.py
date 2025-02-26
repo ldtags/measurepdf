@@ -841,9 +841,6 @@ class MeasureSummary:
     def add_key_terminology_item(self, item: KeyTerminology, indents: int = 0) -> None:
         logger.info(f"Generating key terminology section for {item.name}...")
 
-        if item.name == "Electric Impact Profile ID":
-            pass
-
         content = f"<kth>{item.name}: </kth>{item.content}"
         sections = self.parser.parse(content, indents=indents)
         flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
