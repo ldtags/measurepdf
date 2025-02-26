@@ -640,8 +640,8 @@ class MeasureSummary:
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
     def add_table_of_contents(self) -> None:
-        self.story.add(NextPageTemplate('TOC'))
-        toc_header = Paragraph('Table of Contents', style=PSTYLES['TOCHeader'])
+        self.story.add(NextPageTemplate("TOC"))
+        toc_header = Paragraph("Table of Contents", style=PSTYLES["TOCHeader"])
         self.story.add(toc_header, NEWLINE)
         self.story.add(TableOfContents())
         self.story.add(PageBreak())
