@@ -229,15 +229,22 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
         ParagraphStyle(
             "SectionHeader1",
             font_name="Arial",
-            font_size=14,
-            text_color=COLORS["SectionHeader"]
+            font_size=17
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "SectionSubHeader1",
+            font_name="Arial",
+            font_size=11
         )
     )
     style_sheet.add(
         ParagraphStyle(
             "SectionHeader2",
             font_name="Arial",
-            font_size=13
+            font_size=14,
+            text_color=COLORS["SectionHeader2"]
         )
     )
     style_sheet.add(

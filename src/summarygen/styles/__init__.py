@@ -16,6 +16,7 @@ __all__ = [
     "DEFAULT_SPACE_BEFORE",
     "DEFAULT_SPACE_AFTER",
     "DEFAULT_ALIGNMENT",
+    "DEFAULT_PARA_SPACING",
     "NL_HEIGHT",
 
     # Objects
@@ -53,6 +54,7 @@ from .config import (
     DEFAULT_SPACE_BEFORE,
     DEFAULT_SPACE_AFTER,
     DEFAULT_ALIGNMENT,
+    DEFAULT_PARA_SPACING,
     NL_HEIGHT
 )
 from .objects import (
@@ -77,7 +79,16 @@ from .enums import (
 
 __SourceSansPro = Font("SourceSansPro", "source-sans-pro")
 __SourceSansPro.register_family()
-__SourceSansPro.register(FontType.Black, FontType.BlackItalic)
+__SourceSansPro.register(
+    FontType.Black,
+    FontType.BlackItalic,
+    FontType.Light,
+    FontType.LightItalic,
+    FontType.SemiBold,
+    FontType.SemiBoldItalic,
+    FontType.ExtraLight,
+    FontType.ExtraLightItalic
+)
 
 __Merriweather = Font("Merriweather", "merriweather")
 __Merriweather.register_family()
@@ -95,3 +106,16 @@ __TimesNewRoman.register_family()
 __Cambria = Font("Cambria", "cambria")
 __Cambria.register_family()
 __Cambria.register(FontType.Math)
+
+__Aptos = Font("Aptos", "aptos")
+__Aptos.register_family()
+__Aptos.register(
+    FontType.Black,
+    FontType.BlackItalic,
+    FontType.Light,
+    FontType.LightItalic,
+    FontType.SemiBold,
+    FontType.SemiBoldItalic,
+    FontType.ExtraBold,
+    FontType.ExtraBoldItalic
+)

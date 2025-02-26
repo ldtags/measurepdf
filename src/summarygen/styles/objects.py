@@ -1,7 +1,6 @@
 from __future__ import annotations
 import os
 import sys
-from enum import Enum
 from typing import Literal, TypeVar, Generic, Any, overload
 from reportlab.lib import colors
 from reportlab.lib.enums import TA_LEFT
@@ -25,27 +24,46 @@ from reportlab.rl_config import (
 )
 
 from src import asset_path
+from src.summarygen.styles.enums import FontType
 from src.summarygen.styles.config import (
     DEFAULT_FONT_NAME,
-    DEFAULT_FONT_SIZE
+    DEFAULT_FONT_SIZE,
+    FONT_TYPE_DESCRIPTORS
 )
 from src.summarygen.styles.colors import COLORS
 
 
-class FontType(Enum):
-    Regular = ''
-    Italic = 'I'
-    Bold = 'B'
-    BoldItalic = 'BI'
-    SemiBold = 'SB'
-    SemiBoldItalic = 'SBI'
-    Light = 'L'
-    LightItalic = 'LI'
-    ExtraLight = 'EL'
-    ExtraLightItalic = 'ELI'
-    Black = 'Bl'
-    BlackItalic = 'BlI'
-    Math = 'M'
+def is_upper(s: str) -> bool:
+    for i in range(len(s)):
+        asc_val = ord(s[i])
+        if asc_val < 65 or asc_val > 90:
+            return False
+
+    return True
+
+
+def tokenize_ft_name(ft_name: str) -> list[str]:
+    tokens: list[str] = []
+    cur_token: str = ""
+    for i in range(len(ft_name)):
+        char: str = ft_name[i]
+        if is_upper(char) and cur_token != "" and cur_token not in FONT_TYPE_DESCRIPTORS:
+            tokens.append(cur_token)
+            cur_token = ""
+        else:
+            cur_token += char
+
+    if cur_token != "":
+        tokens.append(cur_token)
+
+    return tokens
+
+
+def get_ft_name(font_type: FontType) -> str:
+    if len(font_type.name) <= 1:
+        return font_type.name
+
+    return "-".join(tokenize_ft_name(font_type.name))
 
 
 class Font:
@@ -76,7 +94,7 @@ class Font:
         for font_type in font_types:
             font = TTFont(
                 f'{self.name}{font_type.value}',
-                os.path.join(self.path, f'{self.name}-{font_type.name}.ttf')
+                os.path.join(self.path, f'{self.name}-{get_ft_name(font_type)}.ttf')
             )
             fonts.append(font)
             pdfmetrics.registerFont(font)
