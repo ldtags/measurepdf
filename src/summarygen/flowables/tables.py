@@ -3,12 +3,13 @@ from typing import Literal
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
     Table,
-    Paragraph
+    Paragraph,
+    Flowable
 )
 
 from src import utils
 from src.etrm.models import Measure
-from src.summarygen.models.enums import ElementType
+from src.summarygen.utils import get_flowable_height, get_flowable_width
 from src.summarygen.types import _TableOrient, _TableSpan
 from src.summarygen.styles import (
     ParagraphStyle,
@@ -21,7 +22,8 @@ from src.summarygen.styles import (
 from src.summarygen.models import (
     VTObjectInfo,
     ParagraphElement,
-    ElementLine
+    ElementLine,
+    ElementType
 )
 from src.summarygen.flowables.utils import wrap_elements
 from src.summarygen.flowables.paragraph import ParagraphLine
@@ -29,12 +31,14 @@ from src.summarygen.exceptions import SummaryGenError
 
 
 class TableCell(Table):
-    def __init__(self,
-                 elements: list[ParagraphLine],
-                 width: float=INNER_WIDTH,
-                 style: ParagraphStyle | None=None,
-                 **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
+    def __init__(
+        self,
+        elements: list[ParagraphLine],
+        width: float = INNER_WIDTH,
+        style: ParagraphStyle | None = None,
+        **kwargs
+    ) -> None:
+        if kwargs.get("normalizedData", None) is not None:
             Table.__init__(self, elements, **kwargs)
             return
 
@@ -42,14 +46,16 @@ class TableCell(Table):
         self.max_width = width
         self.pstyle = style
         if elements == []:
-            elem_line = ElementLine(string='', style=style)
+            elem_line = ElementLine(string="", style=style)
             self.elements.append(ParagraphLine(elem_line))
-        Table.__init__(self,
-                       self.line_matrix,
-                       colWidths=self.width,
-                       rowHeights=self.row_heights,
-                       style=TSTYLES['Unstyled'],
-                       hAlign='LEFT')
+
+        super().__init__(
+            self.line_matrix,
+            colWidths=self.width,
+            rowHeights=self.row_heights,
+            style=TSTYLES["Unstyled"],
+            hAlign="LEFT"
+        )
 
     @property
     def line_matrix(self) -> list[list[ParagraphLine]]:
@@ -82,7 +88,7 @@ class BasicTable(Table):
 
     def __init__(
         self,
-        data: list[list[str | ElementLine]],
+        data: list[list[str | ElementLine | Flowable]],
         headers: int = 1,
         measure: Measure | None = None,
         spans: list[_TableSpan] | None = None,
@@ -98,7 +104,6 @@ class BasicTable(Table):
         min_col_widths: bool = False,
         x_padding: int = 0,
         y_padding: int = 0,
-        uniform_columns: bool = False,
         **kwargs
     ) -> None:
         """Constructs a ReportLab `Table` with the provided data.
@@ -149,16 +154,16 @@ class BasicTable(Table):
             in the event of a table split.
         """
 
-        # Allows reportlab to do the final pass in the multiBuild process
+        # Allow reportlab to do the final pass in the multiBuild process
         if kwargs.get("normalizedData") is not None:
             super().__init__(data, **kwargs)
             return
 
-        # Validates input data
+        # Validate input data
         assert data != []
         assert headers > -1
 
-        # Ensures that each cell in each row has an associated size
+        # Ensure that each cell in each row has an associated size
         row_len: float | None = None
         for row in data:
             if row_len is None:
@@ -168,7 +173,6 @@ class BasicTable(Table):
 
         assert row_len is not None
 
-        self.uniform_columns = uniform_columns
         self.header_count = headers
         self.header_orient = header_orient
         self.measure = measure
@@ -180,7 +184,7 @@ class BasicTable(Table):
                 in self.spans
         }
 
-        # Applies the table style
+        # Apply the table style
         self.style = table_style or get_table_style(
             data=data,
             headers=headers,
@@ -190,7 +194,7 @@ class BasicTable(Table):
         self.h_padding = self.style.left_padding + self.style.right_padding
         self.v_padding = self.style.top_padding + self.style.bottom_padding
 
-        # Applies the header styles
+        # Apply the header styles
         style_count = row_len if header_orient == "top" else len(data)
         if isinstance(header_styles, ParagraphStyle):
             self.header_styles = [header_styles] * style_count
@@ -198,16 +202,17 @@ class BasicTable(Table):
             assert len(header_styles) == headers
             self.header_styles = header_styles
 
-        # Applies the body styles
+        # Apply the body styles
         if isinstance(body_styles, ParagraphStyle):
             self.body_styles = [body_styles] * style_count
         else:
             assert len(body_styles) == style_count
             self.body_styles = body_styles
 
+        # Convert raw strings into element lines
         self.data = self._sanitize_data(data)
 
-        # Ensures that each column has a defined width
+        # Ensure that each column has a defined width
         if isinstance(col_widths, float):
             self.col_widths = [col_widths] * row_len
         elif col_widths is not None:
@@ -216,7 +221,7 @@ class BasicTable(Table):
         else:
             self.col_widths = self._calc_col_widths(self.data)
 
-        # Ensures that each row has a defined height
+        # Ensure that each row has a defined height
         if isinstance(row_heights, float):
             self.row_heights = [row_heights] * len(data)
         elif row_heights is not None:
@@ -225,27 +230,33 @@ class BasicTable(Table):
         else:
             self.row_heights = self._calc_row_heights(self.data)
 
+        # Convert element lines into table cells
         self.table_cells = self._convert_data(self.data)
 
-        # Pulls headers from the table data
+        # Pull headers from the table data
         if header_orient == "left":
             columns = utils.rotate_matrix(self.table_cells)
             self.headers = columns[0:headers]
         else:
             self.headers = self.table_cells[0:headers]
 
+        # Apply horizontal padding to column widths
         for i, val in enumerate(self.col_widths):
             self.col_widths[i] = val + x_padding
 
+        # Apply vertical padding to row heights
         for i, val in enumerate(self.row_heights):
             self.row_heights[i] = val + y_padding
 
-        _min_col_widths = [0] * len(self.col_widths)
+        # Force minimum column width if specified
         if min_col_widths:
-            for row in self.table_cells:
-                for i, item in enumerate(row):
+            _min_col_widths = [0] * len(self.col_widths)
+            for y, row in enumerate(self.table_cells):
+                for x, item in enumerate(row):
                     if isinstance(item, TableCell):
                         width = item.get_min_width()
+                    elif isinstance(item, Flowable):
+                        width, _ = item.wrap(self.col_widths[x], self.row_heights[y])
                     else:
                         width = stringWidth(
                             item,
@@ -254,8 +265,8 @@ class BasicTable(Table):
                         )
 
                     width += x_padding
-                    if width > _min_col_widths[i]:
-                        _min_col_widths[i] = width
+                    if width > _min_col_widths[x]:
+                        _min_col_widths[x] = width
 
             self.col_widths = _min_col_widths
 
@@ -284,9 +295,33 @@ class BasicTable(Table):
 
         return self.body_styles[x - body_off]
 
+    def _sanitize_data(
+        self,
+        data: list[list[str | ElementLine | Flowable]]
+    ) -> list[list[ElementLine | Flowable]]:
+        sanitized_data: list[list[ElementLine | Flowable]] = []
+        for y, row in enumerate(data):
+            sanitized_row: list[ElementLine | Flowable] = []
+            for x, cell in enumerate(row):
+                if isinstance(cell, str):
+                    style = self.get_style(x, y)
+                    elem = ElementLine(
+                        string=cell,
+                        style=style,
+                        max_width=None
+                    )
+                else:
+                    elem = cell
+
+                sanitized_row.append(elem)
+
+            sanitized_data.append(sanitized_row)
+
+        return sanitized_data
+
     def _calc_min_widths(
         self,
-        data: list[list[ElementLine]],
+        data: list[list[ElementLine | Flowable]],
         size: int = 1
     ) -> list[list[float]]:
         """Calculates the minimum width of each column in `data` given
@@ -304,7 +339,13 @@ class BasicTable(Table):
                     skip -= 1
                     continue
 
-                width = cell.get_min_width(size)
+                # Probably not correct as flowables can be wrapped in a
+                # table, but whatever
+                if isinstance(cell, Flowable):
+                    width = get_flowable_width(cell)
+                else:
+                    width = cell.get_min_width(size)
+
                 _, col_span = self.span_dict.get(str((y, x)), (0, 0))
                 if col_span > 1:
                     width_frags = [width / col_span] * col_span
@@ -327,7 +368,7 @@ class BasicTable(Table):
 
         return [max(column) for column in utils.rotate_matrix(min_matrix)]
 
-    def _calc_col_widths(self, data: list[list[ElementLine]]) -> list[float]:
+    def _calc_col_widths(self, data: list[list[ElementLine | Flowable]]) -> list[float]:
         """Returns the list of column widths for this table.
 
         Column widths are calculated by unwrapping data until it cannot
@@ -373,10 +414,11 @@ class BasicTable(Table):
         prev_widths = [width + add_width for width in prev_widths]
         return prev_widths
 
-    def _calc_row_heights(self,
-                           data: list[list[ElementLine]],
-                           col_widths: list[float] | None=None
-                          ) -> list[float]:
+    def _calc_row_heights(
+        self,
+        data: list[list[ElementLine | Flowable]],
+        col_widths: list[float] | None = None
+    ) -> list[float]:
         """Calculates the heights of each row of the table by wrapping
         all data to fit within the previously calculated `col_widths`.
         """
@@ -388,7 +430,7 @@ class BasicTable(Table):
         for y, row in enumerate(data):
             assert len(row) == len(_col_widths)
             matrix_row: list[float] = []
-            for x in range(len(row)):
+            for x, cell in enumerate(row):
                 if skip != 0:
                     skip -= 1
                     continue
@@ -399,8 +441,13 @@ class BasicTable(Table):
                 else:
                     col_width = _col_widths[x]
 
-                frags = wrap_elements(row[x].elements, col_width - h_padding)
-                height = row[x].height * len(frags)
+                # Also probably not correct for the same reasons as the widths
+                if isinstance(cell, Flowable):
+                    height = get_flowable_height(cell)
+                else:
+                    frags = wrap_elements(cell.elements, col_width - h_padding)
+                    height = cell.height * len(frags)
+
                 if col_span > 1:
                     height_frags = [height] * col_span
                     height_frags[0] += self.style.top_padding
@@ -423,58 +470,37 @@ class BasicTable(Table):
 
         return [max(heights) for heights in height_matrix]
 
-    def _sanitize_data(
-        self,
-        data: list[list[ElementLine | str]]
-    ) -> list[list[ElementLine]]:
-        sanitized_data: list[list[ElementLine]] = []
-        for y, row in enumerate(data):
-            sanitized_row: list[ElementLine] = []
-            for x, cell in enumerate(row):
-                if isinstance(cell, str):
-                    style = self.get_style(x, y)
-                    elem = ElementLine(
-                        string=cell,
-                        style=style,
-                        max_width=None
-                    )
-                else:
-                    elem = cell
-
-                sanitized_row.append(elem)
-
-            sanitized_data.append(sanitized_row)
-
-        return sanitized_data
-
     def _wrap_data(
         self,
-        data: list[list[ElementLine]]
-    ) -> list[list[list[ElementLine]]]:
+        data: list[list[ElementLine | Flowable]]
+    ) -> list[list[list[ElementLine] | Flowable]]:
         h_padding = self.style.left_padding + self.style.right_padding
         cell_widths = [
             math.ceil(width - h_padding)
             for width
             in self.col_widths
         ]
-        frags: list[list[list[ElementLine]]] = []
+        frags: list[list[list[ElementLine] | Flowable]] = []
         for y, table_row in enumerate(data):
-            frag_line: list[list[ElementLine]] = []
-            for x, elem_line in enumerate(table_row):
+            frag_line: list[list[ElementLine] | Flowable] = []
+            for x, cell in enumerate(table_row):
                 _, col_span = self.span_dict.get(str((y, x)), (0, 0))
                 if col_span > 1:
                     cell_width = sum(cell_widths[x:x + col_span - 1])
                 else:
                     cell_width = cell_widths[x]
 
-                elements = elem_line.elements
-                for element in elements:
-                    if not element.is_styled():
-                        element.style = self.get_style(x, y)
+                if isinstance(cell, Flowable):
+                    frag_line.append(cell)
+                else:
+                    elements = cell.elements
+                    for element in elements:
+                        if not element.is_styled():
+                            element.style = self.get_style(x, y)
 
-                frag_line.append(
-                    wrap_elements(elem_line.elements, max_width=cell_width)
-                )
+                    frag_line.append(
+                        wrap_elements(cell.elements, max_width=cell_width)
+                    )
 
             frags.append(frag_line)
 
@@ -482,18 +508,22 @@ class BasicTable(Table):
 
     def _convert_data(
         self,
-        data: list[list[ElementLine]]
-    ) -> list[list[TableCell | str]]:
+        data: list[list[ElementLine | Flowable]]
+    ) -> list[list[TableCell | Flowable | str]]:
         frags = self._wrap_data(data)
-        table_cells: list[list[TableCell | str]] = []
+        table_cells: list[list[TableCell | Flowable | str]] = []
         for y, frag_line in enumerate(frags):
-            cells: list[TableCell | str] = []
-            for x, table_cell in enumerate(frag_line):
-                if table_cell == []:
-                    cell = ''
+            cells: list[TableCell | Flowable | str] = []
+            for x, cell in enumerate(frag_line):
+                if isinstance(cell, Flowable):
+                    cells.append(cell)
+                    continue
+
+                if cell == []:
+                    cell = ""
                 else:
                     cell_lines: list[ParagraphLine] = []
-                    for element_line in table_cell:
+                    for element_line in cell:
                         para_line = ParagraphLine(
                             element_line=element_line,
                             measure=self.measure
@@ -517,117 +547,141 @@ class BasicTable(Table):
 
 
 class ValueTable(BasicTable):
-    def __init__(self,
-                 data: list[list[ElementLine]],
-                 measure: Measure | None=None,
-                 headers: int=1,
-                 determinants: int=0,
-                 spans: list[_TableSpan] | None=None,
-                 **kwargs):
-        if kwargs.get('normalizedData') is not None:
+    def __init__(
+        self,
+        data: list[list[ElementLine]],
+        measure: Measure | None = None,
+        headers: int = 1,
+        determinants: int = 0,
+        spans: list[_TableSpan] | None = None,
+        **kwargs
+    ) -> None:
+        if kwargs.get("normalizedData") is not None:
             Table.__init__(self, data, **kwargs)
             return
 
-        style = get_table_style(data=data,
-                                headers=headers,
-                                determinants=determinants,
-                                spans=spans or [])
+        style = get_table_style(
+            data=data,
+            headers=headers,
+            determinants=determinants,
+            spans=spans or []
+        )
 
-        BasicTable.__init__(self,
-                            data=data,
-                            headers=headers,
-                            measure=measure,
-                            spans=spans,
-                            table_style=style)
+        super().__init__(
+            data=data,
+            headers=headers,
+            measure=measure,
+            spans=spans,
+            table_style=style
+        )
 
 
 class ValueTableHeader(Paragraph):
-    def __init__(self, table_info: VTObjectInfo, measure: Measure):
+    def __init__(self, table_info: VTObjectInfo, measure: Measure) -> None:
         value_table = measure.get_value_table(*table_info.possible_names)
         if value_table is None:
-            raise SummaryGenError(f'Invalid value table info: {table_info}')
+            raise SummaryGenError(f"Invalid value table info: {table_info}")
 
-        change_id = table_info.change_url.split('/')[4]
-        link = f'{measure.link}/value-table/{change_id}/'
-        text = f'<link href=\"{link}\">{value_table.name}</link>'
-        Paragraph.__init__(self, text, style=PSTYLES['h6Link'])
+        change_id = table_info.change_url.split("/")[4]
+        link = f"{measure.link}/value-table/{change_id}/"
+        text = f"<link href=\"{link}\">{value_table.name}</link>"
+        Paragraph.__init__(self, text, style=PSTYLES["h6Link"])
 
 
 class EmbeddedValueTable(ValueTable):
-    def __init__(self,
-                 table_info: VTObjectInfo,
-                 measure: Measure | None=None,
-                 **kwargs):
-        if kwargs.get('normalizedData', None) is not None:
+    def __init__(
+        self,
+        table_info: VTObjectInfo,
+        measure: Measure | None = None,
+        **kwargs
+    ) -> None:
+        if kwargs.get("normalizedData", None) is not None:
             Table.__init__(self, table_info, **kwargs)
             return
 
         if measure is None:
-            raise SummaryGenError('Cannot generate a value table without'
-                                  ' an eTRM measure')
+            raise SummaryGenError(
+                "Cannot generate a value table without an eTRM measure"
+            )
 
         self.measure = measure
         self.value_table = measure.get_value_table(*table_info.possible_names)
         if self.value_table is None:
             raise SummaryGenError(f'Invalid value table info: {table_info}')
 
-        ValueTable.__init__(self,
-                            data=self.__get_content(),
-                            measure=self.measure,
-                            determinants=len(self.value_table.determinants))
+        super().__init__(
+            data=self._get_content(),
+            measure=self.measure,
+            determinants=len(self.value_table.determinants)
+        )
 
-    def __get_headers(self) -> list[ElementLine]:
+    def _get_headers(self) -> list[ElementLine]:
         headers: list[ElementLine] = []
         for api_name in self.value_table.determinants:
             determinant = self.measure.get_determinant(api_name)
             if determinant is None:
                 continue
+
             element_line = ElementLine(max_width=None)
             text = determinant.name.upper()
-            element = ParagraphElement(text=text,
-                                       style=PSTYLES['ValueTableHeader'])
+            element = ParagraphElement(
+                text=text,
+                style=PSTYLES["ValueTableHeader"]
+            )
             element_line.add(element)
             headers.append(element_line)
+
         for column in self.value_table.columns:
             element_line = ElementLine(max_width=None)
-            text = f'{column.name} ({column.unit})'.upper()
-            element = ParagraphElement(text=text,
-                                       style=PSTYLES['ValueTableHeader'])
+            text = f"{column.name} ({column.unit})".upper()
+            element = ParagraphElement(
+                text=text,
+                style=PSTYLES["ValueTableHeader"]
+            )
             element_line.add(element)
             for ref in column.reference_refs:
-                ref_element = ParagraphElement(text=ref,
-                                               type=ElementType.Reference,
-                                               style=PSTYLES['VTHeaderRefTag'])
+                ref_element = ParagraphElement(
+                    text=ref,
+                    type=ElementType.Reference,
+                    style=PSTYLES["VTHeaderRefTag"]
+                )
                 element_line.add(ref_element)
+
             headers.append(element_line)
+
         return headers
 
-    def __get_body(self) -> list[list[ElementLine]]:
+    def _get_body(self) -> list[list[ElementLine]]:
         body: list[list[ElementLine]] = []
         for row in self.value_table.values:
             table_row: list[ElementLine] = []
             for i, item in enumerate(row):
                 if i < len(self.value_table.determinants):
-                    style = PSTYLES['ValueTableDeterminant']
+                    style = PSTYLES["ValueTableDeterminant"]
                 else:
-                    style = PSTYLES['ValueTableItem']
+                    style = PSTYLES["ValueTableItem"]
+
                 if item is None:
-                    text = ''
+                    text = ""
                 else:
                     text = item
+
                 element = ParagraphElement(text)
                 table_row.append(ElementLine(elements=[element], style=style))
+
             body.append(table_row)
+
         return body
 
-    def __get_content(self) -> list[list[ElementLine]]:
-        headers = self.__get_headers()
-        body = self.__get_body()
+    def _get_content(self) -> list[list[ElementLine]]:
+        headers = self._get_headers()
+        body = self._get_body()
         sanitized_headers: list[ElementLine] = []
         sanitized_cols: list[list[ElementLine]] = []
         for x, col in enumerate(utils.rotate_matrix(body)):
-            if not all([elem.text == '' for elem in col]):
+            if not all([elem.text == "" for elem in col]):
                 sanitized_cols.append(col)
                 sanitized_headers.append(headers[x])
+
         sanitized_cols = utils.rotate_matrix(sanitized_cols)
         return [sanitized_headers, *sanitized_cols]

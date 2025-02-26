@@ -152,12 +152,16 @@ class SummaryParagraph(Table):
             else:
                 row_heights.append(line[0].height)
 
-        self.total_height = math.fsum(row_heights)
+        width = max([
+            math.fsum(row[0].col_widths)
+            for row
+            in self._lines
+        ])
 
         if indents == 0:
-            col_widths = [max_content_width]
+            col_widths = [width]
         else:
-            col_widths = [indents_width, max_content_width]
+            col_widths = [indents_width, width]
             for line in self._lines:
                 line.insert(0, "")
 
@@ -169,6 +173,7 @@ class SummaryParagraph(Table):
             self._lines.append([""])
             row_heights.append(space_after)
 
+        self.total_height = math.fsum(row_heights)
         super().__init__(
             self._lines,
             colWidths=col_widths,

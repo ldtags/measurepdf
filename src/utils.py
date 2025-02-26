@@ -15,10 +15,9 @@ from typing import (
     get_origin,
     Any
 )
-from reportlab.platypus import Image as RLImage
 from configparser import ConfigParser
 
-from src import asset_path, src_path, patterns, resources
+from src import asset_path, patterns, resources
 
 
 _NotDefined = NewType('_NotDefined', None)

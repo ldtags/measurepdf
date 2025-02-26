@@ -28,6 +28,7 @@ from src.etrm.exceptions import (
     ETRMConnectionError,
     ETRMResponseError
 )
+from src.summarygen.utils import get_flowable_height, get_flowable_width
 from src.summarygen.models import (
     Revision,
     KeyTerminology,
@@ -716,11 +717,7 @@ class MeasureSummary:
 
         return table_content
 
-    def get_static_key_terminology_table(
-        self,
-        item: KeyTerminology,
-        max_width: float
-    ) -> list[list[Flowable]]:
+    def get_static_key_terminology_table(self, item: KeyTerminology) -> list[list[Flowable]]:
         if item.data is None:
             return []
 
@@ -729,15 +726,23 @@ class MeasureSummary:
             row_content: list[Flowable] = []
             for cell in row:
                 sections = self.parser.parse(cell)
-                flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.35)
+                flowables = self.generator.generate(sections, newline_height=NL_HEIGHT * 0.1)
                 if flowables == []:
                     row_content.append(Paragraph(""))
                 else:
+                    widths = []
+                    heights = []
+                    for flowable in flowables:
+                        widths.append(get_flowable_width(flowable))
+                        heights.append(get_flowable_height(flowable))
+
                     row_content.append(
                         Table(
                             data=[[flowable] for flowable in flowables],
                             hAlign="LEFT",
-                            style=TSTYLES["Unstyled"]
+                            style=TSTYLES["Unstyled"],
+                            colWidths=[max(widths)],
+                            rowHeights=heights
                         )
                     )
 
@@ -769,7 +774,7 @@ class MeasureSummary:
         max_width = INNER_WIDTH - indents * DEFAULT_INDENT_SIZE
         data = self.get_shared_key_terminology_table(item)
         if item.data is not None:
-            static_data = self.get_static_key_terminology_table(item, max_width)
+            static_data = self.get_static_key_terminology_table(item)
             if item.append == "before":
                 data = [*static_data, *data]
             elif item.append == "after":
@@ -792,7 +797,6 @@ class MeasureSummary:
         self.story.add(
             BasicTable(
                 data=data,
-                repeat_rows=0,
                 header_styles=DEF_PSTYLE.bold,
                 body_styles=DEF_PSTYLE,
                 table_style=get_kt_table_style(num_cols, len(headers)),
@@ -812,6 +816,9 @@ class MeasureSummary:
 
     def add_key_terminology_item(self, item: KeyTerminology, indents: int = 0) -> None:
         logger.info(f"Generating key terminology section for {item.name}...")
+
+        if item.name == "Electric Impact Profile ID":
+            pass
 
         content = f"<kth>{item.name}: </kth>{item.content}"
         sections = self.parser.parse(content, indents=indents)
