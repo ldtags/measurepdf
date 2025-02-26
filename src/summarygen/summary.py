@@ -389,7 +389,7 @@ class MeasureSummary:
     ) -> None:
         clean()
         self.measures: dict[str, list[Measure]] = {}
-        self.__cur_measure: Measure | None = None
+        self._cur_measure: Measure | None = None
         self.connection = connection
         self.story = Story()
         self.dir_path = dir_path
@@ -480,10 +480,10 @@ class MeasureSummary:
         return True
 
     def add_title_page(self):
-        if self.__cur_measure is None:
+        if self._cur_measure is None:
             return
 
-        self.story.add(TitlePage(self.__cur_measure))
+        self.story.add(TitlePage(self._cur_measure))
 
     def _get_shared_avg(
         self,
@@ -543,7 +543,7 @@ class MeasureSummary:
     ) -> Table:
         data: list[tuple[str, str]] = [("Parameters", "Labels")]
         for verbose_name, api_name in params:
-            param = self.__cur_measure.get_shared_parameter(api_name)
+            param = self._cur_measure.get_shared_parameter(api_name)
             param_labels: list[str] = []
             if param is not None:
                 labels = param.active_labels.copy()
@@ -568,13 +568,13 @@ class MeasureSummary:
             data.append((verbose_name, ", ".join(param_labels).strip()))
 
         for verbose_name, api_name in nd_params:
-            param = self.__cur_measure.get_shared_parameter(api_name)
+            param = self._cur_measure.get_shared_parameter(api_name)
             data.append((verbose_name, ", ".join(param.active_labels).strip()))
 
         return BasicTable(data)
 
     def add_parameters_table(self) -> None:
-        if self.__cur_measure is None:
+        if self._cur_measure is None:
             return
 
         params = [
@@ -597,11 +597,11 @@ class MeasureSummary:
         self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
     def add_impact_table(self):
-        if self.__cur_measure is None:
+        if self._cur_measure is None:
             return
 
         try:
-            permutations = self.connection.get_permutations(self.__cur_measure)
+            permutations = self.connection.get_permutations(self._cur_measure)
         except ETRMResponseError as err:
             raise SummaryGenError(f"eTRM Connection Error ({err.status}):\n{err.message}")
         
@@ -973,13 +973,13 @@ class MeasureSummary:
 
     def _build_summary(self, measure: Measure | None = None) -> None:
         if measure is None:
-            if self.__cur_measure is None:
+            if self._cur_measure is None:
                 raise SummaryGenError("Cannot generate a summary without a measure")
 
-            summary_measure = self.__cur_measure
+            summary_measure = self._cur_measure
         else:
             summary_measure = measure
-            self.__cur_measure = measure
+            self._cur_measure = measure
 
         logger.info(f"Building summary for measure {summary_measure.full_version_id}")
 
@@ -995,7 +995,7 @@ class MeasureSummary:
         self.add_impact_table()
         self.story.add(PageBreak())
 
-        self.__cur_measure = None
+        self._cur_measure = None
 
     def build(self, toc: bool = False) -> None:
         self.add_revision_log()
