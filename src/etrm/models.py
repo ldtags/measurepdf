@@ -3,14 +3,13 @@ import math
 import pandas as pd
 import datetime as dt
 import unicodedata
-from enum import Enum
 from typing import Any, overload
 from pandas import DataFrame, Series
 
 from src import utils
-from src.utils import getc
-from src.etrm.constants import ETRM_URL
+from src.etrm import constants as cnst
 from src.etrm.exceptions import ETRMResponseError, ETRMConnectionError
+from src.utils import getc
 
 
 def convert_from_utc(date_string: str) -> dt.datetime:
@@ -22,30 +21,20 @@ def convert_from_utc(date_string: str) -> dt.datetime:
     )
 
 
-class Baseline(Enum):
-    PEDR_1 = 'UnitkW1stBaseline'
-    """First Baseline - Peak Electric Demand Reduction"""
+def is_nc_nr(row) -> bool:
+    val = row[cnst.MAT]
+    if not isinstance(val, str):
+        return False
 
-    PEDR_2 = 'UnitkW2ndBaseline'
-    """Second Baseline - Peak Electric Demand Reduction"""
+    return val == "NC" or val == "NR"
 
-    ES_1 = 'UnitkWh1stBaseline'
-    """First Baseline - Electric Savings"""
 
-    ES_2 = 'UnitkWh2ndBaseline'
-    """Second Baseline - Electric Savings"""
+def is_ar(row) -> bool:
+    val = row[cnst.MAT]
+    if not isinstance(val, str):
+        return False
 
-    GS_1 = 'UnitTherm1stBaseline'
-    """First Baseline - Gas Savings"""
-
-    GS_2 = 'UnitTherm2ndBaseline'
-    """Second Baseline - Gas Savings"""
-
-    MTC_1 = 'UnitMeaCost1stBaseline'
-    """Measure Total Cost 1st Baseline"""
-
-    MTC_2 = 'UnitMeaCost2ndBaseline'
-    """Measure Total Cost 2nd Baseline"""
+    return val == "AR"
 
 
 class PermutationsTable:
@@ -93,144 +82,194 @@ class PermutationsTable:
 
         self.results.extend(table.results)
 
-    def average(self, column_name: str) -> float | None:
-        column = self.data.get(column_name, None)
-        if column == None:
-            return None
+    def get_nc_nr_rows(self) -> DataFrame:
+        return self.data.loc[self.data.apply(is_nc_nr, axis=1)]
 
-        if not all([type(item) is float for item in column]):
-            return None
+    def get_ar_rows(self) -> DataFrame:
+        return self.data.loc[self.data.apply(is_ar, axis=1)]
 
-        return sum(column) / len(column)
+    def get_standard_savings(self, nc_nr_field: str, ar_field: str) -> float | None:
+        """Returns the standard savings from the specified fields.
 
-    def get_standard_costs(self) -> tuple[float, float, float]:
-        """Returns a three-tuple of the (Peak Electric Demand Reduction,
-         Electric Savings, Gas Savings) standard costs.
-
-        The standard costs are either:
-            First Baseline  (NC or NR)
-            Second Baseline (AR)
-            None            (other)
+        Typically, an MAT is either NC/NR, AR, or other. When this is not the
+        case (i.e., varying MATs), rows with NC/NR and AR MATs are averaged.
+        Rows with other MATs are not included.
         """
 
-        baseline_count = 0
-        pedr = 0.0
-        es = 0.0
-        gs = 0.0
+        nc_nr_rows = self.get_nc_nr_rows()
+        ar_rows = self.get_ar_rows()
+        if nc_nr_rows.empty and ar_rows.empty:
+            return None
 
-        nc_nr_rows = self.data.loc[
-            self.data['MeasAppType'].isin(['NC', 'NR'])
-        ]
-        if not nc_nr_rows.empty:
-            pedr += nc_nr_rows[Baseline.PEDR_1.value].mean()
-            es += nc_nr_rows[Baseline.ES_1.value].mean()
-            gs += nc_nr_rows[Baseline.GS_1.value].mean()
-            baseline_count += 1
+        stnd_savings: Series = pd.concat(
+            [nc_nr_rows[nc_nr_field], ar_rows[ar_field]],
+            ignore_index=True,
+            sort=False
+        )
 
-        ar_rows = self.data.loc[
-            self.data['MeasAppType'] == 'AR'
-        ]
-        if not ar_rows.empty:
-            pedr += ar_rows[Baseline.PEDR_2.value].mean()
-            es += ar_rows[Baseline.ES_2.value].mean()
-            gs += ar_rows[Baseline.GS_2.value].mean()
-            baseline_count += 1
+        val = stnd_savings.mean()
+        if math.isnan(val):
+            return 0.0
 
-        if baseline_count == 0:
-            return (0.0, 0.0, 0.0)
+        return val
 
-        if math.isnan(pedr):
-            pedr = 0.0
-        else:
-            pedr /= baseline_count
+    def get_standard_pedr(self) -> float | None:
+        return self.get_standard_savings(cnst.PEDR_1, cnst.PEDR_2)
 
-        if math.isnan(es):
-            es = 0.0
-        else:
-            es /= baseline_count
+    def get_standard_es(self) -> float | None:
+        return self.get_standard_savings(cnst.ES_1, cnst.ES_2)
 
-        if math.isnan(gs):
-            gs = 0.0
-        else:
-            gs /= baseline_count
+    def get_standard_gs(self) -> float | None:
+        return self.get_standard_savings(cnst.GS_1, cnst.GS_2)
 
-        return (pedr, es, gs)
+    def get_standard_ws(self) -> float | None:
+        return self.get_standard_savings(cnst.WS_1, cnst.WS_2)
 
-    def get_pre_existing_costs(self) -> tuple[float, float, float]:
-        """Returns a three-tuple of the (Peak Electric Demand Reduction,
-         Electric Savings, Gas Savings) pre-existing costs.
-
-        The pre-existing costs are either:
-            None            (NC or NR)
-            First Baseline  (other)
-        """
-
+    def get_existing_savings(self, field: str) -> float | None:
         rows = self.data.loc[
-            ~self.data['MeasAppType'].isin(['NC', 'NR'])
+            ~self.data[cnst.MAT].isin(["NC", "NR"])
         ]
 
-        pedr = rows[Baseline.PEDR_1.value].mean()
-        if math.isnan(pedr):
-            pedr = 0.0
+        if rows.empty:
+            return None
 
-        es = rows[Baseline.ES_1.value].mean()
-        if math.isnan(es):
-            es = 0.0
+        val = rows[field].mean()
+        if math.isnan(val):
+            return 0
 
-        gs = rows[Baseline.GS_1.value].mean()
-        if math.isnan(gs):
-            gs = 0.0
-        return (pedr, es, gs)
+        return val
 
-    def get_incremental_cost(self) -> float:
-        """Returns the incremental cost of the measure.
-        
-        The incremental cost is either:
-            Measure Total Cost 1st Baseline (NC or NR)
-            Measure Total Cost 2nd Baseline (AR)
-            None                            (other)
-        """
+    def get_existing_pedr(self) -> float | None:
+        return self.get_existing_savings(cnst.PEDR_1)
 
-        mtc_1_col = self.data.loc[
-            self.data['MeasAppType'].isin(['NC', 'NR'])
-        ][Baseline.MTC_1.value]
+    def get_existing_es(self) -> float | None:
+        return self.get_existing_savings(cnst.ES_1)
 
-        mtc_2_col = self.data.loc[
-            self.data['MeasAppType'] == 'AR'
-        ][Baseline.MTC_2.value]
+    def get_existing_gs(self) -> float | None:
+        return self.get_existing_savings(cnst.GS_1)
 
-        if mtc_1_col.empty and mtc_2_col.empty:
+    def get_existing_ws(self) -> float | None:
+        return self.get_existing_savings(cnst.WS_1)
+
+    def get_base_case_cost(self) -> float | None:
+        nc_nr_rows = self.get_nc_nr_rows()
+        ar_rows = self.get_ar_rows()
+        other_rows = self.data.loc[
+            self.data.apply(
+                lambda row: not (is_nc_nr(row) or is_ar(row)),
+                axis=1
+            )
+        ]
+
+        all_costs: Series = pd.concat(
+            [
+                nc_nr_rows[cnst.ULC_1] + nc_nr_rows[cnst.UMC_1],
+                ar_rows[cnst.ULC_2] + ar_rows[cnst.UMC_2],
+                Series([0.0] * other_rows.size)
+            ],
+            ignore_index=True,
+            sort=False
+        )
+
+        if all_costs.empty:
+            return None
+
+        avg_cost = all_costs.mean()
+        if math.isnan(avg_cost):
             return 0.0
 
-        if mtc_1_col.empty:
-            mtc = mtc_2_col.mean()
-        elif mtc_2_col.empty:
-            mtc = mtc_1_col.mean()
+        return avg_cost
+
+    def get_measure_cost(self) -> float | None:
+        nc_nr_rows = self.get_nc_nr_rows()
+        other_rows = self.data.loc[
+            self.data.apply(
+                lambda row: not is_nc_nr(row),
+                axis=1
+            )
+        ]
+
+        all_costs: Series = pd.concat(
+            [
+                nc_nr_rows[cnst.ULC_M] + nc_nr_rows[cnst.UMC_M],
+                other_rows[cnst.MTC_1]
+            ],
+            ignore_index=True,
+            sort=False
+        )
+
+        if all_costs.empty:
+            return None
+
+        avg_cost = all_costs.mean()
+        if math.isnan(avg_cost):
+            return 0.0
+
+        return avg_cost
+
+    def get_incremental_cost(self) -> float | None:
+        nc_nr_rows = self.get_nc_nr_rows()
+        ar_rows = self.get_ar_rows()
+        other_rows = self.data.loc[
+            self.data.apply(
+                lambda row: not (is_nc_nr(row) or is_ar(row)),
+                axis=1
+            )
+        ]
+
+        all_costs: Series = pd.concat(
+            [
+                nc_nr_rows[cnst.MTC_1],
+                ar_rows[cnst.MTC_2],
+                Series([0.0] * other_rows.size)
+            ],
+            ignore_index=True,
+            sort=False
+        )
+
+        if all_costs.empty:
+            return None
+
+        val = all_costs.mean()
+        if math.isnan(val):
+            return 0.0
+
+        return val
+
+    def get_eul_years(self, no_aoe: bool = True) -> float | None:
+        if no_aoe:
+            df = self.data.loc[
+                ~self.data[cnst.MAT].eq("AOE")
+            ]
         else:
-            mtc_col = pd.concat([mtc_1_col, mtc_2_col],
-                                ignore_index=True,
-                                sort=False)
-            mtc = mtc_col.mean()
+            df = self.data
 
-        if math.isnan(mtc):
+        if df.empty:
+            return None
+
+        val = df[cnst.EUL].mean()
+        if math.isnan(val):
             return 0.0
-        return mtc
 
-    def get_total_cost(self) -> float:
-        """Returns the total cost of the measure.
-        
-        The total cost is either:
-            None                            (NC or NR)
-            Measure Total Cost 1st Baseline (other)
-        """
+        return val
 
-        mtc_col = self.data.loc[
-            ~self.data['MeasAppType'].isin(['NC', 'NR'])
-        ][Baseline.MTC_1.value]
-        mtc = mtc_col.mean()
-        if math.isnan(mtc):
-            mtc = 0.0
-        return mtc
+    def get_rul_years(self) -> float | None:
+        eul_yrs = self.data.loc[
+            self.data[cnst.MAT].eq("AOE")
+        ][cnst.EUL]
+
+        rul_yrs = self.data.loc[
+            self.data[cnst.MAT].eq("AR")
+        ][cnst.RUL]
+
+        if eul_yrs.empty and rul_yrs.empty:
+            return None
+
+        val = (eul_yrs + rul_yrs).mean()
+        if math.isnan(val):
+            return 0.0
+
+        return val
 
     def __eq__(self, other) -> bool:
         if not isinstance(other, PermutationsTable):
@@ -726,7 +765,7 @@ class Measure:
             self.permutations_url = getc(res_json, 'permutations_url', str)
             self.property_data_url = getc(res_json, 'property_data_url', str)
             id_path = '/'.join(self.full_version_id.split('-'))
-            self.link = f'{ETRM_URL}/measure/{id_path}'
+            self.link = f'{cnst.ETRM_URL}/measure/{id_path}'
         except IndexError:
             raise ETRMResponseError()
 

@@ -30,6 +30,7 @@ from src import (
     START_TIME,
     TMP_DIR
 )
+from src.etrm import ETRM_URL
 from src.etrm.models import Measure
 from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import (
@@ -586,7 +587,6 @@ class MeasureSummary:
                 style=PSTYLES["SectionHeader1"]
             )
         )
-        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
 
         self.story.add(Paragraph("Offering ID", style=PSTYLES["SectionSubHeader1"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
@@ -710,7 +710,7 @@ class MeasureSummary:
         ]
 
         table = self._build_parameters_table(params, nd_params)
-        table_header = Paragraph("Applicable Parameters:", PSTYLES["h6"])
+        table_header = Paragraph("Applicable Parameters:", PSTYLES["SectionHeader1"])
         self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
     def add_impact_table(self):
@@ -718,30 +718,102 @@ class MeasureSummary:
             return
 
         try:
-            permutations = self.connection.get_permutations(self._cur_measure)
+            perms = self.connection.get_permutations(self._cur_measure)
         except ETRMResponseError as err:
             raise SummaryGenError(f"eTRM Connection Error ({err.status}):\n{err.message}")
-        
-        std_costs = permutations.get_standard_costs()
-        pre_costs = permutations.get_pre_existing_costs()
-        inc_cost = permutations.get_incremental_cost()
-        tot_cost = permutations.get_total_cost()
+
+        cost_map = {
+            "pre_pedr": perms.get_existing_pedr(),
+            "std_pedr": perms.get_standard_pedr(),
+            "pre_es": perms.get_existing_es(),
+            "std_es": perms.get_standard_es(),
+            "pre_gs": perms.get_existing_gs(),
+            "std_gs": perms.get_standard_gs(),
+            "pre_ws": perms.get_existing_ws(),
+            "std_ws": perms.get_standard_ws(),
+            "msr_cost": perms.get_measure_cost(),
+            "inc_cost": perms.get_incremental_cost(),
+            "bsc_cost": perms.get_base_case_cost(),
+            "eul_yrs": perms.get_eul_years(),
+            "rul_yrs": perms.get_rul_years()
+        }
+
+        for key, val in cost_map.items():
+            if val is None:
+                cost_map[key] = "-"
+            elif key != "eul_yrs" and key != "rul_yrs":
+                cost_map[key] = f"{val:.2f}"
+            else:
+                cost_map[key] = f"{int(val)}"
+
+        measure_id, version = self._cur_measure.full_version_id.split("-", 1)
+        base_link = f"{ETRM_URL}/measure/{measure_id.lower()}/{version}/"
+        link_map = {
+            "pedr": f"{base_link}#peak-electric-demand-reduction-kw",
+            "es": f"{base_link}#electric-savings-kwh",
+            "gs": f"{base_link}#gas-savings-therms",
+            "ws": f"{base_link}#non-energy-impacts",
+            "costs": f"{base_link}#base-case-material-cost-unit",
+            "life": f"{base_link}#life-cycle"
+        }
 
         data = [
             ["", "Average Value", "Methodology"],
-            ["Existing - Peak Demand Reduction (kW)", f"{pre_costs[0]:.2f}", ""],
-            ["Standard - Peak Demand Reduction (kW)", f"{std_costs[0]:.2f}", "Link"],
-            ["Existing - Electric Savings (kWh/yr)", f"{pre_costs[1]:.2f}", ""],
-            ["Standard - Electric Savings (kWh/yr)", f"{std_costs[1]:.2f}", "Link"],
-            ["Existing - Gas Savings (therm/yr)", f"{pre_costs[2]:.2f}", ""],
-            ["Standard - Gas Savings (therm/yr)", f"{std_costs[2]:.2f}", "Link"],
-            ["Existing - Water Savings (gal/yr)", "", ""],
-            ["Standard - Water Savings (gal/yr)", "", "Link"],
-            ["Measure Case Costs ($)", "", "Link"],
-            ["Base Case Costs ($)", f"{tot_cost:.2f}", ""],
-            ["Incremental Cost ($)", f"{inc_cost:.2f}", ""],
-            ["Effective Useful Life (years)", "", "Link"],
-            ["Remaining Useful Life (years)", "", ""]
+            [
+                "Existing - Peak Demand Reduction (kW)",
+                cost_map.get("pre_pedr"),
+                Paragraph(
+                    f"<link href=\"{link_map.get('pedr')}\">Link</link>",
+                    style=DEF_PSTYLE.link
+                )
+            ],
+            ["Standard - Peak Demand Reduction (kW)", cost_map.get("std_pedr"), ""],
+            [
+                "Existing - Electric Savings (kWh/yr)",
+                cost_map.get("pre_es"),
+                Paragraph(
+                    f"<link href=\"{link_map.get('es')}\">Link</link>",
+                    style=DEF_PSTYLE.link
+                )
+            ],
+            ["Standard - Electric Savings (kWh/yr)", cost_map.get("std_es"), ""],
+            [
+                "Existing - Gas Savings (therm/yr)",
+                cost_map.get("pre_gs"),
+                Paragraph(
+                    f"<link href=\"{link_map.get('gs')}\">Link</link>",
+                    style=DEF_PSTYLE.link
+                )
+            ],
+            ["Standard - Gas Savings (therm/yr)", cost_map.get("std_gs"), ""],
+            [
+                "Existing - Water Savings (gal/yr)",
+                cost_map.get("pre_ws"),
+                Paragraph(
+                    f"<link href=\"{link_map.get('ws')}\">Link</link>",
+                    style=DEF_PSTYLE.link
+                )
+            ],
+            ["Standard - Water Savings (gal/yr)", cost_map.get("std_ws"), ""],
+            [
+                "Measure Case Costs ($)",
+                cost_map.get("msr_cost"),
+                Paragraph(
+                    f"<link href=\"{link_map.get('costs')}\">Link</link>",
+                    style=DEF_PSTYLE.link
+                )
+            ],
+            ["Base Case Costs ($)", cost_map.get("bsc_cost"), ""],
+            ["Incremental Cost ($)", cost_map.get("inc_cost"), ""],
+            [
+                "Effective Useful Life (years)",
+                cost_map.get("eul_yrs"),
+                Paragraph(
+                    f"<link href=\"{link_map.get('life')}\">Link</link>",
+                    style=DEF_PSTYLE.link
+                )
+            ],
+            ["Remaining Useful Life (years)", cost_map.get("rul_yrs"), ""]
         ]
 
         spans = [
@@ -749,11 +821,11 @@ class MeasureSummary:
             ((3, 2), (2, 0)),
             ((5, 2), (2, 0)),
             ((7, 2), (2, 0)),
-            ((9, 2), (2, 0)),
+            ((9, 2), (3, 0)),
             ((12, 2), (2, 0))
         ]
         table = BasicTable(data, spans=spans)
-        header = Paragraph("Average Impact:", style=PSTYLES["h6"])
+        header = Paragraph("Average Impact:", style=PSTYLES["SectionHeader1"])
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
     def get_shared_key_terminology_table(self, item: KeyTerminology) -> list[list[str]]:

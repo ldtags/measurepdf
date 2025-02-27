@@ -199,7 +199,8 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
         ParagraphStyle(
             "SectionHeader1",
             font_name="TimesNewRoman",
-            font_size=17
+            font_size=17,
+            space_after=8
         )
     )
     style_sheet.add(

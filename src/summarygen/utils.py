@@ -88,8 +88,15 @@ def get_flowable_width(flowable: Flowable) -> float:
         return width
 
     if isinstance(flowable, Paragraph):
+        text = ""
+        try:
+            for frag in flowable.frags:
+                text += frag.text
+        except AttributeError:
+            text = flowable.text
+
         return stringWidth(
-            flowable.text,
+            text,
             flowable.style.fontName,
             flowable.style.fontSize,
             flowable.encoding

@@ -5,5 +5,6 @@ __all__ = [
 ]
 
 
+from src.etrm.models import Measure
+from src.etrm.constants import ETRM_URL
 from src.etrm.connection import ETRMConnection
-from src.etrm.models import ETRM_URL, Measure
