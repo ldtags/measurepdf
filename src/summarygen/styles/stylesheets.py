@@ -240,44 +240,16 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
     style_sheet = StyleSheet[TableStyle]()
     style_sheet.add(
         TableStyle(
-            'SummaryTable', 
+            "BasicTable",
             [
-                ('GRID', (0, 0), (-1, -1), 0.25, colors.black),
-                ('TOPPADDING', (0, 0), (-1, -1), 1),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 1),
-                ('VALIGN', (0, 0), (1, -1), 'MIDDLE')
-            ]
-        )
-    )
-    style_sheet.add(
-        TableStyle(
-            'SectionsTable',
-            [
-                ('GRID', (0, 0), (-1, -1), 0.5, colors.black),
-                ('SPAN', (0, 0), (0, 2)),
-                ('SPAN', (0, 3), (0, 6)),
-                ('SPAN', (0, 7), (0, 9)),
-                ('SPAN', (0, 10), (0, 13)),
-                ('SPAN', (0, 14), (0, 17)),
-                ('TOPPADDING', (0, 0), (-1, -1), 5),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 5),
-                ('VALIGN', (0, 0), (0, -1), 'TOP'),
-                ('VALIGN', (1, 0), (1, -1), 'MIDDLE')
-            ]
-        )
-    )
-    style_sheet.add(
-        TableStyle(
-            'ValueTable',
-            [
-                ('GRID', (0, 0), (-1, -1), 0.25, colors.white),
-                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
-                ('LEFTPADDING', (0, 0), (-1, -1), 9),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 9),
-                ('TOPPADDING', (0, 0), (-1, -1), 9),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 9),
-                ('TEXTCOLOR', (0, 0), (-1, 0), colors.white)
+                ("GRID", (0, 0), (-1, -1), 0.25, colors.black),
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("ALIGN", (0, 0), (-1, -1), "LEFT"),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 5),
+                ("TOPPADDING", (0, 0), (-1, -1), 2),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 2),
+                ("TEXTCOLOR", (0, 0), (-1, 0), colors.white)
             ]
         )
     )
@@ -430,9 +402,10 @@ def get_table_style(
     headers: int = 1,
     determinants: int = 0,
     spans: list[_TableSpan] = [],
-    orient: _TableOrient = "top"
+    orient: _TableOrient = "top",
+    alternate_row_bg: bool = False,
 ) -> TableStyle:
-    table_style = copy.deepcopy(TSTYLES["ValueTable"])
+    table_style = copy.deepcopy(TSTYLES["BasicTable"])
     table_styles = table_style.getCommands()
 
     for i in range(0, headers):
@@ -486,7 +459,7 @@ def get_table_style(
         row = data[y]
         for x in range(0, len(row)):    # will cause a bug with left-orient tables
             if determinants > 0:
-                if y % 2 == 1 or is_spanned(x, y, spans):
+                if not alternate_row_bg or y % 2 == 1 or is_spanned(x, y, spans):
                     color = COLORS['ValueTableRowLight']
                 else:
                     color = COLORS['ValueTableRowAltLight']
