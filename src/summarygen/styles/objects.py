@@ -184,12 +184,12 @@ class ParagraphStyle(PropertySet):
                  **kwargs):
         if font_name is not None:
             kwargs['fontName'] = font_name
-        
+
         if font_size is not None:
             kwargs['fontSize'] = font_size
             if leading is None:
                 kwargs['leading'] = font_size * 1.2
-        
+
         if leading is not None:
             kwargs['leading'] = leading
 
@@ -201,13 +201,13 @@ class ParagraphStyle(PropertySet):
 
         if left_indent is not None:
             kwargs['leftIndent'] = left_indent
-        
+
         if right_indent is not None:
             kwargs['rightIndent'] = right_indent
-        
+
         if space_before is not None:
             kwargs['spaceBefore'] = space_before
-        
+
         if space_after is not None:
             kwargs['spaceAfter'] = space_after
 
@@ -267,6 +267,26 @@ class ParagraphStyle(PropertySet):
     @text_color.setter
     def text_color(self, color: colors.Color) -> None:
         self['textColor'] = color
+
+    @property
+    def space_before(self) -> float:
+        space_before = self["spaceBefore"]
+        assert isinstance(space_before, float | int)
+        return float(space_before)
+
+    @space_before.setter
+    def space_before(self, val: float) -> None:
+        self["spaceBefore"] = val
+
+    @property
+    def space_after(self) -> float:
+        space_after = self["spaceAfter"]
+        assert isinstance(space_after, float | int)
+        return space_after
+
+    @space_after.setter
+    def space_after(self, val: float) -> None:
+        self["spaceAfter"] = val
 
     @property
     def subscripted(self) -> ParagraphStyle:
