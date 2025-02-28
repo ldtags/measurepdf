@@ -601,14 +601,14 @@ class MeasureSummary:
             )
         )
 
-        self.story.add(Paragraph("Offering ID", style=PSTYLES["h3"]))
+        self.story.add(Paragraph("Offering ID", style=PSTYLES["h4"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(*self.convert_html(desc_obj.offering_id))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self._add_value_table("offerId")
         self.story.add(NEWLINE)
 
-        self.story.add(Paragraph("Base Case Description", style=PSTYLES["h3"]))
+        self.story.add(Paragraph("Base Case Description", style=PSTYLES["h4"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(*self.convert_html(desc_obj.base_case))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
@@ -843,7 +843,7 @@ class MeasureSummary:
 
     def add_streamlined_permutations(self) -> None:
         file_name = f"SW{self._cur_measure.use_category.upper()}_Summary.xlsx"
-        self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["h4"]))
+        self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["h5"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(
             StreamlinedPermutations(

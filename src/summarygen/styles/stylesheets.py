@@ -157,14 +157,14 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            "h3",
+            "h4",
             font_name="TimesNewRoman",
             font_size=11
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            "h4",
+            "h5",
             font_name="AptosB",
             font_size=10
         )
