@@ -10,6 +10,7 @@ __all__ = [
     "get_revisions",
     "get_key_terminology",
     "get_section_description",
+    "get_introduction_html",
 ]
 
 
@@ -79,3 +80,9 @@ def get_section_description(measure_id: str) -> SectionDescription | None:
         return None
 
     return SectionDescription(desc_json)
+
+
+def get_introduction_html() -> str:
+    file_path = get_path("data/introduction.html")
+    with open(file_path, "r") as fp:
+        return fp.read()

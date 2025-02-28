@@ -149,9 +149,8 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet.add(
         ParagraphStyle(
             'h3',
-            font_name='SourceSansProB',
-            font_size=18,
-            space_after=5
+            font_name='Arial',
+            font_size=12
         )
     )
     style_sheet.add(

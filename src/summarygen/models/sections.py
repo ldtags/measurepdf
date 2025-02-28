@@ -231,9 +231,8 @@ class ListSection(HTMLSection):
         bullet_option: BulletOption = CIRCLE_BULLET,
         indent_level: int = DEFAULT_INDENT_LEVEL,
         indent_size: int = DEFAULT_INDENT_SIZE,
-        bullet_indent_size: int = DEFAULT_BULLET_INDENT_SIZE,
         space_before: int = 4,
-        space_after: int = 5,
+        space_after: int = 2,
         alignment: Alignment = DEFAULT_ALIGNMENT
     ) -> None:
         super().__init__(
@@ -246,7 +245,6 @@ class ListSection(HTMLSection):
 
         self.list_items = list_items
         self.bullet_option = bullet_option
-        self.bullet_indent_size = bullet_indent_size
 
     @property
     def height(self) -> float:
@@ -279,7 +277,8 @@ class ImageSection(HTMLSection):
         indent_size: int = DEFAULT_INDENT_SIZE,
         space_before: int = DEFAULT_SPACE_BEFORE,
         space_after: int = DEFAULT_SPACE_AFTER,
-        alignment: Alignment = Alignment.Center
+        alignment: Alignment = Alignment.Center,
+        scale: float = 1.0
     ) -> None:
         super().__init__(
             indent_level=indent_level,
@@ -289,6 +288,7 @@ class ImageSection(HTMLSection):
             alignment=alignment
         )
 
+        self.scale = scale
         self.url = url
         if url.startswith("./"):
             self.img_path = assets.get_path(url[2:])
@@ -299,11 +299,11 @@ class ImageSection(HTMLSection):
 
     @property
     def height(self) -> float:
-        return float(self._image_height)
+        return float(self._image_height) * self.scale
 
     @property
     def width(self) -> float:
-        return float(self._image_width)
+        return float(self._image_width) * self.scale
 
 
 class TableSection(HTMLSection):

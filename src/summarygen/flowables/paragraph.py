@@ -12,9 +12,13 @@ from src.summarygen.models.enums import (
 )
 from src.summarygen.styles import (
     ParagraphStyle,
+    Alignment,
     TSTYLES,
     DEF_PSTYLE,
-    INNER_WIDTH
+    INNER_WIDTH,
+    DEFAULT_INDENT_SIZE,
+    DEFAULT_BULLET_INDENT_SIZE,
+    DEFAULT_ALIGNMENT
 )
 from src.summarygen.models import (
     ParagraphElement,
@@ -122,56 +126,78 @@ class SummaryParagraph(Table):
         elements: list[ParagraphElement],
         measure: Measure | None = None,
         max_width: float = INNER_WIDTH,
-        space_after: float | None = None,
-        space_before: float | None = None,
-        indents: int = 0,
-        indent_size: int = 0,
+        indent_level: int = 0,
+        indent_size: int = DEFAULT_INDENT_SIZE,
+        is_bulleted: bool = False,
+        bullet_level: int = 0,
+        bullet_indent_size: int = DEFAULT_BULLET_INDENT_SIZE,
+        h_align: Alignment = DEFAULT_ALIGNMENT,
         **kwargs
     ) -> None:
         if kwargs.get("normalizedData", None) is not None:
             super().__init__(elements, **kwargs)
             return
 
-        assert indents >= 0
+        assert max_width >= 0
+        assert indent_level >= 0
         assert indent_size >= 0
+        assert bullet_level >= 0
+        assert bullet_indent_size >= 0
 
-        indents_width = indents * indent_size
-        max_content_width = max_width - indents_width
+        indent_width = (indent_level + bullet_level) * indent_size
+        if bullet_level != 0:
+            indent_width += bullet_indent_size
+
+        max_content_width = max_width - indent_width
         self._lines = [
             [ParagraphLine(line, measure)]
             for line
             in wrap_elements(elements, max_content_width)
         ]
         if self._lines == []:
-            self._lines = [[]]
+            self._lines = [[ParagraphLine(ElementLine(""))]]
 
         row_heights: list[float] = []
         for line in self._lines:
-            if line == []:
-                row_heights.append(0.01)
-            else:
-                row_heights.append(line[0].height)
+            try:
+                height = max([item.height for item in line])
+            except ValueError:
+                height = 0.01
 
-        width = max([
-            math.fsum(row[0].col_widths)
-            for row
-            in self._lines
-        ])
+            row_heights.append(height)
 
-        if indents == 0:
-            col_widths = [width]
-        else:
-            col_widths = [indents_width, width]
+        content_width: float = 0.0
+        for line in self._lines:
+            try:
+                line_width = math.fsum([
+                    math.fsum(item.col_widths)
+                    for item
+                    in line
+                ])
+            except ValueError:
+                line_width = 0.01
+
+            content_width = max(content_width, line_width)
+
+        col_widths: list[float] = [content_width]
+
+        # apply indentation
+        for _ in range(indent_level + bullet_level):
+            col_widths.insert(0, indent_size)
             for line in self._lines:
                 line.insert(0, "")
 
-        if space_before is not None and space_before > 0:
-            self._lines.insert(0, [""])
-            row_heights.insert(0, space_before)
+        # insert the bullet point if necessary
+        if bullet_level != 0:
+            col_widths.insert(-1, bullet_indent_size)
+            for line in self._lines:
+                line.insert(-1, "")
 
-        if space_after is not None and space_after > 0:
-            self._lines.append([""])
-            row_heights.append(space_after)
+            if is_bulleted:
+                self._lines[0][-2] = XPreformatted(
+                    "<bullet>&bull</bullet> ",
+                    DEF_PSTYLE
+                )
 
         self.total_height = math.fsum(row_heights)
         super().__init__(
@@ -179,10 +205,5 @@ class SummaryParagraph(Table):
             colWidths=col_widths,
             rowHeights=row_heights,
             style=TSTYLES["Unstyled"],
-            hAlign="LEFT"
+            hAlign=h_align.value.upper()
         )
-
-    def set_style(self, style: ParagraphStyle) -> None:
-        for line in self._lines:
-            for para_line in line:
-                para_line.set_style(style)

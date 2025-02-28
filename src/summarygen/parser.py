@@ -269,10 +269,20 @@ class HTMLParser:
 
     def handle_img(self, tag: Tag) -> ImageSection:
         img_src = tag.get("src")
+        scale = tag.get("scale")
+        if scale is not None:
+            try:
+                scale = float(scale) / 100
+            except ValueError:
+                raise SummaryGenError(f"Invalid image scalar: {scale}")
+        else:
+            scale = 1.0
+
         return ImageSection(
             url=img_src,
             indent_level=self._indents,
-            indent_size=self._indent_size
+            indent_size=self._indent_size,
+            scale=scale
         )
 
     def handle_kth(self, tag: Tag) -> ParagraphSection:
@@ -303,7 +313,21 @@ class HTMLParser:
 
         match element.name:
             case "div" | "span" | "p":
-                return self.convert_elements(element.contents)
+                indents = element.get("indents")
+                if indents is not None:
+                    try:
+                        indents = int(indents)
+                        self._indents += indents
+                    except ValueError:
+                        warnings.warn(f"Invalid indentation value: {indents}")
+                        indents = None
+
+                sections = self.convert_elements(element.contents)
+
+                if indents is not None:
+                    self._indents -= indents
+
+                return sections
             case "a":
                 return self.handle_a(element)
             case "em" | "strong" | "sup" | "sub" | "pre":
@@ -353,7 +377,9 @@ class HTMLParser:
         html: str,
         bullet_option: BulletOption = CIRCLE_BULLET,
         indents: int = 0,
-        base_style: ParagraphStyle = DEF_PSTYLE
+        indent_size: int = DEFAULT_INDENT_SIZE,
+        base_style: ParagraphStyle = DEF_PSTYLE,
+        trim_newlines: bool = False
     ) -> list[HTMLSection]:
         """Converts HTML into HTML sections that can be converted into
         reportlab Flowables.
@@ -364,9 +390,23 @@ class HTMLParser:
         self._bullet_option = bullet_option
         self._indents = indents
         self._style = base_style
+        self._indent_size = indent_size
 
         soup = BeautifulSoup(html, "html.parser")
         sections = self.convert_elements(soup.contents)
+
+        if trim_newlines and sections != []:
+            left = 0
+            while left < len(sections) and isinstance(sections[left], NewlineSection):
+                left += 1
+
+            right = len(sections) - 1
+            while right >= 0 and isinstance(sections[right], NewlineSection):
+                right -= 1
+
+            sections = sections[left:right + 1]
+            sections[0].space_before = 0
+            sections[-1].space_after = 0
 
         self._set_defaults()
 

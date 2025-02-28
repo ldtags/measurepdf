@@ -487,12 +487,24 @@ class MeasureSummary:
         newline_height: float = NL_HEIGHT,
         max_width: float = INNER_WIDTH
     ) -> list[Flowable]:
-        sections = self.parser.parse(html)
+        sections = self.parser.parse(
+            html,
+            indent_size=DEFAULT_INDENT_SIZE * (2 / 3),
+            trim_newlines=True
+        )
         return self.generator.generate(
             sections,
             newline_height=newline_height,
             max_width=max_width
         )
+
+    def add_introduction(self) -> None:
+        _html = resources.get_introduction_html()
+        flowables = self.convert_html(_html, newline_height=DEFAULT_PARA_SPACING)
+        self.story.add(Paragraph("INTRODUCTION", style=PSTYLES["SectionHeader2"]))
+        self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
+        self.story.add(*flowables)
+        self.story.add(PageBreak())
 
     def add_table_of_contents(self) -> None:
         self.story.add(NextPageTemplate("TOC"))
@@ -1143,6 +1155,7 @@ class MeasureSummary:
         self._cur_measure = None
 
     def build(self, toc: bool = False) -> None:
+        self.add_introduction()
         self.add_revision_log()
         if toc:
             self.add_table_of_contents()

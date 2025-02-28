@@ -1,0 +1,164 @@
+<h3>Purpose</h3>
+<div>
+    The POU technical reference manual (TRM) provides information on eligibility, energy and water 
+    savings, costs, and other impacts - as well as the methodology used to estimate those impacts - 
+    for energy efficiency measures and projects. The energy savings estimates are used to report 
+    program accomplishments and measure progress towards program goals.
+</div>
+<h3>Manual Organization</h3>
+<div>
+    This section explains how the contents of this manual are organized. The TRM consists of both this 
+    document and the summary spreadsheets embedded with this document. The TRM presents all 
+    active deemed measure package versions hosted in the California Electronic Technical Reference 
+    Manual (eTRM).
+    <br>
+    Major sections and subsections within this manual are described as follows:
+    <div indents="1">
+        <strong>Table of Contents:</strong> Lists all the measures included in this document and their 
+        effective date ranges. Measures are grouped by their Use Category, such as HVAC, Food Service, 
+        etc.
+        <br>
+        The pages for each measure listing present text and data in the following order (with screen 
+        capture examples below to illustrate the respective sections/subsections):
+        <ul>
+            <li>
+                <strong>Measure Details:</strong> The start of a new measure page. Section includes the 
+                Measure Name, hyperlink to the measure in the eTRM, Use Category, Program Administrator 
+                (PA) Lead for the measure (i.e., the organization that oversaw the measure development), 
+                Measure Version ID, and Effective Date Range (i.e., Start Date and End Date) to 
+                indicate the measure's active period.
+                <br>
+                <img
+                    src="./assets/images/meas_det_intro.png"
+                    scale="55"
+                />
+            </li>
+            <li>
+                <strong>Measure Case and Base Case Definition:</strong> The two tables in this section 
+                provide high level description of the measure and define the determinants (i.e., energy 
+                efficient measure case condition, base case condition, and/or installation 
+                circumstances) that characterize the measure.
+                <br>
+                The "Offering ID" table describes the scope of the energy efficient measure case. The 
+                "Base Case Description" describes the base case that is being replaced. Definitions of 
+                "Measure Offering Description", "Existing Description", and "Standard Description" can 
+                be found in the Key Terminology section of this document.
+                <br>
+                <img
+                    src="./assets/images/mc_bc_intro.png"
+                    scale="68"
+                />
+            </li>
+            <li>
+                <strong>Applicable Parameters:</strong> Lists the parameter labels that are applicable 
+                for each measure. The definition of each parameter can be found in the Key Terminology 
+                section.
+                <br>
+                <img
+                    src="./assets/images/applicable_params_intro.png"
+                    scale="61"
+                />
+            </li>
+            <li>
+                <strong>Average Impacts:</strong> Provides the measure-level averages of energy savings, 
+                costs, water savings, and useful life. Values are calculated by averaging the applicable 
+                eTRM permutations. For details on the calculation methodology used to derive the impact 
+                data, click the hyperlink to be directed to the appropriate characterization section in 
+                the eTRM.
+                <br>
+                <img
+                    src="./assets/images/average_impacts_intro.png"
+                    scale="60"
+                />
+            </li>
+            <li>
+                <strong>Streamlined Permutations:</strong> Provide the same impact fields as above at the 
+                measure offering and building location (i.e., climate zone) level. Values are calculated 
+                by averaging the applicable eTRM permutations for each measure offering and climate zone. 
+                These are external Excel spreadsheets attached with the TRM, grouped by Use Category, and 
+                accessible via hyperlinks located at the end of each "Average Impacts" table.
+            </li>
+            <li>
+                <strong>Other:</strong> Includes text describing program exclusions, quality assurance 
+                related to design, installation, commissioning, and operation, and other important notes.
+                <br>
+                <div indents="1">
+                    Program Exclusions field highlights any rules or restrictions that limit the 
+                    eligibility of the measure, such as excluded market segments and building types.
+                    <br>
+                    Quality Assurance field lists the verification and quality-related activities required 
+                    for the design, installation, commissioning, and operation of the measure.
+                    <br>
+                    Important Notes field documents miscellaneous information important to the measure not 
+                    already captured in other sections.
+                </div>
+            </li>
+        </ul>
+        <strong>Key Terminology:</strong> Provides definitions and supplementary information for each field 
+        in the measure data specification and for other important terms used in this document.
+        <br>
+        <strong>Data Table:</strong> Refers to large data tables that are not fully included in the main 
+        sections of the TRM due to size and usability in PDF format. These tables include Effective Useful 
+        Life (EUL), Net to Gross (NTG), and Gross Savings Installation Adjustment (GSIA). Click on the 
+        embedded icon to open each Excel spreadsheet.
+        <br>
+        <strong>Appendix:</strong><ul>
+            <li>
+                <strong>Permutations Summary Spreadsheet:</strong> All the summary permutation spreadsheets 
+                accessible from one central location.
+            </li>
+            <li>
+                <strong>Permutation Data Specification:</strong> An embedded Excel spreadsheet that lists 
+                the data specification fields applicable to all measures, in the order that they appear in 
+                the permutation tables, along with:
+                <ul>
+                    <li>
+                        <strong>[Field] Reporting Name:</strong> API name of the data specification fields. 
+                        This API "Reporting Name" is used in the API or Postgres SQL read-only database. The 
+                        human-readable "Verbose name" of the data specification field is used in the 
+                        permutation CSV file downloadable from eTRM measure pages. 
+                    </li>
+                    <li>
+                        <strong>Order:</strong> Order in which the field appears in the permutation. List should be sequential.
+                    </li>
+                    <li>
+                        <strong>Grouping:</strong> Type or category of the data specification fields.
+                    </li>
+                    <li>
+                        <strong>Type:</strong> How fields are generated in the permutation tables (e.g., 
+                        automatically generated with measure metadata, input by the measure developer, or 
+                        uploaded data from external CET).
+                    </li>
+                    <li>
+                        <strong>Data type:</strong> Type of the values, such as "String" and "Decimal".
+                    </li>
+                    <li>
+                        <strong>Sample value:</strong> Example value in this field.
+                    </li>
+                    <li>
+                        <strong>Definition:</strong> Free text definition field for each data specification.
+                    </li>
+                </ul>
+            </li>
+            <li>
+                <strong>Sunsetted (or Deactivated Measures):</strong> List of sunsetted or deactivated measure 
+                versions plus three flag fields to indicate reasons for sunsetting or deactivating:
+                <ul>
+                    <li>
+                        TRM Update: Measures from a previous TRM that are no longer included in the new TRM.
+                    </li>
+                    <li>
+                        Measure Version Update: Measure version is expired or past its End Date and a new 
+                        measure version with data updated for the latest program year is available. The latest 
+                        version should be used.
+                    </li>
+                    <li>
+                        Measure Sunsetted/Deactivated: The entire measure package is sunsetted or 
+                        deactivated without a replacement version for various reasons, such as code change or 
+                        low measure uptake, etc.
+                    </li>
+                </ul>
+            </li>
+        </ul>
+    </div>
+</div>

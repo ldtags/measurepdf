@@ -24,7 +24,8 @@ from src.summarygen.styles import (
     PSTYLES,
     TSTYLES,
     STYLES,
-    NL_HEIGHT
+    NL_HEIGHT,
+    DEFAULT_BULLET_INDENT_SIZE
 )
 from src.summarygen.models import (
     HTMLSection,
@@ -45,14 +46,18 @@ logger = logging.getLogger(__name__)
 class FlowableGenerator:
     def __init__(self) -> None:
         self.bullet_level: int
+        self.bullet_indent_size: int
         self.newline_height: float
         self.max_width: float
+        self._is_bulleted: bool
         self._set_defaults()
 
     def _set_defaults(self) -> None:
         self.bullet_level = 0
+        self.bullet_indent_size = DEFAULT_BULLET_INDENT_SIZE
         self.newline_height = NL_HEIGHT
         self.max_width = INNER_WIDTH
+        self._is_bulleted = False
 
     def _join_sections(self, sections: list[HTMLSection]) -> list[HTMLSection]:
         """Joins as many adjacent HTML sections as possible and returns the
@@ -67,9 +72,13 @@ class FlowableGenerator:
         for section in sections[1:]:
             if isinstance(cur_section, ParagraphSection) and type(section) == type(cur_section):
                 cur_section.join(section)
-            else:
-                html_sections.append(cur_section)
-                cur_section = section
+                continue
+
+            if isinstance(section, ListSection):
+                section.list_items = [self._join_sections(line) for line in section.list_items]
+
+            html_sections.append(cur_section)
+            cur_section = section
 
         html_sections.append(cur_section)
         return html_sections
@@ -77,79 +86,48 @@ class FlowableGenerator:
     def handle_paragraph(self, section: ParagraphSection) -> SummaryParagraph:
         return SummaryParagraph(
             elements=section.elements,
-            max_width=self.max_width - section.indent_size * self.bullet_level,
-            space_after=section.space_after,
-            space_before=section.space_before,
-            indents=section.indent_level,
-            indent_size=section.indent_size
+            max_width=self.max_width,
+            indent_level=section.indent_level,
+            indent_size=section.indent_size,
+            is_bulleted=self._is_bulleted,
+            bullet_level=self.bullet_level,
+            bullet_indent_size=self.bullet_indent_size
         )
 
-    def handle_list(self, section: ListSection) -> Table:
-        data: list[list[Flowable | str]] = []
+    def handle_list(self, section: ListSection) -> list[Flowable]:
+        flowables: list[Flowable] = []
+
         self.bullet_level += 1
-        for list_item_sections in section.list_items:
-            flowables = self.convert_sections(list_item_sections)
-            if flowables == []:
+
+        for item_sections in section.list_items:
+            if item_sections == []:
                 continue
 
-            if isinstance(list_item_sections[0], ListSection):
-                data.append(["", flowables[0]])
-            else:
-                data.append([
-                    XPreformatted(
-                        "<bullet>&bull</bullet> ",
-                        style=STYLES["Normal"]
-                    ),
-                    flowables[0]
-                ])
+            i = 0
+            while i < len(item_sections) and isinstance(item_sections[i], NewlineSection):
+                flowables.extend(self.convert_section(item_sections[i]))
+                i += 1
 
-            if len(flowables) > 1:
-                for flowable in flowables[1:]:
-                    data.append(["", flowable])
+            self._is_bulleted = True
+            flowables.extend(self.convert_section(item_sections[i]))
+            self._is_bulleted = False
 
-        # Apply indentation
+            if len(item_sections) > i + 1:
+                flowables.extend(self.convert_sections(item_sections[i + 1:]))
+
         self.bullet_level -= 1
-        col_widths = [section.bullet_indent_size]
-        bullet_index = self.bullet_level + section.indent_level + 1
-        for _ in range(bullet_index):
-            col_widths.append(section.bullet_indent_size)
-            for row in data:
-                row.insert(0, "")
 
-        col_widths.append(self.max_width - sum(col_widths))
-        row_heights: list[float] = []
-        for row in data:
-            flowable = row[-1]
-            if isinstance(flowable, SummaryParagraph):
-                row_heights.append(flowable.total_height)
-            else:
-                raise SummaryGenError(f"Cannot get height of flowable type: {type(flowable)}")
-
-        list_flowable = Table(
-            data,
-            colWidths=col_widths,
-            rowHeights=row_heights,
-            hAlign="LEFT",
-            style=get_list_style(bullet_index)
-        )
-        return Table(
-            data=[[""], [list_flowable], [""]],
-            colWidths=[sum(col_widths)],
-            rowHeights=[section.space_before, sum(row_heights), section.space_after],
-            hAlign="LEFT",
-            style=TSTYLES["Unstyled"]
-        )
+        return flowables
 
     def handle_image(self, section: ImageSection) -> Table:
-        max_width = (
-            self.max_width
-            - section.indent_level * section.indent_size
-            - self.bullet_level * section.indent_size
-        )
-        image = utils.get_image(section.img_path, max_width=max_width)
+        indent_width = section.indent_level * section.indent_size
+        bullet_indent_width = self.bullet_level * self.bullet_indent_size
+        max_image_width = self.max_width - bullet_indent_width - indent_width
+        max_image_width *= section.scale
+        image = utils.get_image(section.img_path, max_width=max_image_width)
         data = [image]
         col_widths = [image.drawWidth]
-        rem_space = max_width - image.drawWidth
+        rem_space = max_image_width - image.drawWidth
         match section.alignment:
             case Alignment.Left:
                 data.append("")
@@ -163,7 +141,17 @@ class FlowableGenerator:
                 data.insert(0, "")
                 col_widths.insert(0, rem_space)
 
-        if section.indent_level > 0:
+        for _ in range(self.bullet_level):
+            data.insert(0, "")
+            col_widths.insert(0, self.bullet_indent_size)
+
+        if self._is_bulleted and self.bullet_level != 0:
+            data[self.bullet_level - 1] = XPreformatted(
+                "<bullet>&bull</bullet> ",
+                style=STYLES["Normal"]
+            )
+
+        for _ in range(section.indent_level):
             data.insert(0, "")
             col_widths.insert(0, section.indent_size)
 
@@ -263,7 +251,7 @@ class FlowableGenerator:
 
         return cur_token
 
-    def handle_math(self, section: MathSection) -> Flowable:
+    def handle_math(self, section: MathSection) -> Table:
         style = PSTYLES["Math"]
         max_width = stringWidth(section.expression, style.font_name, style.font_size)
         lines: list[tuple[Paragraph, float]] = [
@@ -347,48 +335,53 @@ class FlowableGenerator:
             hAlign=section.alignment.value.upper()
         )
 
-    def convert_section(self, section: HTMLSection) -> Flowable:
+    def convert_section(self, section: HTMLSection) -> list[Flowable]:
         """Converts an `HTMLSection` object into a `Flowable` object."""
 
         if isinstance(section, ParagraphSection):
-            return self.handle_paragraph(section)
+            flowables = [self.handle_paragraph(section)]
+        elif isinstance(section, ListSection):
+            flowables = self.handle_list(section)
+        elif isinstance(section, ImageSection):
+            flowables = [self.handle_image(section)]
+        elif isinstance(section, NewlineSection):
+            flowables = [self.handle_newline()]
+        elif isinstance(section, MathSection):
+            flowables = [self.handle_math(section)]
+        else:
+            raise SummaryGenError(f"Unsupported HTML section type: {type(section)}")
 
-        if isinstance(section, ListSection):
-            return self.handle_list(section)
+        if section.space_before != 0:
+            flowables.insert(0, Spacer(0.01, section.space_before))
 
-        if isinstance(section, ImageSection):
-            return self.handle_image(section)
+        if section.space_after != 0:
+            flowables.append(Spacer(0.01, section.space_after))
 
-        if isinstance(section, NewlineSection):
-            return self.handle_newline()
-
-        if isinstance(section, MathSection):
-            return self.handle_math(section)
-
-        raise SummaryGenError(f"Unsupported HTML section type: {type(section)}")
+        return flowables
 
     def convert_sections(self, sections: list[HTMLSection]) -> list[Flowable]:
         """Converts multiple `HTMLSection` objects into a list of `Flowable`
         objects.
         """
 
-        return list(
-            map(
-                lambda section: self.convert_section(section),
-                sections
-            )
-        )
+        flowables: list[Flowable] = []
+        for section in sections:
+            flowables.extend(self.convert_section(section))
+
+        return flowables
 
     def generate(
         self,
         sections: list[HTMLSection],
         newline_height: float | None = None,
-        max_width: float | None = None
+        max_width: float | None = None,
+        bullet_indent_size: int | None = None,
     ) -> list[Flowable]:
         logger.info("Generating flowables from HTML sections...")
 
         self.newline_height = newline_height or self.newline_height
         self.max_width = max_width or self.max_width
+        self.bullet_indent_size = bullet_indent_size or self.bullet_indent_size
 
         sections = self._join_sections(sections)
         flowables = self.convert_sections(sections)
