@@ -503,7 +503,6 @@ class MeasureSummary:
         _html = resources.get_introduction_html()
         flowables = self.convert_html(_html, newline_height=DEFAULT_PARA_SPACING)
         self.story.add(Paragraph("INTRODUCTION", style=PSTYLES["h1"]))
-        self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
         self.story.add(*flowables)
         self.story.add(PageBreak())
 
@@ -518,7 +517,7 @@ class MeasureSummary:
         logger.info("Generating revision log...")
 
         style = DEF_PSTYLE
-        header = Paragraph("Revision Log", style=PSTYLES["h6"])
+        header = Paragraph("Revision Log", style=PSTYLES["h3"])
         data = []
         data.append([
             Paragraph(table_header, style.bold)
@@ -1021,10 +1020,7 @@ class MeasureSummary:
         logger.info("Generating key terminology sections...")
 
         self.story.add(Paragraph("KEY TERMINOLOGY", style=PSTYLES["h1"]))
-        self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
-
         key_terminology = resources.get_key_terminology()
-
         sections = self.parser.parse(key_terminology.introduction)
         flowables = self.generator.generate(sections, newline_height=DEFAULT_PARA_SPACING)
         self.story.add(*flowables, Spacer(0.01, DEFAULT_PARA_SPACING))

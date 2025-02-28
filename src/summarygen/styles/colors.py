@@ -18,5 +18,6 @@ COLORS = {
     "Green": rgb_color(100, 163, 69),
     "RevisionLogGridLine": rgb_color(198, 175, 147),
     "RevisionLogHeaderBG": rgb_color(241, 234, 227),
-    "h1": rgb_color(140, 110, 74)
+    "h1": rgb_color(140, 110, 74),
+    "h3": rgb_color(64, 64, 64)
 }

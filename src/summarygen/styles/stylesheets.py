@@ -144,6 +144,8 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             "h1",
             font_name="Arial",
             font_size=14,
+            space_before=18,
+            space_after=12,
             text_color=COLORS["h1"]
         )
     )
@@ -153,6 +155,16 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             font_name="TimesNewRoman",
             font_size=17,
             space_after=8
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "h3",
+            font_name="Arial",
+            font_size=12,
+            space_before=8,
+            space_after=8,
+            text_color=COLORS["h3"]
         )
     )
     style_sheet.add(
@@ -171,10 +183,9 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            'h6',
-            font_name='Merriweather',
-            font_size=11,
-            space_after=8
+            "h6",
+            font_name="AptosB",
+            font_size=9
         )
     )
     style_sheet.add(

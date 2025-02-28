@@ -70,7 +70,7 @@ class FlowableGenerator:
         html_sections: list[HTMLSection] = []
         cur_section = sections[0]
         for section in sections[1:]:
-            if isinstance(cur_section, ParagraphSection) and type(section) == type(cur_section):
+            if isinstance(cur_section, ParagraphSection) and cur_section.can_join(section):
                 cur_section.join(section)
                 continue
 

@@ -155,16 +155,25 @@ class HTMLParser:
         self._style = DEF_PSTYLE
         self._bullet_option = None
 
-    def handle_text(self, element: NavigableString) -> ParagraphSection | NewlineSection:
-        text = element.get_text()
+    def handle_text(
+        self,
+        text: str,
+        style: ParagraphStyle | None = None
+    ) -> ParagraphSection | NewlineSection:
         if text == "\n":
             return NewlineSection()
 
+        para_style = style or self._style
         return ParagraphSection(
-            [ParagraphElement(text=text, style=self._style)],
+            [ParagraphElement(text=text, style=para_style)],
             indent_level=self._indents,
-            indent_size=self._indent_size
+            indent_size=self._indent_size,
+            space_before=para_style.space_before,
+            space_after=para_style.space_after
         )
+
+    def handle_nav_string(self, element: NavigableString) -> ParagraphSection:
+        return self.handle_text(element.get_text())
 
     def handle_a(self, tag: Tag) -> ParagraphSection:
         """Simple <a> tag handler.
@@ -202,11 +211,7 @@ class HTMLParser:
         return sections
 
     def handle_header(self, tag: Tag) -> ParagraphSection:
-        return ParagraphSection(
-            [ParagraphElement(text=tag.get_text(), style=PSTYLES[tag.name])],
-            indent_level=self._indents,
-            indent_size=self._indent_size
-        )
+        return self.handle_text(tag.get_text(), PSTYLES[tag.name])
 
     def _convert_rows(self, rows: list[ResultSet[Tag]]) -> list[list[list[HTMLSection] | None]]:
         row_sections: list[list[list[HTMLSection] | None]] = []
@@ -306,7 +311,7 @@ class HTMLParser:
 
     def convert_element(self, element: PageElement) -> HTMLSection | list[HTMLSection]:
         if isinstance(element, NavigableString):
-            return self.handle_text(element)
+            return self.handle_nav_string(element)
 
         if not isinstance(element, Tag):
             raise SummaryGenError(f"Unexpected page element type: {type(element)}")
@@ -332,7 +337,7 @@ class HTMLParser:
                 return self.handle_a(element)
             case "em" | "strong" | "sup" | "sub" | "pre":
                 return self.handle_styler(element)
-            case "h3" | "h6":
+            case "h1" | "h2" | "h3" | "h4" | "h5" | "h6":
                 return self.handle_header(element)
             case "table":
                 return self.handle_table(element)

@@ -15,6 +15,7 @@ __all__ = [
 
 
 import os
+import re
 import json
 from typing import Any, Literal
 from configparser import ConfigParser
@@ -85,4 +86,7 @@ def get_section_description(measure_id: str) -> SectionDescription | None:
 def get_introduction_html() -> str:
     file_path = get_path("data/introduction.html")
     with open(file_path, "r") as fp:
-        return fp.read()
+        _html = fp.read().replace("\n", "").replace("\t", "")
+
+    _html = re.sub(r"[ ]{2,}", " ", _html)
+    return _html

@@ -19,7 +19,7 @@ from src.summarygen.styles import (
     DEFAULT_ALIGNMENT,
     PSTYLES
 )
-from src.summarygen.models.enums import TextStyle
+from src.summarygen.models.enums import TextStyle, ElementType
 from src.summarygen.models.general import BulletOption
 from src.summarygen.models.elements import ParagraphElement
 from src.summarygen.models.constants import CIRCLE_BULLET
@@ -96,6 +96,27 @@ class HTMLSection(metaclass=ABCMeta):
     def width(self) -> float:
         return 0
 
+    def can_join(self, other: HTMLSection) -> bool:
+        if type(self) != type(other):
+            return False
+
+        if self.indent_level != other.indent_level:
+            return False
+
+        if self.indent_size != other.indent_size:
+            return False
+
+        if self.space_before != other.space_before:
+            return False
+
+        if self.space_after != other.space_after:
+            return False
+
+        if self.alignment != other.alignment:
+            return False
+
+        return True
+
 
 class NewlineSection(HTMLSection):
     """Defines an HTML newline section.
@@ -150,6 +171,32 @@ class ParagraphSection(HTMLSection):
 
         self.elements = elements
 
+    @property
+    def height(self) -> float:
+        height = max([element.height for element in self.elements])
+        return height
+
+    @property
+    def width(self) -> float:
+        width = max([element.width for element in self.elements])
+        return width
+
+    @property
+    def elements(self) -> list[ParagraphElement]:
+        return self._elements
+
+    @elements.setter
+    def elements(self, val: list[ParagraphElement]) -> None:
+        left = 0
+        while left < len(val) and val[left].text == " ":
+            left += 1
+
+        right = len(val) - 1
+        while right >= 0 and val[right].text == " ":
+            right -= 1
+
+        self._elements = val[left:right + 1]
+
     def join(self, section: ParagraphSection) -> None:
         """Joins `section` with this element.
 
@@ -158,7 +205,7 @@ class ParagraphSection(HTMLSection):
         instances will be joined.
         """
 
-        self.elements.extend(section.elements)
+        self.elements = [*self.elements, *section.elements]
 
     def add_style(self, style: TextStyle) -> None:
         """Adds `style` to each `ParagraphElement` in this objects elements.
@@ -169,16 +216,6 @@ class ParagraphSection(HTMLSection):
 
         for element in self.elements:
             element.add_text_style(style)
-
-    @property
-    def height(self) -> float:
-        height = max([element.height for element in self.elements])
-        return height
-
-    @property
-    def width(self) -> float:
-        width = max([element.width for element in self.elements])
-        return width
 
 
 class MathSection(HTMLSection):
@@ -232,7 +269,7 @@ class ListSection(HTMLSection):
         indent_level: int = DEFAULT_INDENT_LEVEL,
         indent_size: int = DEFAULT_INDENT_SIZE,
         space_before: int = 4,
-        space_after: int = 2,
+        space_after: int = 4,
         alignment: Alignment = DEFAULT_ALIGNMENT
     ) -> None:
         super().__init__(
@@ -275,8 +312,8 @@ class ImageSection(HTMLSection):
         url: str,
         indent_level: int = DEFAULT_INDENT_LEVEL,
         indent_size: int = DEFAULT_INDENT_SIZE,
-        space_before: int = DEFAULT_SPACE_BEFORE,
-        space_after: int = DEFAULT_SPACE_AFTER,
+        space_before: int = 8,
+        space_after: int = 8,
         alignment: Alignment = Alignment.Center,
         scale: float = 1.0
     ) -> None:
