@@ -502,7 +502,7 @@ class MeasureSummary:
     def add_introduction(self) -> None:
         _html = resources.get_introduction_html()
         flowables = self.convert_html(_html, newline_height=DEFAULT_PARA_SPACING)
-        self.story.add(Paragraph("INTRODUCTION", style=PSTYLES["SectionHeader2"]))
+        self.story.add(Paragraph("INTRODUCTION", style=PSTYLES["h1"]))
         self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
         self.story.add(*flowables)
         self.story.add(PageBreak())
@@ -597,18 +597,18 @@ class MeasureSummary:
         self.story.add(
             Paragraph(
                 "Measure Case and Base Case Description:",
-                style=PSTYLES["SectionHeader1"]
+                style=PSTYLES["h2"]
             )
         )
 
-        self.story.add(Paragraph("Offering ID", style=PSTYLES["SectionSubHeader1"]))
+        self.story.add(Paragraph("Offering ID", style=PSTYLES["h3"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(*self.convert_html(desc_obj.offering_id))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self._add_value_table("offerId")
         self.story.add(NEWLINE)
 
-        self.story.add(Paragraph("Base Case Description", style=PSTYLES["SectionSubHeader1"]))
+        self.story.add(Paragraph("Base Case Description", style=PSTYLES["h3"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(*self.convert_html(desc_obj.base_case))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
@@ -723,7 +723,7 @@ class MeasureSummary:
         ]
 
         table = self._build_parameters_table(params, nd_params)
-        table_header = Paragraph("Applicable Parameters:", PSTYLES["SectionHeader1"])
+        table_header = Paragraph("Applicable Parameters:", PSTYLES["h2"])
         self.story.add(KeepTogether([table_header, table]), NEWLINE)
 
     def add_impact_table(self):
@@ -838,12 +838,12 @@ class MeasureSummary:
             ((12, 2), (2, 0))
         ]
         table = BasicTable(data, spans=spans)
-        header = Paragraph("Average Impact:", style=PSTYLES["SectionHeader1"])
+        header = Paragraph("Average Impact:", style=PSTYLES["h2"])
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
     def add_streamlined_permutations(self) -> None:
         file_name = f"SW{self._cur_measure.use_category.upper()}_Summary.xlsx"
-        self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["SectionHeader3"]))
+        self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["h4"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(
             StreamlinedPermutations(
@@ -1020,7 +1020,7 @@ class MeasureSummary:
     def add_key_terminology(self) -> None:
         logger.info("Generating key terminology sections...")
 
-        self.story.add(Paragraph("KEY TERMINOLOGY", style=PSTYLES["SectionHeader2"]))
+        self.story.add(Paragraph("KEY TERMINOLOGY", style=PSTYLES["h1"]))
         self.story.add(Spacer(0.01, NL_HEIGHT * 0.5))
 
         key_terminology = resources.get_key_terminology()

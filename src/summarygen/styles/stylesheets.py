@@ -141,16 +141,32 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            'h2',
-            font_name='Merriweather',
-            font_size=19
+            "h1",
+            font_name="Arial",
+            font_size=14,
+            text_color=COLORS["h1"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'h3',
-            font_name='Arial',
-            font_size=12
+            "h2",
+            font_name="TimesNewRoman",
+            font_size=17,
+            space_after=8
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "h3",
+            font_name="TimesNewRoman",
+            font_size=11
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "h4",
+            font_name="AptosB",
+            font_size=10
         )
     )
     style_sheet.add(
@@ -163,26 +179,7 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            'Link',
-            font_name='SourceSansPro',
-            leading=18.5,
-            font_size=13.5,
-            linkUnderline=1,
-            underlineWidth=0.25,
-            text_color=COLORS['Green']
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            'h6Link',
-            linkUnderline=0,
-            text_color=COLORS['Green'],
-            parent=style_sheet['h6']
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            'BulletPoint',
+            "BulletPoint",
             font_size=18
         )
     )
@@ -192,36 +189,6 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
             font_name='MerriweatherB',
             font_size=18,
             alignment=TA_CENTER
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            "SectionHeader1",
-            font_name="TimesNewRoman",
-            font_size=17,
-            space_after=8
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            "SectionSubHeader1",
-            font_name="TimesNewRoman",
-            font_size=11
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            "SectionHeader2",
-            font_name="Arial",
-            font_size=14,
-            text_color=COLORS["SectionHeader2"]
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
-            "SectionHeader3",
-            font_name="AptosB",
-            font_size=10
         )
     )
     style_sheet.add(
