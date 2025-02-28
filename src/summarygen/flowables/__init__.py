@@ -16,9 +16,31 @@ Extending Custom Tables:
 """
 
 
+__all__ = [
+    "Spacer",
+    "Reference",
+    "StreamlinedPermutations",
+    "NEWLINE",
+    "ParagraphLine",
+    "SummaryParagraph",
+    "TableCell",
+    "BasicTable",
+    "ValueTable",
+    "ValueTableHeader",
+    "EmbeddedValueTable",
+    "TitlePage",
+    "TitleSection",
+    "TitleSectionContainer",
+    "TitleSectionSubContainer",
+    "split_word",
+    "wrap_elements"
+]
+
+
 from src.summarygen.flowables.general import (
     Spacer,
     Reference,
+    StreamlinedPermutations,
     NEWLINE
 )
 from src.summarygen.flowables.paragraph import (

@@ -219,6 +219,13 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
+            "SectionHeader3",
+            font_name="AptosB",
+            font_size=10
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
             "TerminologyHeader",
             text_color=COLORS["LightBrown"],
             parent=style_sheet["Paragraph"]

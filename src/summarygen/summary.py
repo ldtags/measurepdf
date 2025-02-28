@@ -61,7 +61,8 @@ from src.summarygen.generator import FlowableGenerator
 from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
-    TitlePage
+    TitlePage,
+    StreamlinedPermutations
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -840,6 +841,17 @@ class MeasureSummary:
         header = Paragraph("Average Impact:", style=PSTYLES["SectionHeader1"])
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
+    def add_streamlined_permutations(self) -> None:
+        file_name = f"SW{self._cur_measure.use_category.upper()}_Summary.xlsx"
+        self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["SectionHeader3"]))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+        self.story.add(
+            StreamlinedPermutations(
+                file_name,
+                "https://google.com"
+            )
+        )
+
     def get_shared_key_terminology_table(self, item: KeyTerminology) -> list[list[str]]:
         if not item.requires_etrm_table():
             return []
@@ -1150,6 +1162,7 @@ class MeasureSummary:
         self.add_bc_mc_section()
         self.add_parameters_table()
         self.add_impact_table()
+        self.add_streamlined_permutations()
         self.story.add(PageBreak())
 
         self._cur_measure = None

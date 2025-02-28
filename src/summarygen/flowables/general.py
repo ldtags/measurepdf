@@ -1,4 +1,5 @@
 import copy
+from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfgen.pathobject import PDFPathObject
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -7,6 +8,8 @@ from reportlab.platypus import (
     Flowable
 )
 
+from src import assets
+from src.summarygen import utils
 from src.summarygen.styles import (
     ParagraphStyle,
     PSTYLES,
@@ -106,5 +109,60 @@ class Reference(Flowable):
                 canvas.linkURL(url=self.link,
                                rect=area,
                                relative=1)
+        finally:
+            canvas.restoreState()
+
+
+class StreamlinedPermutations(Flowable):
+    def __init__(self, text: str, link: str) -> None:
+        self.text = text
+        self.link = link
+
+        self.img_path = assets.get_path("images/excel_icon.png")
+        self.img_obj = utils.get_image(
+            self.img_path,
+            max_height=0.3 * inch
+        )
+        self._style = style = PSTYLES["SmallerBase"]
+        text_width = stringWidth(text, style.font_name, style.font_size)
+        self._width = max(text_width, self.img_obj.drawWidth)
+        self._height = self.img_obj.drawHeight + style.leading
+
+    def wrap(self, *args) -> tuple[float, float]:
+        return (self._width, self._height)
+
+    def draw(self) -> None:
+        canvas = self.canv
+        if not isinstance(canvas, Canvas):
+            return
+
+        canvas.saveState()
+        try:
+            text_obj = canvas.beginText(x=0, y=0)
+            text_obj.setFont(
+                self._style.font_name,
+                self._style.font_size,
+                self._style.leading
+            )
+            text_obj.setFillColor(self._style.text_color)
+            text_obj.textOut(self.text)
+            canvas.drawText(text_obj)
+
+            rem_width = self._width - self.img_obj.drawWidth
+            canvas.drawImage(
+                self.img_path,
+                x=rem_width / 2,
+                y=self._style.leading,
+                height=self.img_obj.drawHeight,
+                width=self.img_obj.drawWidth,
+                preserveAspectRatio=True,
+                mask="auto"
+            )
+
+            canvas.linkURL(
+                url=self.link,
+                rect=(0, -3, self._width, self._height),
+                relative=1
+            )
         finally:
             canvas.restoreState()
