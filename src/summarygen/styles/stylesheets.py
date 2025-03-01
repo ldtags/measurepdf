@@ -331,6 +331,20 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
             ]
         )
     )
+    style_sheet.add(
+        TableStyle(
+            "SunsettedMeasuresTable",
+            [
+                ("BACKGROUND", (0, 0), (-1, 0), COLORS["RevisionLogHeaderBG"]),
+                ("LINEABOVE", (0, 0), (-1, 0), 0.5, COLORS["RevisionLogGridLine"]),
+                ("LINEBELOW", (0, 0), (-1, 0), 0.5, COLORS["RevisionLogGridLine"]),
+                ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
+                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
+                ("ALIGN", (0, 1), (3, -1), "LEFT"),
+                ("ALIGN", (4, 1), (-1, -1), "CENTER")
+            ]
+        )
+    )
 
     return style_sheet
 
@@ -366,7 +380,52 @@ def get_list_style(bullet_index: int) -> TableStyle:
     return TableStyle(style.name, cmds)
 
 
-def get_kt_table_style(num_cols: int, col_size: int) -> TableStyle:
+def get_sunsetted_measures_table_style(
+    num_rows: int,
+    spans: list[_TableSpan],
+    uc_row_indices: list[int]
+) -> TableStyle:
+    style = copy.deepcopy(TSTYLES["SunsettedMeasuresTable"])
+    cmds = style.getCommands()
+
+    # apply use category row styles
+    for i, y in enumerate(uc_row_indices):
+        cmds.append(("BACKGROUND", (0, y), (-1, y), COLORS["SunsettedMeasuresUCRow"]))
+        cmds.append(("SPAN", (0, y), (-1, y)))
+        if y != 1:
+            cmds.append(("LINEABOVE", (0, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+
+        cmds.append(("LINEBELOW", (0, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+
+    # get each row that contains a spanned Start Date - End Date column
+    sl_row_indice_map: dict[int, _TableSpan] = {}
+    for span in spans:
+        if span[1][0] != 0:
+            for y in range(span[1][0] - span[0][0]):
+                sl_row_indice_map[y] = span
+
+    uc_row_indice_set = set(uc_row_indices)
+    for y in range(num_rows):
+        if y in uc_row_indice_set or y + 1 in uc_row_indice_set:
+            continue
+
+        if y not in sl_row_indice_map:
+            cmds.append(("LINEBELOW", (1, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+            continue
+
+        span = sl_row_indice_map[y]
+        cmds.append(("LINEBELOW", (1, y), (2, y), 0.25, COLORS["RevisionLogGridLine"]))
+        cmds.append(("LINEBELOW", (4, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+        if y - 1 not in uc_row_indice_set and y == span[0][0]:
+            cmds.append(("LINEBELOW", (1, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+
+        if y + 1 not in uc_row_indice_set and y == span[0][0] + span[1][0]:
+            cmds.append(("LINEBELOW", (1, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+
+    return TableStyle(style.name, cmds)
+
+
+def get_key_terminology_table_style(num_cols: int, col_size: int) -> TableStyle:
     style = copy.deepcopy(TSTYLES["KeyTerminologyTable"])
     cmds = style.getCommands()
     for i in range(num_cols - 1):

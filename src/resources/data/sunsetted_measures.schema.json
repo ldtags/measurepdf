@@ -1,0 +1,55 @@
+{
+    "$schema": "https://json-schema.org/draft-04/schema",
+    "title": "Sunsetted Measures",
+    "description": "TRM sunsetted measures collection",
+    "type": "object",
+    "properties": {
+        "introduction": {
+            "type": "string",
+            "description": "The sunsetted measures introduction section (formatted as HTML)"
+        },
+        "use_categories": {
+            "type": "array",
+            "items": {
+                "type": "object",
+                "properties": {
+                    "use_category": {
+                        "type": "string",
+                        "description": "The verbose name of the use category followed by its reporting name"
+                    },
+                    "measures": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "version_id": {
+                                    "type": "string",
+                                    "description": "The version ID of the measure"
+                                },
+                                "name": {
+                                    "type": "string",
+                                    "description": "The name of the measure"
+                                },
+                                "active_life": {
+                                    "type": "string",
+                                    "description": "The duration of time in which this measure was active"
+                                },
+                                "trm_update": {
+                                    "type": "boolean"
+                                },
+                                "version_update": {
+                                    "type": "boolean"
+                                },
+                                "is_sunsetted": {
+                                    "type": "boolean"
+                                }
+                            }
+                        },
+                        "description": "The list of sunsetted measures within the use category"
+                    }
+                }
+            },
+            "description": "The list of sunsetted measures grouped by use category"
+        }
+    }
+}

@@ -19,5 +19,6 @@ COLORS = {
     "RevisionLogGridLine": rgb_color(198, 175, 147),
     "RevisionLogHeaderBG": rgb_color(241, 234, 227),
     "h1": rgb_color(140, 110, 74),
-    "h3": rgb_color(64, 64, 64)
+    "h3": rgb_color(64, 64, 64),
+    "SunsettedMeasuresUCRow": rgb_color(232, 232, 232)
 }

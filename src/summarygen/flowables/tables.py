@@ -9,6 +9,7 @@ from reportlab.platypus import (
 
 from src import utils
 from src.etrm.models import Measure
+from src.resources import SunsettedMeasureCollection
 from src.summarygen.utils import get_flowable_height, get_flowable_width
 from src.summarygen.types import _TableOrient, _TableSpan
 from src.summarygen.styles import (
@@ -17,7 +18,9 @@ from src.summarygen.styles import (
     PSTYLES,
     TSTYLES,
     INNER_WIDTH,
-    get_table_style
+    DEF_PSTYLE,
+    get_table_style,
+    get_sunsetted_measures_table_style
 )
 from src.summarygen.models import (
     VTObjectInfo,
@@ -92,9 +95,9 @@ class BasicTable(Table):
         headers: int = 1,
         measure: Measure | None = None,
         spans: list[_TableSpan] | None = None,
-        header_orient: _TableOrient = "top",
         header_styles: _TABLE_STYLES = PSTYLES["ValueTableHeader"],
-        body_styles: _TABLE_STYLES = PSTYLES["ValueTableDeterminant"],
+        body_col_styles: _TABLE_STYLES | None = None,
+        body_row_styles: _TABLE_STYLES | None = None,
         table_style: TableStyle | None = None,
         col_widths: list[float] | float | None = None,
         row_heights: list[float] | float | None = None,
@@ -108,23 +111,23 @@ class BasicTable(Table):
     ) -> None:
         """Constructs a ReportLab `Table` with the provided data.
 
-        Parameters:
-            `data` - A 2D matrix of strings or `ElementLine` objects that
-            define the table data.
+        Args:
+            - data : A 2D matrix of strings, `ElementLine` objects or flowables
+            that define the table data.
 
-            `headers` - A non-negative integer representing the number of
+            ` headers : A non-negative integer representing the number of
             rows/cols (depending on `header_orient`) that are table headers.
 
-            `measure` - An eTRM measure object, used for adding links and data
+            - measure : An eTRM measure object, used for adding links and data
             that would otherwise be unaccessible.
 
-            `spans` - A list of table spans that exist within the table. A
+            - spans : A list of table spans that exist within the table. A
             table span is a two-tuple of two-tuples. The first two-tuple
             contains the (y, x) coords of the first cell in the span. The
             second two-tuple contains the (row, column) span sizes of the
             span. The span sizes should include the initial cell.
 
-            `header_orient` - The orientation of the table header.
+            - header_orient : The orientation of the table header.
 
             `header_styles` - A list of paragraph styles that define how the
             elements within the table headers should be styled. If only one
@@ -174,7 +177,6 @@ class BasicTable(Table):
         assert row_len is not None
 
         self.header_count = headers
-        self.header_orient = header_orient
         self.measure = measure
         self.max_width = max_width
         self.spans = spans or []
@@ -195,12 +197,24 @@ class BasicTable(Table):
         self.v_padding = self.style.top_padding + self.style.bottom_padding
 
         # Apply the header styles
-        style_count = row_len if header_orient == "top" else len(data)
+        style_count = len(data[0])
         if isinstance(header_styles, ParagraphStyle):
             self.header_styles = [header_styles] * style_count
         else:
             assert len(header_styles) == headers
             self.header_styles = header_styles
+
+        self._body_style_orient: Literal["row", "col"] | None = None
+        body_styles = []
+        if body_col_styles is not None:
+            self._body_style_orient = "col"
+            body_styles = body_col_styles
+        elif body_row_styles is not None:
+            self._body_style_orient = "row"
+            body_styles = body_row_styles
+            style_count = len(data) - headers
+        else:
+            body_styles = PSTYLES["ValueTableDeterminant"]
 
         # Apply the body styles
         if isinstance(body_styles, ParagraphStyle):
@@ -234,11 +248,7 @@ class BasicTable(Table):
         self.table_cells = self._convert_data(self.data)
 
         # Pull headers from the table data
-        if header_orient == "left":
-            columns = utils.rotate_matrix(self.table_cells)
-            self.headers = columns[0:headers]
-        else:
-            self.headers = self.table_cells[0:headers]
+        self.headers = self.table_cells[0:headers]
 
         # Apply horizontal padding to column widths
         for i, val in enumerate(self.col_widths):
@@ -281,19 +291,14 @@ class BasicTable(Table):
         )
 
     def get_style(self, x: int, y: int) -> ParagraphStyle:
-        if self.header_orient == 'left':
-            is_header = x < self.header_count
-            head_axis = x
-            body_off = self.header_count
-        else:
-            is_header = y < self.header_count
-            head_axis = y
-            body_off = 0
-
+        is_header = y < self.header_count
         if is_header:
-            return self.header_styles[head_axis]
+            return self.header_styles[y]
 
-        return self.body_styles[x - body_off]
+        if self._body_style_orient == "row":
+            return self.body_styles[y - self.header_count]
+
+        return self.body_styles[x]
 
     def _sanitize_data(
         self,
@@ -685,3 +690,81 @@ class EmbeddedValueTable(ValueTable):
 
         sanitized_cols = utils.rotate_matrix(sanitized_cols)
         return [sanitized_headers, *sanitized_cols]
+
+
+class SunsettedMeasuresTable(BasicTable):
+    def __init__(self, use_categories: list[SunsettedMeasureCollection], **kw) -> None:
+        if kw.get("normalizedData") is not None:
+            Table.__init__(self, use_categories, **kw)
+            return
+
+        headers = [
+            "",
+            "Measure Version ID",
+            "Measure Name",
+            "Start Date - End Date",
+            "TRM Update",
+            "Measure Version Update",
+            "Measure Sunsetted / Deactivated"
+        ]
+
+        data = [headers]
+        uc_row_indices: list[int] = []
+        spans: list[_TableSpan] = []
+        for i, use_category in enumerate(use_categories):
+            data.append(["", "", "", use_category.name, "", "", ""])
+            row_index = len(data) - 1
+            uc_row_indices.append(row_index)
+            spans.append(((row_index, 0), (0, 7)))
+            if use_category.measures == []:
+                data.append(["", "", "", "", "", "", ""])
+
+            for measure in use_category.measures:
+                data.append(
+                    [
+                        "",
+                        measure.version_id,
+                        measure.name,
+                        measure.active_life,
+                        "X" if measure.trm_update else "",
+                        "X" if measure.version_update else "",
+                        "X" if measure.is_sunsetted else ""
+                    ]
+                )
+
+            if i != len(use_categories) - 1:
+                data.append(["", "", "", "", "", "", ""])
+
+        cur_life: str | None = None
+        cur_span: _TableSpan | None = None
+        for y, row in enumerate(data):
+            if cur_life is None or row[3] != cur_life:
+                if cur_span is not None and cur_span[1][0] != 1:
+                    spans.append(cur_span)
+
+                cur_life = row[3]
+                cur_span = ((y, 2), (1, 0))
+                continue
+
+            row[3] = ""
+            if cur_span is not None:
+                cur_span = (cur_span[0], (cur_span[1][0] + 1, cur_span[1][1]))
+
+        if cur_span is not None and cur_span[1][0] != 1:
+            spans.append(cur_span)
+
+        uc_row_indice_set = set(uc_row_indices)
+        para_styles: list[ParagraphStyle] = []
+        for y in range(1, len(data)):
+            if y in uc_row_indice_set:
+                para_styles.append(DEF_PSTYLE.bold)
+            else:
+                para_styles.append(DEF_PSTYLE)
+
+        super().__init__(
+            data,
+            header_styles=DEF_PSTYLE.bold,
+            body_row_styles=para_styles,
+            table_style=get_sunsetted_measures_table_style(len(data), spans, uc_row_indices),
+            spans=spans
+        )

@@ -54,7 +54,7 @@ from src.summarygen.styles import (
     DEF_PSTYLE,
     DEFAULT_INDENT_SIZE,
     DEFAULT_PARA_SPACING,
-    get_kt_table_style
+    get_key_terminology_table_style
 )
 from src.summarygen.parser import HTMLParser
 from src.summarygen.generator import FlowableGenerator
@@ -62,7 +62,8 @@ from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
     TitlePage,
-    StreamlinedPermutations
+    StreamlinedPermutations,
+    SunsettedMeasuresTable
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -981,8 +982,8 @@ class MeasureSummary:
             BasicTable(
                 data=data,
                 header_styles=DEF_PSTYLE.bold,
-                body_styles=DEF_PSTYLE,
-                table_style=get_kt_table_style(num_cols, len(headers)),
+                body_col_styles=DEF_PSTYLE,
+                table_style=get_key_terminology_table_style(num_cols, len(headers)),
                 max_width=max_width - 10,
                 min_col_widths=True,
                 h_align="center",
@@ -1027,6 +1028,52 @@ class MeasureSummary:
 
         for terminology_item in key_terminology.items:
             self.add_key_terminology_item(terminology_item)
+
+        self.story.add(PageBreak())
+
+    def add_spreadsheets(self) -> None:
+        self.story.add(
+            Paragraph(
+                "Permutations Summary Spreadsheets",
+                style=PSTYLES["h3"]
+            )
+        )
+
+        for use_category, _ in lookups.USE_CATEGORIES.items():
+            self.story.add(
+                StreamlinedPermutations(
+                    f"SW{use_category}_Summary.xlsx",
+                    "https://google.com"
+                )
+            )
+
+        self.story.add(
+            Paragraph(
+                "eTRM Data Specification",
+                style=PSTYLES["h3"]
+            )
+        )
+
+        self.story.add(
+            StreamlinedPermutations(
+                f"eTRM - Data Specification.xls",
+                "https://google.com"
+            )
+        )
+
+        self.story.add(PageBreak())
+
+    def add_sunsetted_measures(self) -> None:
+        section = resources.get_sunsetted_measures()
+        flowables = self.convert_html(section.introduction, newline_height=DEFAULT_PARA_SPACING)
+        self.story.add(*flowables)
+        self.story.add(SunsettedMeasuresTable(section.use_categories))
+        self.story.add(PageBreak())
+
+    def add_appendix(self) -> None:
+        self.story.add(Paragraph("APPENDIX", style=PSTYLES["h1"]))
+        self.add_spreadsheets()
+        self.add_sunsetted_measures()
 
     @overload
     def add_measure(self, measure_id: str) -> None:
@@ -1174,6 +1221,7 @@ class MeasureSummary:
                 self._build_summary(measure)
 
         self.add_key_terminology()
+        self.add_appendix()
         if self.story.contents == []:
             raise RuntimeError("Cannot create an empty summary")
 

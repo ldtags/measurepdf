@@ -32,7 +32,8 @@ __all__ = [
     "DEF_PSTYLE",
     "get_table_style",
     "get_list_style",
-    "get_kt_table_style",
+    "get_key_terminology_table_style",
+    "get_sunsetted_measures_table_style",
 
     # Enums
     "Alignment",
@@ -70,7 +71,8 @@ from .stylesheets import (
     DEF_PSTYLE,
     get_table_style,
     get_list_style,
-    get_kt_table_style
+    get_key_terminology_table_style,
+    get_sunsetted_measures_table_style
 )
 from .enums import (
     Alignment

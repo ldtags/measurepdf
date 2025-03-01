@@ -4,6 +4,9 @@ __all__ = [
     "KeyTerminology",
     "KeyTerminologySection",
     "SectionDescription",
+    "SunsettedMeasure",
+    "SunsettedMeasureCollection",
+    "SunsettedMeasuresSection",
 
     # Methods
     "get_api_key",
@@ -20,7 +23,15 @@ import json
 from typing import Any, Literal
 from configparser import ConfigParser
 
-from .models import Revision, KeyTerminology, KeyTerminologySection, SectionDescription
+from .models import (
+    Revision,
+    KeyTerminology,
+    KeyTerminologySection,
+    SectionDescription,
+    SunsettedMeasure,
+    SunsettedMeasureCollection,
+    SunsettedMeasuresSection
+)
 
 
 _PATH = os.path.abspath(os.path.dirname(__file__))
@@ -90,3 +101,8 @@ def get_introduction_html() -> str:
 
     _html = re.sub(r"[ ]{2,}", " ", _html)
     return _html
+
+
+def get_sunsetted_measures() -> SunsettedMeasuresSection:
+    data = get_json("data/sunsetted_measures.json")
+    return SunsettedMeasuresSection(data)

@@ -76,3 +76,32 @@ class SectionDescription(JSONObject):
         self.program_exclusion = self.get("Other: Program Exclusion / /", str)
         self.quality_assurance = self.get("Quality Assurance", str)
         self.important_notes = self.get("Important Notes", str)
+
+
+class SunsettedMeasure(JSONObject):
+    def __init__(self, _json: str | dict[str, Any]) -> None:
+        super().__init__(_json)
+        self.version_id = self.get("version_id", str)
+        self.name = self.get("name", str)
+        self.active_life = self.get("active_life", str)
+        self.trm_update = self.get("trm_update", bool)
+        self.version_update = self.get("version_update", bool)
+        self.is_sunsetted = self.get("is_sunsetted", bool)
+
+
+class SunsettedMeasureCollection(JSONObject):
+    def __init__(self, _json: str | dict[str, Any]) -> None:
+        super().__init__(_json)
+        self.name = self.get("use_category", str)
+        self.measures: list[SunsettedMeasure] = []
+        for measure in self.get("measures", list[dict]):
+            self.measures.append(SunsettedMeasure(measure))
+
+
+class SunsettedMeasuresSection(JSONObject):
+    def __init__(self, _json: str | dict[str, Any]) -> None:
+        super().__init__(_json)
+        self.introduction = self.get("introduction", str)
+        self.use_categories: list[SunsettedMeasureCollection] = []
+        for use_category in self.get("use_categories", list[dict]):
+            self.use_categories.append(SunsettedMeasureCollection(use_category))

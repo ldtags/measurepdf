@@ -1,0 +1,714 @@
+{
+    "$schema": "./sunsetted_measures.schema.json",
+    "introduction": "<h3>Sunsetted/Deactivated Measures</h3>Measure versions are listed below, with three flag fields to indicate the reasons for deactivation:<ul><li><strong>TRM Update:</strong> Measures from the previous TRM that are no longer included in the new TRM.</li><li><strong>Measure Update Version:</strong> Measure version is expired. A new measure version with data updated for the latest program year is available. The latest version should be used.</li><li><strong>Measure Sunsetted or Deactivated:</strong> The entire measure package is sunsetted, or deactivated, without a replacement version for various reasons, such as code or market changes.</li></ul>Measures are grouped by the End Use category in the same manner as the Table of Contents. The \"#.#\" measure IDs refer to previous CMUA TRM measures, while \"SWXX###-##\" measure IDs are eTRM measures.",
+    "use_categories": [
+        {
+            "use_category": "Appliance Plug - AP",
+            "measures": [
+                {
+                    "version_id": "8.2",
+                    "name": "Vending Machine Controller",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.3",
+                    "name": "Vending Machine Controller - Non-Refrigerated",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.11",
+                    "name": "High Efficiency Clothes Washers in Multifamily Properties",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.12",
+                    "name": "ENERGY STAR Uninterrupted Power Supply",
+                    "active_life": "Unknown",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": true
+                },
+                {
+                    "version_id": "8.13",
+                    "name": "Plug-Load Occupancy Sensor",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.14",
+                    "name": "Smart Power Strip - Commercial Use",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "9.1",
+                    "name": "Residential Air Conditioners",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "9.2",
+                    "name": "ENERGY STAR Room Air Conditioner",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "11.1",
+                    "name": "ENERGY STAR Refrigerator",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "11.2",
+                    "name": "Refrigerator and Freezer Recycling",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "11.4",
+                    "name": "ENERGY STAR Dishwasher, Compact and Standard Size",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "11.5",
+                    "name": "High Efficiency Residential Clothes Washer",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "11.6",
+                    "name": "ENERGY STAR Television",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "11.7",
+                    "name": "Heat Pump Clothes Dryers",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "13.1",
+                    "name": "Smart Power Strip",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "14.4",
+                    "name": "Ozone Laundry",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWAP001-06",
+                    "name": "Refrigerator or Freezer, Residential",
+                    "active_life": "01/01/2024 - 12/31/2025",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Building Envelop - BE",
+            "measures": [
+                {
+                    "version_id": "8.16",
+                    "name": "Reflective Window Film",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.1",
+                    "name": "Ceiling Insulation",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.2",
+                    "name": "Wall Insulation",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.4",
+                    "name": "Reflective Window Film",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.5",
+                    "name": "Solar Screen",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.6",
+                    "name": "Reduced Building Leakage",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.7",
+                    "name": "Energy Efficient Windows",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.8",
+                    "name": "Radiant Barriers",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Commercial Refrigeration - CR",
+            "measures": [
+                {
+                    "version_id": "7.2",
+                    "name": "Commercial Solid Door & Glass Door Refrigerators",
+                    "active_life": "Until 01/01/2018",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": true
+                },
+                {
+                    "version_id": "7.3",
+                    "name": "EC Motor for Cold Storage Evaporator Fans",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "7.4",
+                    "name": "Refrigerated Display Case EC Motor Retrofit",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "7.5",
+                    "name": "EC Motor with Fan Cycling Controls for Cold Storage Evaporator Fans",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "7.6",
+                    "name": "Strip Curtain Infiltration Barrier for Refrigerated Space",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "7.7",
+                    "name": "Refrigerated Display Case with Doors",
+                    "active_life": "Until 01/01/2018",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "7.8",
+                    "name": "Auto-Closers for Main Cooler or Freezer Doors",
+                    "active_life": "Unknown",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": true
+                },
+                {
+                    "version_id": "7.9",
+                    "name": "Anti-Sweat Heater Controls",
+                    "active_life": "Unknown",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWCR004-02",
+                    "name": "ECM Retrofit for a Walk-in Cooler or Freezer",
+                    "active_life": "01/01/2023 - 04/01/2024",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWCR005-03",
+                    "name": "Auto Closer for Refrigerated Storage Door",
+                    "active_life": "01/01/2023 - 04/01/2024",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Compressed Air - CA",
+            "measures": []
+        },
+        {
+            "use_category": "Food Service - FS",
+            "measures": [
+                {
+                    "version_id": "7.1",
+                    "name": "Commercial Ice Machines",
+                    "active_life": "Until 01/01/2018",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.1",
+                    "name": "Commercial Dishwasher",
+                    "active_life": "Until 12/31/2024",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.4",
+                    "name": "Insulated Holding Cabinets",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.5",
+                    "name": "Commercial Combination Oven",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.6",
+                    "name": "Commercial Electric Steam Cooker",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.7",
+                    "name": "Commercial Electric Convection Oven",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.8",
+                    "name": "Commercial Electric Fryer",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.9",
+                    "name": "Commercial Electric Griddle",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "8.15",
+                    "name": "Kitchen Exhaust Hood Demand Ventilation Control System",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "HVAC - HC",
+            "measures": [
+                {
+                    "version_id": "5.1",
+                    "name": "Commercial Air Conditioning Units and Heat Pumps",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "5.2",
+                    "name": "Packaged Terminal Air Conditioners & Heat Pumps",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "9.3",
+                    "name": "Whole-House Ventilation Fan",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "10.3",
+                    "name": "ENERGY STAR Ceiling Fan",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "12.3",
+                    "name": "Solar Attic Fan",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "15.1",
+                    "name": "High Efficiency Residential Furnace & Boiler",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWHC052-02",
+                    "name": "Air-Cooled Chiller, Path B",
+                    "active_life": "01/01/2023 - 02/28/2024",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Lighting - LG",
+            "measures": [
+                {
+                    "version_id": "6.1",
+                    "name": "Semi-Custom Lighting and Lighting Control Measures",
+                    "active_life": "Until 12/31/2024",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "6.2",
+                    "name": "Reduced Wattage Lamp and Ballast",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "6.3",
+                    "name": "De-Lamp Fluorescent Fixture",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "6.4",
+                    "name": "LED Lighting",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "6.5",
+                    "name": "LED Refrigerated Display Case Lighting",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "6.6",
+                    "name": "Bi-Level Lighting Fixture - Stairwells, Hallways, and Garages",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "6.7",
+                    "name": "Compact Fluorescent Lamps (Commercial and Residential)",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "10.1",
+                    "name": "LED Lights",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "10.2",
+                    "name": "LED Holiday Lights",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWLG009-04",
+                    "name": "LED, Tube",
+                    "active_life": "01/01/2023 - 12/31/2023",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWLG011-04",
+                    "name": "LED, High or Low Bay",
+                    "active_life": "01/01/2023 - 12/31/2023",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWLG018-03",
+                    "name": "LED, Tube, Type B and Type C",
+                    "active_life": "01/01/2023 - 12/31/2023",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Miscellaneous - MI",
+            "measures": [
+                {
+                    "version_id": "SWMI001-02",
+                    "name": "Water Energy Nexus Measures",
+                    "active_life": "03/31/2021 - 12/31/2023",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Process - PR",
+            "measures": [
+                {
+                    "version_id": "14.5",
+                    "name": "Steam Traps",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Recreation - RE",
+            "measures": [
+                {
+                    "version_id": "13.2",
+                    "name": "Variable Speed Residential Pool Pump",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Service - SV",
+            "measures": [
+                {
+                    "version_id": "9.4",
+                    "name": "Duct Sealing",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "9.5.1",
+                    "name": "HVAC Tune-Up Measures: Refrigerant Charge",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "9.5.2",
+                    "name": "HVAC Tune-Up Measures: Coil Cleaning",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "9.5.2",
+                    "name": "HVAC Tune-Up Measures: Airflow Adjustment",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Whole Building - WB",
+            "measures": []
+        },
+        {
+            "use_category": "Service and Domestic Hot Water - WH",
+            "measures": [
+                {
+                    "version_id": "11.3",
+                    "name": "Heat Pump Water Heater",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "14.1",
+                    "name": "Tank Insulation",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "14.2",
+                    "name": "Hot Water and Steam Pipe Insulation",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "14.3",
+                    "name": "High Efficiency Commercial Gas Hot Water Heaters",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "15.2",
+                    "name": "Domestic Hot Water Piping Insulation - Multifamily Recirculating System",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "15.3",
+                    "name": "Domestic Hot Water Heater",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "15.4",
+                    "name": "Low-Flow Showerheads",
+                    "active_life": "Unknown",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "15.5",
+                    "name": "Faucet Aerators",
+                    "active_life": "Until 07/01/2019",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                },
+                {
+                    "version_id": "SWWH022-01",
+                    "name": "Smart Pump, Residential",
+                    "active_life": "01/01/2020 - 02/23/2024",
+                    "trm_update": false,
+                    "version_update": true,
+                    "is_sunsetted": false
+                }
+            ]
+        },
+        {
+            "use_category": "Water Pump and Irrigation - WP",
+            "measures": [
+                {
+                    "version_id": "8.1",
+                    "name": "Pump and Fan Variable Frequency Drive Control",
+                    "active_life": "Until 12/31/2024",
+                    "trm_update": true,
+                    "version_update": false,
+                    "is_sunsetted": false
+                }
+            ]
+        }
+    ]
+}

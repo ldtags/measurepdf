@@ -32,6 +32,7 @@ __all__ = [
     "TitleSection",
     "TitleSectionContainer",
     "TitleSectionSubContainer",
+    "SunsettedMeasuresTable",
     "split_word",
     "wrap_elements"
 ]
@@ -52,7 +53,8 @@ from src.summarygen.flowables.tables import (
     BasicTable,
     ValueTable,
     ValueTableHeader,
-    EmbeddedValueTable
+    EmbeddedValueTable,
+    SunsettedMeasuresTable
 )
 from src.summarygen.flowables.titlepage import (
     TitlePage,
