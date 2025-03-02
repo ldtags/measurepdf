@@ -258,7 +258,7 @@ class SummaryPageTemplate(PageTemplate):
             rightPadding=0,
             topPadding=0,
             bottomPadding=0,
-            id='normal'
+            id="normal"
         )
         PageTemplate.__init__(self, id=id, frames=frame)
 
@@ -272,12 +272,15 @@ class SummaryPageTemplate(PageTemplate):
 
             canv.saveState()
 
-            style = PSTYLES['SmallParagraph'].bold
+            # draw measure ID
+            style = PSTYLES["SmallParagraph"].bold
             id_footer = Paragraph(self.id, style=style)
             _, h = id_footer.wrap(INNER_WIDTH, Y_MARGIN)
             x = X_MARGIN / 1.5
             y = h * 1.5
             id_footer.drawOn(canvas=canv, x=x, y=y)
+
+            # draw measure name
             id_width = stringWidth(
                 self.id,
                 style.font_name, 
@@ -285,7 +288,7 @@ class SummaryPageTemplate(PageTemplate):
             )
             name_footer = Paragraph(
                 self.measure_name,
-                style=PSTYLES['SmallParagraph']
+                style=PSTYLES["SmallParagraph"]
             )
             _, h = name_footer.wrap(INNER_WIDTH - id_width, Y_MARGIN)
             name_footer.drawOn(canvas=canv, x=x + id_width + 3, y=y)
@@ -299,12 +302,14 @@ class SummaryPageTemplate(PageTemplate):
     ) -> None:
         canv.saveState()
 
-        if _SYSTEM == 'Windows':
-            fmt = '#'
+        if _SYSTEM == "Windows":
+            fmt = "#"
         else:
-            fmt = '-'
-        cur_dt = START_TIME.strftime(rf'%{fmt}m/%{fmt}d/%y, %{fmt}I:%M%p')
-        style = PSTYLES['SmallBase']
+            fmt = "-"
+
+        # draw date and time
+        cur_dt = START_TIME.strftime(rf"%{fmt}m/%{fmt}d/%y, %{fmt}I:%M%p")
+        style = PSTYLES["SmallBase"]
         time_header = Paragraph(cur_dt, style=style)
         _, h = time_header.wrap(INNER_WIDTH + X_MARGIN, Y_MARGIN)
         y = PAGESIZE[1] - Y_MARGIN / 2 + h / 2
@@ -505,14 +510,12 @@ class MeasureSummary:
         flowables = self.convert_html(_html, newline_height=DEFAULT_PARA_SPACING)
         self.story.add(Paragraph("INTRODUCTION", style=PSTYLES["h1"]))
         self.story.add(*flowables)
-        self.story.add(PageBreak())
 
     def add_table_of_contents(self) -> None:
         self.story.add(NextPageTemplate("TOC"))
         toc_header = Paragraph("Table of Contents", style=PSTYLES["TOCHeader"])
         self.story.add(toc_header, NEWLINE)
         self.story.add(TableOfContents())
-        self.story.add(PageBreak())
 
     def add_revision_log(self) -> None:
         logger.info("Generating revision log...")
@@ -550,7 +553,6 @@ class MeasureSummary:
 
         table = Table(data, colWidths=col_widths, style=TSTYLES["RevisionLog"])
         self.story.add(KeepTogether([header, table]))
-        self.story.add(PageBreak())
 
     def add_title_page(self) -> None:
         if self._cur_measure is None:
@@ -1193,6 +1195,14 @@ class MeasureSummary:
     def reset(self):
         self.story.clear()
 
+    def _add_measure_template(self, measure: Measure) -> None:
+        template = SummaryPageTemplate(
+            id=measure.full_version_id,
+            measure_name=measure.name
+        )
+        self.summary.addPageTemplates(template)
+        self.story.add(NextPageTemplate(measure.full_version_id))
+
     def _build_summary(self, measure: Measure | None = None) -> None:
         if measure is None:
             if self._cur_measure is None:
@@ -1205,31 +1215,42 @@ class MeasureSummary:
 
         logger.info(f"Building summary for measure {summary_measure.full_version_id}")
 
-        template = SummaryPageTemplate(
-            id=summary_measure.full_version_id,
-            measure_name=summary_measure.name
-        )
-        self.summary.addPageTemplates(template)
-        self.story.add(NextPageTemplate(summary_measure.full_version_id))
-
         self.add_title_page()
         self.add_bc_mc_section()
         self.add_parameters_table()
         self.add_impact_table()
         self.add_streamlined_permutations()
-        self.story.add(PageBreak())
 
         self._cur_measure = None
 
     def build(self, toc: bool = False) -> None:
+        template = SummaryPageTemplate(id="default")
+        self.summary.addPageTemplates(template)
+        self.story.add(NextPageTemplate("default"))
+
         self.add_introduction()
+        self.story.add(PageBreak())
         self.add_revision_log()
         if toc:
+            self.story.add(PageBreak())
             self.add_table_of_contents()
 
+        sorted_measures: list[Measure] = []
         for use_category in sorted(self.measures.keys()):
             for measure in self.measures[use_category]:
+                sorted_measures.append(measure)
+
+        if sorted_measures != []:
+            self._add_measure_template(sorted_measures[0])
+            self.story.add(PageBreak())
+            for i, measure in enumerate(sorted_measures):
                 self._build_summary(measure)
+                if i != len(sorted_measures) - 1:
+                    self._add_measure_template(sorted_measures[i + 1])
+                else:
+                    self.story.add(NextPageTemplate("default"))
+
+                self.story.add(PageBreak())
 
         self.add_key_terminology()
         self.add_data_table()
