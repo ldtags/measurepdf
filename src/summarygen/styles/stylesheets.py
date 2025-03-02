@@ -339,8 +339,9 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
                 ("LINEABOVE", (0, 0), (-1, 0), 0.5, COLORS["RevisionLogGridLine"]),
                 ("LINEBELOW", (0, 0), (-1, 0), 0.5, COLORS["RevisionLogGridLine"]),
                 ("VALIGN", (0, 1), (-1, -1), "MIDDLE"),
-                ("ALIGN", (0, 0), (-1, 0), "CENTER"),
-                ("ALIGN", (0, 1), (3, -1), "LEFT"),
+                ("ALIGN", (0, 0), (3, 0), "LEFT"),
+                ("ALIGN", (4, 0), (-1, 0), "CENTER"),
+                ("ALIGN", (0, 1), (2, -1), "LEFT"),
                 ("ALIGN", (4, 1), (-1, -1), "CENTER")
             ]
         )
@@ -387,22 +388,35 @@ def get_sunsetted_measures_table_style(
 ) -> TableStyle:
     style = copy.deepcopy(TSTYLES["SunsettedMeasuresTable"])
     cmds = style.getCommands()
+    line_color = COLORS["RevisionLogGridLine"]
 
     # apply use category row styles
     for i, y in enumerate(uc_row_indices):
         cmds.append(("BACKGROUND", (0, y), (-1, y), COLORS["SunsettedMeasuresUCRow"]))
         cmds.append(("SPAN", (0, y), (-1, y)))
+        cmds.append(("ALIGN", (0, y), (-1, y), "CENTER"))
         if y != 1:
-            cmds.append(("LINEABOVE", (0, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+            cmds.append(("LINEABOVE", (0, y), (-1, y), 0.25, line_color))
 
-        cmds.append(("LINEBELOW", (0, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+        cmds.append(("LINEBELOW", (0, y), (-1, y), 0.25, line_color))
+
+        if i != len(uc_row_indices) - 1:
+            next_y = uc_row_indices[i + 1]
+        else:
+            next_y = -1
+
+        # vertical line after the Start Date - End Date column
+        cmds.append(("LINEAFTER", (3, y + 1), (3, next_y), 0.5, line_color))
 
     # get each row that contains a spanned Start Date - End Date column
     sl_row_indice_map: dict[int, _TableSpan] = {}
     for span in spans:
-        if span[1][0] != 0:
-            for y in range(span[1][0] - span[0][0]):
-                sl_row_indice_map[y] = span
+        if span[1][0] == 0:
+            continue
+
+        start_y = span[0][0]
+        for y in range(start_y, start_y + span[1][0]):
+            sl_row_indice_map[y] = span
 
     uc_row_indice_set = set(uc_row_indices)
     for y in range(num_rows):
@@ -410,17 +424,14 @@ def get_sunsetted_measures_table_style(
             continue
 
         if y not in sl_row_indice_map:
-            cmds.append(("LINEBELOW", (1, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+            cmds.append(("LINEBELOW", (1, y), (-1, y), 0.25, line_color))
             continue
 
         span = sl_row_indice_map[y]
-        cmds.append(("LINEBELOW", (1, y), (2, y), 0.25, COLORS["RevisionLogGridLine"]))
-        cmds.append(("LINEBELOW", (4, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
-        if y - 1 not in uc_row_indice_set and y == span[0][0]:
-            cmds.append(("LINEBELOW", (1, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
-
-        if y + 1 not in uc_row_indice_set and y == span[0][0] + span[1][0]:
-            cmds.append(("LINEBELOW", (1, y), (-1, y), 0.25, COLORS["RevisionLogGridLine"]))
+        cmds.append(("LINEBELOW", (1, y), (2, y), 0.25, line_color))
+        cmds.append(("LINEBELOW", (4, y), (-1, y), 0.25, line_color))
+        if y == span[0][0] + span[1][0] - 1:
+            cmds.append(("LINEBELOW", (3, y), (3, y), 0.25, line_color))
 
     return TableStyle(style.name, cmds)
 

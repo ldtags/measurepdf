@@ -712,12 +712,12 @@ class SunsettedMeasuresTable(BasicTable):
         uc_row_indices: list[int] = []
         spans: list[_TableSpan] = []
         for i, use_category in enumerate(use_categories):
-            data.append(["", "", "", use_category.name, "", "", ""])
+            data.append([use_category.name, "", "", "", "", "", ""])
             row_index = len(data) - 1
             uc_row_indices.append(row_index)
             spans.append(((row_index, 0), (0, 7)))
             if use_category.measures == []:
-                data.append(["", "", "", "", "", "", ""])
+                data.append(["", "", "", " ", "", "", ""])
 
             for measure in use_category.measures:
                 data.append(
@@ -733,7 +733,7 @@ class SunsettedMeasuresTable(BasicTable):
                 )
 
             if i != len(use_categories) - 1:
-                data.append(["", "", "", "", "", "", ""])
+                data.append(["", "", "", " ", "", "", ""])
 
         cur_life: str | None = None
         cur_span: _TableSpan | None = None

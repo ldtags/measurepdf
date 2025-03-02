@@ -1046,6 +1046,7 @@ class MeasureSummary:
                     "https://google.com"
                 )
             )
+            self.story.add(Spacer(0.01, 8))
 
         self.story.add(
             Paragraph(
@@ -1067,6 +1068,7 @@ class MeasureSummary:
         section = resources.get_sunsetted_measures()
         flowables = self.convert_html(section.introduction, newline_height=DEFAULT_PARA_SPACING)
         self.story.add(*flowables)
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(SunsettedMeasuresTable(section.use_categories))
         self.story.add(PageBreak())
 
