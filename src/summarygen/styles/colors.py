@@ -6,12 +6,12 @@ def rgb_color(red: float, green: float, blue: float) -> colors.Color:
 
 
 COLORS = {
-    "ValueTableHeaderLight": rgb_color(174, 141, 100),
-    "ValueTableHeaderDark": rgb_color(153, 121, 80),
-    "ValueTableRowLight": rgb_color(242, 242, 242),
-    "ValueTableRowAltLight": rgb_color(230, 230, 230),
-    "ValueTableRowDark": rgb_color(230, 230, 230),
-    "ValueTableRowAltDark": rgb_color(217, 217, 217),
+    "TableHeaderLight": rgb_color(174, 141, 100),
+    "TableHeaderDark": rgb_color(153, 121, 80),
+    "TableRowLight": rgb_color(242, 242, 242),
+    "TableRowAltLight": rgb_color(230, 230, 230),
+    "TableRowDark": rgb_color(230, 230, 230),
+    "TableRowAltDark": rgb_color(217, 217, 217),
     "ReferenceTagBG": rgb_color(100, 162, 68),
     "LightBrown": rgb_color(173, 140, 99),
     "DarkBrown": rgb_color(153, 121, 80),

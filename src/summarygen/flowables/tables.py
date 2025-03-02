@@ -95,7 +95,7 @@ class BasicTable(Table):
         headers: int = 1,
         measure: Measure | None = None,
         spans: list[_TableSpan] | None = None,
-        header_styles: _TABLE_STYLES = PSTYLES["ValueTableHeader"],
+        header_styles: _TABLE_STYLES = PSTYLES["TableHeader"],
         body_col_styles: _TABLE_STYLES | None = None,
         body_row_styles: _TABLE_STYLES | None = None,
         table_style: TableStyle | None = None,
@@ -214,7 +214,7 @@ class BasicTable(Table):
             body_styles = body_row_styles
             style_count = len(data) - headers
         else:
-            body_styles = PSTYLES["ValueTableDeterminant"]
+            body_styles = PSTYLES["TableDeterminant"]
 
         # Apply the body styles
         if isinstance(body_styles, ParagraphStyle):
@@ -631,7 +631,7 @@ class EmbeddedValueTable(ValueTable):
             text = determinant.name.upper()
             element = ParagraphElement(
                 text=text,
-                style=PSTYLES["ValueTableHeader"]
+                style=PSTYLES["TableHeader"]
             )
             element_line.add(element)
             headers.append(element_line)
@@ -641,7 +641,7 @@ class EmbeddedValueTable(ValueTable):
             text = f"{column.name} ({column.unit})".upper()
             element = ParagraphElement(
                 text=text,
-                style=PSTYLES["ValueTableHeader"]
+                style=PSTYLES["TableHeader"]
             )
             element_line.add(element)
             for ref in column.reference_refs:
@@ -662,9 +662,9 @@ class EmbeddedValueTable(ValueTable):
             table_row: list[ElementLine] = []
             for i, item in enumerate(row):
                 if i < len(self.value_table.determinants):
-                    style = PSTYLES["ValueTableDeterminant"]
+                    style = PSTYLES["TableDeterminant"]
                 else:
-                    style = PSTYLES["ValueTableItem"]
+                    style = PSTYLES["TableItem"]
 
                 if item is None:
                     text = ""
