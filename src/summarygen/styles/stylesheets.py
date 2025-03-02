@@ -3,10 +3,7 @@ from reportlab.lib import colors
 from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import getSampleStyleSheet
 
-from src.summarygen.types import (
-    _TableSpan,
-    _TableOrient
-)
+from src.summarygen.types import _TableSpan
 from src.summarygen.styles.config import (
     DEFAULT_FONT_NAME,
     DEFAULT_FONT_SIZE
@@ -19,7 +16,7 @@ from src.summarygen.styles.objects import (
 )
 
 
-def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
+def _gen_pstyles() -> StyleSheet[ParagraphStyle]:
     style_sheet = StyleSheet[ParagraphStyle]()
     style_sheet.add(
         ParagraphStyle(
@@ -107,35 +104,35 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            "ValueTableHeaderThin",
+            "TableHeaderThin",
             text_color=colors.white,
             parent=style_sheet["SmallerBase"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            "ValueTableHeader",
+            "TableHeader",
             font_name=f"{DEFAULT_FONT_NAME}B",
-            parent=style_sheet["ValueTableHeaderThin"]
+            parent=style_sheet["TableHeaderThin"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'ValueTableDeterminant',
-            parent=style_sheet['SmallBase']
+            "TableDeterminant",
+            parent=style_sheet["SmallBase"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'ValueTableItem',
-            font_name=f'{DEFAULT_FONT_NAME}B',
-            parent=style_sheet['SmallBase']
+            "TableItem",
+            font_name=f"{DEFAULT_FONT_NAME}B",
+            parent=style_sheet["SmallBase"]
         )
     )
     style_sheet.add(
         ParagraphStyle(
-            'TableHeader',
-            font_name=f'{DEFAULT_FONT_NAME}B',
+            "TableHeader",
+            font_name=f"{DEFAULT_FONT_NAME}B",
             font_size=DEFAULT_FONT_SIZE + 3.5
         )
     )
@@ -196,8 +193,8 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            'TOCHeader',
-            font_name='MerriweatherB',
+            "TOCHeader",
+            font_name="MerriweatherB",
             font_size=18,
             alignment=TA_CENTER
         )
@@ -220,7 +217,7 @@ def __gen_pstyles() -> StyleSheet[ParagraphStyle]:
     return style_sheet
 
 
-def __gen_tstyles() -> StyleSheet[TableStyle]:
+def _gen_tstyles() -> StyleSheet[TableStyle]:
     style_sheet = StyleSheet[TableStyle]()
     style_sheet.add(
         TableStyle(
@@ -252,50 +249,50 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
     )
     style_sheet.add(
         TableStyle(
-            'TitleSectionLeft',
+            "TitleSectionLeft",
             [
-                ('ALIGN', (0, 0), (-1, -1), 'LEFT')
+                ("ALIGN", (0, 0), (-1, -1), "LEFT")
             ]
         )
     )
     style_sheet.add(
         TableStyle(
-            'TitleSectionRight',
+            "TitleSectionRight",
             [
-                ('ALIGN', (0, 0), (-1, -1), 'RIGHT')
+                ("ALIGN", (0, 0), (-1, -1), "RIGHT")
             ]
         )
     )
     style_sheet.add(
         TableStyle(
-            'TitleSectionContainer',
+            "TitleSectionContainer",
             [
-                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
-                ('ALIGN', (1, 0), (1, -1), 'RIGHT')
+                ("ALIGN", (0, 0), (0, -1), "LEFT"),
+                ("ALIGN", (1, 0), (1, -1), "RIGHT")
             ]
         )
     )
     style_sheet.add(
         TableStyle(
-            'TitlePage',
+            "TitlePage",
             [
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0),
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('VALIGN', (0, 0), (0, 0), 'TOP'),
-                ('VALIGN', (-1, -1), (-1, -1), 'BOTTOM')
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (0, 0), "TOP"),
+                ("VALIGN", (-1, -1), (-1, -1), "BOTTOM")
             ]
         )
     )
     style_sheet.add(
         TableStyle(
-            'SummaryList',
+            "SummaryList",
             [
-                ('LEFTPADDING', (0, 0), (-1, -1), 0),
-                ('RIGHTPADDING', (0, 0), (-1, -1), 0),
-                ('TOPPADDING', (0, 0), (-1, -1), 0),
-                ('BOTTOMPADDING', (0, 0), (-1, -1), 0)
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0)
             ]
         )
     )
@@ -353,8 +350,8 @@ def __gen_tstyles() -> StyleSheet[TableStyle]:
 
 
 STYLES = getSampleStyleSheet()
-PSTYLES = __gen_pstyles()
-TSTYLES = __gen_tstyles()
+PSTYLES = _gen_pstyles()
+TSTYLES = _gen_tstyles()
 DEF_PSTYLE = PSTYLES["Paragraph"]
 
 
@@ -392,7 +389,7 @@ def get_sunsetted_measures_table_style(
     cmds = style.getCommands()
     line_color = COLORS["RevisionLogGridLine"]
 
-    # apply use category row styles
+    # apply use category row styles and styles relative to use category rows
     for i, y in enumerate(uc_row_indices):
         cmds.append(("BACKGROUND", (0, y), (-1, y), COLORS["SunsettedMeasuresUCRow"]))
         cmds.append(("SPAN", (0, y), (-1, y)))
@@ -410,7 +407,7 @@ def get_sunsetted_measures_table_style(
         # vertical line after the Start Date - End Date column
         cmds.append(("LINEAFTER", (3, y + 1), (3, next_y), 0.5, line_color))
 
-    # get each row that contains a spanned Start Date - End Date column
+    # get indices of each row that contains a spanned Start Date - End Date column
     sl_row_indice_map: dict[int, _TableSpan] = {}
     for span in spans:
         if span[1][0] == 0:
@@ -420,6 +417,7 @@ def get_sunsetted_measures_table_style(
         for y in range(start_y, start_y + span[1][0]):
             sl_row_indice_map[y] = span
 
+    # apply span-relative styles
     uc_row_indice_set = set(uc_row_indices)
     for y in range(num_rows):
         if y in uc_row_indice_set or y + 1 in uc_row_indice_set:
@@ -441,6 +439,8 @@ def get_sunsetted_measures_table_style(
 def get_key_terminology_table_style(num_cols: int, col_size: int) -> TableStyle:
     style = copy.deepcopy(TSTYLES["KeyTerminologyTable"])
     cmds = style.getCommands()
+
+    # add lines after each revision
     for i in range(num_cols - 1):
         cmds.append((
             "LINEAFTER",
@@ -458,116 +458,58 @@ def get_table_style(
     headers: int = 1,
     determinants: int = 0,
     spans: list[_TableSpan] = [],
-    orient: _TableOrient = "top",
     alternate_row_bg: bool = False,
 ) -> TableStyle:
     table_style = copy.deepcopy(TSTYLES["BasicTable"])
-    table_styles = table_style.getCommands()
+    cmds = table_style.getCommands()
 
-    for i in range(0, headers):
-        if determinants > 0:
-            table_styles.append((
-                'BACKGROUND',
-                (0, i),
-                (determinants - 1, i),
-                COLORS['ValueTableHeaderLight']
-            ))
-
-        if len(data) > 0 and len(data[0]) > determinants:
-            table_styles.append((
-                'BACKGROUND',
-                (determinants, i),
-                (-1, i),
-                COLORS['ValueTableHeaderDark']
-            ))
-
-    top_styles: list[tuple] = []
-    left_styles: list[tuple] = []
+    # apply determinant header styles
     if determinants > 0:
-        top_styles.append((
-            'BACKGROUND',
+        cmds.append((
+            "BACKGROUND",
             (0, 0),
             (determinants - 1, headers - 1),
-            COLORS['ValueTableHeaderLight']
-        ))
-        left_styles.append((
-            'BACKGROUND',
-            (0, 0),
-            (headers - 1, determinants - 1),
-            COLORS['ValueTableHeaderLight']
+            COLORS["TableHeaderLight"]
         ))
 
+    # apply non-determinant header styles
     if len(data) > 0 and len(data[0]) > determinants:
-        top_styles.append((
-            'BACKGROUND',
+        cmds.append((
+            "BACKGROUND",
             (determinants, 0),
             (-1, headers - 1),
-            COLORS['ValueTableHeaderDark']
-        ))
-        left_styles.append((
-            'BACKGROUND',
-            (0, determinants),
-            (headers - 1, -1),
-            COLORS['ValueTableHeaderDark']
+            COLORS["TableHeaderDark"]
         ))
 
+    # apply table body styles
     for y in range(headers, len(data)):
         row = data[y]
-        for x in range(0, len(row)):    # will cause a bug with left-orient tables
+        for x in range(0, len(row)):
             if determinants > 0:
                 if not alternate_row_bg or y % 2 == 1 or is_spanned(x, y, spans):
-                    color = COLORS['ValueTableRowLight']
+                    color = COLORS["TableRowLight"]
                 else:
-                    color = COLORS['ValueTableRowAltLight']
+                    color = COLORS["TableRowAltLight"]
 
-                top_styles.append((
-                    'BACKGROUND',
-                    (x, y),
-                    (x, y),
-                    color
-                ))
-                left_styles.append((
-                    'BACKGROUND',
-                    (y, x),
-                    (y, x),
-                    color
-                ))
+                cmds.append(("BACKGROUND", (x, y), (x, y), color))
 
             if len(row) > determinants:
                 if y % 2 == 1 or is_spanned(x, y, spans):
-                    color = COLORS['ValueTableRowDark']
+                    color = COLORS["TableRowDark"]
                 else:
-                    color = COLORS['ValueTableRowAltDark']
+                    color = COLORS["TableRowAltDark"]
 
-                top_styles.append((
-                    'BACKGROUND',
-                    (x, y),
-                    (x, y),
-                    color
-                ))
-                left_styles.append((
-                    'BACKGROUND',
-                    (y, x),
-                    (y, x),
-                    color
-                ))
+                cmds.append(("BACKGROUND", (x, y), (x, y), color))
 
-    if orient == 'left':
-        table_styles.extend(left_styles)
-    elif orient == 'top':
-        table_styles.extend(top_styles)
-    elif orient == 'top-left':
-        table_styles.extend(top_styles)
-        table_styles.extend(left_styles)
-
-    for span in spans:
-        y, x = span[0]
-        row_span, col_span = span[1]
+    # apply span styles
+    for (y, x), (row_span, col_span) in spans:
         if col_span != 0:
             col_span -= 1
+
         if row_span != 0:
             row_span -= 1
-        span_style = ('SPAN', (x, y), (x + col_span, y + row_span))
-        table_styles.append(span_style)
 
-    return TableStyle(table_style.name, cmds=table_styles)
+        span_style = ("SPAN", (x, y), (x + col_span, y + row_span))
+        cmds.append(span_style)
+
+    return TableStyle(table_style.name, cmds)
