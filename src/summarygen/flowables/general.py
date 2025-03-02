@@ -114,19 +114,23 @@ class Reference(Flowable):
 
 
 class StreamlinedPermutations(Flowable):
-    def __init__(self, text: str, link: str) -> None:
+    def __init__(self, text: str, link: str, scale: int = 1) -> None:
         self.text = text
         self.link = link
 
         self.img_path = assets.get_path("images/excel_icon.png")
-        self.img_obj = utils.get_image(
+        self.img_obj = img_obj = utils.get_image(
             self.img_path,
             max_height=0.3 * inch
         )
-        self._style = style = PSTYLES["SmallerBase"]
+
+        self._img_width = img_obj.drawWidth * scale
+        self._img_height = img_obj.drawHeight * scale
+
+        self._style = style = PSTYLES["IconCaption"]
         text_width = stringWidth(text, style.font_name, style.font_size)
-        self._width = max(text_width, self.img_obj.drawWidth)
-        self._height = self.img_obj.drawHeight + style.leading
+        self._width = max(text_width, self._img_width)
+        self._height = self._img_height + style.leading
 
     def wrap(self, *args) -> tuple[float, float]:
         return (self._width, self._height)
@@ -148,13 +152,13 @@ class StreamlinedPermutations(Flowable):
             text_obj.textOut(self.text)
             canvas.drawText(text_obj)
 
-            rem_width = self._width - self.img_obj.drawWidth
+            rem_width = self._width - self._img_width
             canvas.drawImage(
                 self.img_path,
                 x=rem_width / 2,
                 y=self._style.leading,
-                height=self.img_obj.drawHeight,
-                width=self.img_obj.drawWidth,
+                height=self._img_height,
+                width=self._img_width,
                 preserveAspectRatio=True,
                 mask="auto"
             )

@@ -161,7 +161,7 @@ def _gen_pstyles() -> StyleSheet[ParagraphStyle]:
             font_size=12,
             space_before=8,
             space_after=8,
-            text_color=COLORS["h3"]
+            text_color=COLORS["LightBlack"]
         )
     )
     style_sheet.add(
@@ -211,6 +211,14 @@ def _gen_pstyles() -> StyleSheet[ParagraphStyle]:
             "Math",
             font_name="CambriaM",
             font_size=11
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "IconCaption",
+            font_name=DEFAULT_FONT_NAME,
+            font_size=7,
+            text_color=COLORS["LightBlack"]
         )
     )
 
