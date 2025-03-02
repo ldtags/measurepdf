@@ -766,5 +766,6 @@ class SunsettedMeasuresTable(BasicTable):
             header_styles=DEF_PSTYLE.bold,
             body_row_styles=para_styles,
             table_style=get_sunsetted_measures_table_style(len(data), spans, uc_row_indices),
-            spans=spans
+            spans=spans,
+            **kw
         )
