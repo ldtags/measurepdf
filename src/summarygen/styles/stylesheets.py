@@ -131,13 +131,6 @@ def _gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            "TableHeader",
-            font_name=f"{DEFAULT_FONT_NAME}B",
-            font_size=DEFAULT_FONT_SIZE + 3.5
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
             "h1",
             font_name="Arial",
             font_size=14,
