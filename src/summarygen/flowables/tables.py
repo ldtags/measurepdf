@@ -293,7 +293,7 @@ class BasicTable(Table):
     def get_style(self, x: int, y: int) -> ParagraphStyle:
         is_header = y < self.header_count
         if is_header:
-            return self.header_styles[y]
+            return self.header_styles[x]
 
         if self._body_style_orient == "row":
             return self.body_styles[y - self.header_count]
