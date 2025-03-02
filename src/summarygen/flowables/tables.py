@@ -743,7 +743,7 @@ class SunsettedMeasuresTable(BasicTable):
                     spans.append(cur_span)
 
                 cur_life = row[3]
-                cur_span = ((y, 2), (1, 0))
+                cur_span = ((y, 3), (1, 0))
                 continue
 
             row[3] = ""
