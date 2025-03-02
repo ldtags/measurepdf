@@ -62,7 +62,7 @@ from src.summarygen.flowables import (
     NEWLINE,
     BasicTable,
     TitlePage,
-    StreamlinedPermutations,
+    ExcelLink,
     SunsettedMeasuresTable
 )
 from src.summarygen.exceptions import SummaryGenError
@@ -846,7 +846,7 @@ class MeasureSummary:
         self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["h5"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(
-            StreamlinedPermutations(
+            ExcelLink(
                 file_name,
                 "https://google.com"
             )
@@ -1031,6 +1031,29 @@ class MeasureSummary:
 
         self.story.add(PageBreak())
 
+    def add_data_table(self) -> None:
+        logger.info("Adding the data table...")
+
+        self.story.add(Paragraph("DATA TABLE", style=PSTYLES["h1"]))
+        _html = resources.get_data_table_html()
+        self.story.add(*self.convert_html(_html, newline_height=DEFAULT_PARA_SPACING))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+        self.story.add(
+            Paragraph(
+                "eTRM Data Specification",
+                style=PSTYLES["h3"]
+            )
+        )
+
+        self.story.add(
+            ExcelLink(
+                "eTRM - Data Specification.xls",
+                "https://google.com"
+            )
+        )
+
+        self.story.add(PageBreak())
+
     def add_spreadsheets(self) -> None:
         self.story.add(
             Paragraph(
@@ -1041,26 +1064,12 @@ class MeasureSummary:
 
         for use_category, _ in lookups.USE_CATEGORIES.items():
             self.story.add(
-                StreamlinedPermutations(
+                ExcelLink(
                     f"SW{use_category}_Summary.xlsx",
                     "https://google.com"
                 )
             )
             self.story.add(Spacer(0.01, 8))
-
-        self.story.add(
-            Paragraph(
-                "eTRM Data Specification",
-                style=PSTYLES["h3"]
-            )
-        )
-
-        self.story.add(
-            StreamlinedPermutations(
-                f"eTRM - Data Specification.xls",
-                "https://google.com"
-            )
-        )
 
         self.story.add(PageBreak())
 
@@ -1223,6 +1232,7 @@ class MeasureSummary:
                 self._build_summary(measure)
 
         self.add_key_terminology()
+        self.add_data_table()
         self.add_appendix()
         if self.story.contents == []:
             raise RuntimeError("Cannot create an empty summary")

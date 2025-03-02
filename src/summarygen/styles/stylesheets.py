@@ -217,7 +217,7 @@ def _gen_pstyles() -> StyleSheet[ParagraphStyle]:
         ParagraphStyle(
             "IconCaption",
             font_name=DEFAULT_FONT_NAME,
-            font_size=7,
+            font_size=8,
             text_color=COLORS["LightBlack"]
         )
     )

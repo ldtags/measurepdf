@@ -19,7 +19,7 @@ Extending Custom Tables:
 __all__ = [
     "Spacer",
     "Reference",
-    "StreamlinedPermutations",
+    "ExcelLink",
     "NEWLINE",
     "ParagraphLine",
     "SummaryParagraph",
@@ -41,7 +41,7 @@ __all__ = [
 from src.summarygen.flowables.general import (
     Spacer,
     Reference,
-    StreamlinedPermutations,
+    ExcelLink,
     NEWLINE
 )
 from src.summarygen.flowables.paragraph import (

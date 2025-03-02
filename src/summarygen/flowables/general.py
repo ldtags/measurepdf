@@ -16,6 +16,7 @@ from src.summarygen.styles import (
     COLORS,
     NL_HEIGHT
 )
+from src.summarygen.exceptions import SummaryGenError
 
 
 class Spacer(_Spacer):
@@ -113,10 +114,38 @@ class Reference(Flowable):
             canvas.restoreState()
 
 
-class StreamlinedPermutations(Flowable):
-    def __init__(self, text: str, link: str, scale: int = 1) -> None:
+def find_wrap_index(text: str, width: float, style: ParagraphStyle) -> int:
+    if stringWidth(text[0], style.font_name, style.font_size) > width:
+        raise SummaryGenError(f"Character is too large to display: {text[0]}")
+
+    for i in range(1, len(text)):
+        if stringWidth(text[0:i], style.font_name, style.font_size) > width:
+            return i - 1
+
+    return -1
+
+
+def wrap_text(text: str, width: float, style: ParagraphStyle) -> list[str]:
+    wrap_index = find_wrap_index(text, width, style)
+    if wrap_index == -1:
+        return [text]
+
+    lines = [text[0:wrap_index + 1]]
+    lines.extend(wrap_text(text[wrap_index + 1:], width, style))
+    return lines
+
+
+class ExcelLink(Flowable):
+    def __init__(
+        self,
+        text: str,
+        link: str,
+        scale: int = 1,
+        ipady: int = 0
+    ) -> None:
         self.text = text
         self.link = link
+        self._ipady = ipady
 
         self.img_path = assets.get_path("images/excel_icon.png")
         self.img_obj = img_obj = utils.get_image(
@@ -128,9 +157,9 @@ class StreamlinedPermutations(Flowable):
         self._img_height = img_obj.drawHeight * scale
 
         self._style = style = PSTYLES["IconCaption"]
-        text_width = stringWidth(text, style.font_name, style.font_size)
-        self._width = max(text_width, self._img_width)
-        self._height = self._img_height + style.leading
+        self._width = self._img_width * 4.2
+        self._lines = wrap_text(self.text, self._width, self._style)
+        self._height = self._img_height + style.leading * len(self._lines) + self._ipady
 
     def wrap(self, *args) -> tuple[float, float]:
         return (self._width, self._height)
@@ -142,21 +171,27 @@ class StreamlinedPermutations(Flowable):
 
         canvas.saveState()
         try:
-            text_obj = canvas.beginText(x=0, y=0)
-            text_obj.setFont(
-                self._style.font_name,
-                self._style.font_size,
-                self._style.leading
-            )
-            text_obj.setFillColor(self._style.text_color)
-            text_obj.textOut(self.text)
-            canvas.drawText(text_obj)
+            lines = wrap_text(self.text, self._width, self._style)
+            for i, line in enumerate(lines):
+                text_width = stringWidth(line, self._style.font_name, self._style.font_size)
+                text_obj = canvas.beginText(
+                    x=(self._width - text_width) / 2,
+                    y=self._style.leading * (len(lines) - i - 1)
+                )
+                text_obj.setFont(
+                    self._style.font_name,
+                    self._style.font_size,
+                    self._style.leading
+                )
+                text_obj.setFillColor(self._style.text_color)
+                text_obj.textOut(line)
+                canvas.drawText(text_obj)
 
             rem_width = self._width - self._img_width
             canvas.drawImage(
                 self.img_path,
                 x=rem_width / 2,
-                y=self._style.leading,
+                y=self._style.leading * len(lines) + self._ipady,
                 height=self._img_height,
                 width=self._img_width,
                 preserveAspectRatio=True,
@@ -165,7 +200,7 @@ class StreamlinedPermutations(Flowable):
 
             canvas.linkURL(
                 url=self.link,
-                rect=(0, -3, self._width, self._height),
+                rect=(0, 0, self._width, self._height),
                 relative=1
             )
         finally:

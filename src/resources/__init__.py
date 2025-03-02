@@ -14,6 +14,7 @@ __all__ = [
     "get_key_terminology",
     "get_section_description",
     "get_introduction_html",
+    "get_data_table_html",
 ]
 
 
@@ -94,13 +95,32 @@ def get_section_description(measure_id: str) -> SectionDescription | None:
     return SectionDescription(desc_json)
 
 
-def get_introduction_html() -> str:
-    file_path = get_path("data/introduction.html")
+def ensure_html_file(file_name: str) -> str:
+    if not file_name.endswith(".html"):
+        file_name += ".html"
+
+    return file_name
+
+
+def get_html(file_name: str) -> str:
+    file_path = get_path(ensure_html_file(f"data/{file_name}"))
     with open(file_path, "r") as fp:
-        _html = fp.read().replace("\n", "").replace("\t", "")
+        _html = (
+            fp.read()
+            .replace("\n", "")
+            .replace("\t", "")
+        )
 
     _html = re.sub(r"[ ]{2,}", " ", _html)
     return _html
+
+
+def get_introduction_html() -> str:
+    return get_html("introduction.html")
+
+
+def get_data_table_html() -> str:
+    return get_html("data_table.html")
 
 
 def get_sunsetted_measures() -> SunsettedMeasuresSection:
