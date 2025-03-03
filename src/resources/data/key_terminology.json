@@ -910,7 +910,7 @@
         {
             "name": "Offering ID",
             "api_name": null,
-            "content": "Offering ID, or Statewide Measure Offering ID, is a unique identifier for each unique measure offering, based on combinations of measure determinants defined for each measure. For example, the \"SWHC020-04 Air-Cooled Screw Chiller\" measure can be characterized by  \"Capacity\", \"Energy Efficiency Ratio\", and \"Integrated Part Load Value\", creating multiple distinct offerings for this measure (see example image below). Offerings are then assigned an ID token for identification, using the alphabet system (i.e., A, B, …, Z, AA, AB, …).<br><img src=\"./assets/images/off_id_kt.png\"/>",
+            "content": "Offering ID, or Statewide Measure Offering ID, is a unique identifier for each unique measure offering, based on combinations of measure determinants defined for each measure. For example, the \"SWHC020-04 Air-Cooled Screw Chiller\" measure can be characterized by  \"Capacity\", \"Energy Efficiency Ratio\", and \"Integrated Part Load Value\", creating multiple distinct offerings for this measure (see example image below). Offerings are then assigned an ID token for identification, using the alphabet system (i.e., A, B, \u2026, Z, AA, AB, \u2026).<br><img src=\"./assets/images/off_id_kt.png\"/>",
             "contains_table": false,
             "columns": null,
             "column_mappings": null,
@@ -954,7 +954,7 @@
         {
             "name": "PAC Cost - No Administrative Cost (USD)",
             "api_name": null,
-            "content": "This field represents the Net Program Administrator Cost without Administrator Cost. The field is calculated identically as the TRC Cost – No Administrator Cost but without including participant cost. This calculation is described in the CPUC Cost Effectiveness Test Reference Manual and includes costs for the measure, electric and gas benefits, as well as refrigerant and miscellaneous costs.<br>The \"no administrative cost\" version is included in the eTRM to provide a directional and best-case view of permutation cost effectiveness without the consideration for the needs of a specific program.",
+            "content": "This field represents the Net Program Administrator Cost without Administrator Cost. The field is calculated identically as the TRC Cost - No Administrator Cost but without including participant cost. This calculation is described in the CPUC Cost Effectiveness Test Reference Manual and includes costs for the measure, electric and gas benefits, as well as refrigerant and miscellaneous costs.<br>The \"no administrative cost\" version is included in the eTRM to provide a directional and best-case view of permutation cost effectiveness without the consideration for the needs of a specific program.",
             "contains_table": false,
             "columns": null,
             "column_mappings": null,
@@ -1038,7 +1038,7 @@
         {
             "name": "Restricted Permutation (Number)",
             "api_name": null,
-            "content": "This field was created in response to the CPUC's Gas Decision - D.23-04-035 to document the TRCRatio for non-exempt natural gas, new construction, and Res or Com permutations.<br>Field has value of 0 if TRCRatio ≥ 1 and value of 1 if TRCRatio < 1.<br>For measures/permutations that are not non-exempt gas, new construction, or Res/Com sector, this field has a value of 0.",
+            "content": "This field was created in response to the CPUC's Gas Decision - D.23-04-035 to document the TRCRatio for non-exempt natural gas, new construction, and Res or Com permutations.<br>Field has value of 0 if TRCRatio \u2265 1 and value of 1 if TRCRatio < 1.<br>For measures/permutations that are not non-exempt gas, new construction, or Res/Com sector, this field has a value of 0.",
             "contains_table": false,
             "columns": null,
             "column_mappings": null,
