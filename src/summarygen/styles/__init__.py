@@ -34,6 +34,7 @@ __all__ = [
     "get_list_style",
     "get_key_terminology_table_style",
     "get_sunsetted_measures_table_style",
+    "get_toc_style",
 
     # Enums
     "Alignment",
@@ -72,7 +73,8 @@ from .stylesheets import (
     get_table_style,
     get_list_style,
     get_key_terminology_table_style,
-    get_sunsetted_measures_table_style
+    get_sunsetted_measures_table_style,
+    get_toc_style
 )
 from .enums import (
     Alignment

@@ -338,6 +338,19 @@ def _gen_tstyles() -> StyleSheet[TableStyle]:
             ]
         )
     )
+    style_sheet.add(
+        TableStyle(
+            "TOC",
+            [
+                ("VALIGN", (0, 0), (-1, -1), "TOP"),
+                ("ALIGN", (0, -2), (-1, -2), "LEFT"),
+                ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 5),
+                ("LINEABOVE", (0, 0), (-1, 0), 1, COLORS["RevisionLogGridLine"])
+            ]
+        )
+    )
 
     return style_sheet
 
@@ -358,6 +371,20 @@ def is_spanned(x: int, y: int, spans: list[_TableSpan]) -> bool:
             return True
 
     return False
+
+
+def get_toc_style(uc_row_indices: list[int], generic_indices: list[int]) -> TableStyle:
+    style = copy.deepcopy(TSTYLES["TOC"])
+    cmds = style.getCommands()
+
+    for y in uc_row_indices:
+        cmds.append(("BACKGROUND", (0, y), (-1, y), COLORS["UseCategoryRowBG"]))
+        cmds.append(("SPAN", (0, y), (-2, y)))
+
+    for y in generic_indices:
+        cmds.append(("SPAN", (1, y), (-2, y)))
+
+    return TableStyle(style.name, cmds)
 
 
 def get_list_style(bullet_index: int) -> TableStyle:
@@ -384,7 +411,7 @@ def get_sunsetted_measures_table_style(
 
     # apply use category row styles and styles relative to use category rows
     for i, y in enumerate(uc_row_indices):
-        cmds.append(("BACKGROUND", (0, y), (-1, y), COLORS["SunsettedMeasuresUCRow"]))
+        cmds.append(("BACKGROUND", (0, y), (-1, y), COLORS["UseCategoryRowBG"]))
         cmds.append(("SPAN", (0, y), (-1, y)))
         cmds.append(("ALIGN", (0, y), (-1, y), "CENTER"))
         if y != 1:

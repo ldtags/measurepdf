@@ -181,6 +181,7 @@ class ParagraphStyle(PropertySet):
                  space_before: float | None=None,
                  space_after: float | None=None,
                  word_wrap: Literal['CJK', 'LTR', 'RTL'] | None=None,
+                 first_line_indent: int | None=None,
                  **kwargs):
         if font_name is not None:
             kwargs['fontName'] = font_name
@@ -210,6 +211,9 @@ class ParagraphStyle(PropertySet):
 
         if space_after is not None:
             kwargs['spaceAfter'] = space_after
+
+        if first_line_indent is not None:
+            kwargs["firstLineIndent"] = first_line_indent
 
         PropertySet.__init__(self,
                              name=name,
@@ -287,6 +291,16 @@ class ParagraphStyle(PropertySet):
     @space_after.setter
     def space_after(self, val: float) -> None:
         self["spaceAfter"] = val
+
+    @property
+    def first_line_indent(self) -> int:
+        first_line_indent = self["firstLineIndent"]
+        assert isinstance(first_line_indent, float | int)
+        return first_line_indent
+
+    @first_line_indent.setter
+    def first_line_indent(self, val: int) -> None:
+        self["firstLineIndent"] = val
 
     @property
     def subscripted(self) -> ParagraphStyle:

@@ -33,6 +33,7 @@ __all__ = [
     "TitleSectionContainer",
     "TitleSectionSubContainer",
     "SunsettedMeasuresTable",
+    "TableOfContents",
     "split_word",
     "wrap_elements"
 ]
@@ -61,6 +62,9 @@ from src.summarygen.flowables.titlepage import (
     TitleSection,
     TitleSectionContainer,
     TitleSectionSubContainer
+)
+from src.summarygen.flowables.tableofcontents import (
+    TableOfContents
 )
 from src.summarygen.flowables.utils import (
     split_word,

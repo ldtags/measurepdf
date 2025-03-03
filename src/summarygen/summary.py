@@ -3,7 +3,7 @@ import re
 import math
 import shutil
 import logging
-import datetime
+import datetime as dt
 from typing import overload, TypeVar
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -18,7 +18,7 @@ from reportlab.platypus import (
     Spacer,
     Flowable
 )
-from reportlab.platypus.tableofcontents import TableOfContents
+# from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
 from src import (
@@ -63,7 +63,8 @@ from src.summarygen.flowables import (
     BasicTable,
     TitlePage,
     ExcelLink,
-    SunsettedMeasuresTable
+    SunsettedMeasuresTable,
+    TableOfContents
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -71,6 +72,8 @@ from src.summarygen.exceptions import SummaryGenError
 logger = logging.getLogger(__name__)
 
 _T = TypeVar("_T")
+
+_conn: ETRMConnection | None = None
 
 
 def clean():
@@ -163,10 +166,55 @@ class SummaryDocTemplate(BaseDocTemplate):
         else:
             text = use_category
 
-        self.notify("TOCEntry", (0, text, self.page))
+        self.notify("TOCEntryUC", (text, self.page))
 
     def add_measure_toc_entry(self, version_id: str) -> None:
-        self.notify("TOCEntry", (1, version_id, self.page))
+        global _conn
+        if _conn is None:
+            measure_name = ""
+            active_life = ""
+        else:
+            measure = _conn.get_measure(version_id)
+            measure_name = measure.name
+            start_date = measure.start_date.strftime(r"%Y-%m-%d")
+            if measure.end_date is None:
+                end_date = "Unknown"
+            else:
+                end_date = measure.end_date.strftime(r"%Y-%m-%d")
+
+            active_life = f"{start_date} - {end_date}"
+
+        self.notify(
+            "TOCEntryM",
+            (version_id, self.page, measure_name, active_life)
+        )
+
+    def add_generic_toc_entry(self, id: str) -> None:
+        match id:
+            case "key_terminology":
+                text = "Key Terminology"
+                key = "TOCEntryUC"
+            case "data_table":
+                text = "Data Table"
+                key = "TOCEntryUC"
+            case "appendix":
+                text = "Appendix"
+                key = "TOCEntryUC"
+            case "data_spec":
+                text = "eTRM Data Specification"
+                key = "TOCEntry"
+            case "summary_spreadsheets":
+                text = "Permutations Summary Spreadsheets"
+                key = "TOCEntry"
+            case "sunsetted_measures":
+                text = "Sunsetted or Deactivated Measures"
+                key = "TOCEntry"
+            case _:
+                return
+
+        self.notify(key, (text, self.page))
+        if id == "appendix":
+            self.add_generic_toc_entry("summary_spreadsheets")
 
     def afterFlowable(self, flowable: Flowable) -> None:
         if not isinstance(flowable, NextPageTemplate):
@@ -175,6 +223,7 @@ class SummaryDocTemplate(BaseDocTemplate):
         template_id = flowable.action[1]
         re_match = re.fullmatch(patterns.VERSION_ID, template_id)
         if re_match is None:
+            self.add_generic_toc_entry(template_id)
             return
 
         try:
@@ -346,12 +395,14 @@ class MeasureSummary:
         clean()
         self.measures: dict[str, list[Measure]] = {}
         self._cur_measure: Measure | None = None
-        self.connection = connection
         self.story = Story()
         self.dir_path = dir_path
         self.file_name = file_name
         if not override and os.path.exists(self.file_path):
             raise FileExistsError(f"File already exists at {self.file_path}")
+
+        global _conn
+        _conn = self.connection = connection
 
         self.summary = SummaryDocTemplate(self.file_path)
         self.parser = HTMLParser()
@@ -460,12 +511,8 @@ class MeasureSummary:
 
     def add_table_of_contents(self) -> None:
         toc_header = Paragraph("TABLE OF CONTENTS", style=PSTYLES["h1"])
-        self.story.add(toc_header, NEWLINE)
-        toc = TableOfContents()
-        # toc.levelStyles = [
-            
-        # ]
-        self.story.add(toc)
+        self.story.add(toc_header, Spacer(0.01, DEFAULT_PARA_SPACING))
+        self.story.add(TableOfContents())
 
     def add_revision_log(self) -> None:
         logger.info("Generating revision log...")
@@ -981,8 +1028,6 @@ class MeasureSummary:
         for terminology_item in key_terminology.items:
             self.add_key_terminology_item(terminology_item)
 
-        self.story.add(PageBreak())
-
     def add_data_table(self) -> None:
         logger.info("Adding the data table...")
 
@@ -1004,8 +1049,6 @@ class MeasureSummary:
             )
         )
 
-        self.story.add(PageBreak())
-
     def add_spreadsheets(self) -> None:
         self.story.add(
             Paragraph(
@@ -1023,7 +1066,20 @@ class MeasureSummary:
             )
             self.story.add(Spacer(0.01, 8))
 
-        self.story.add(PageBreak())
+    def add_data_spec(self) -> None:
+        self.story.add(
+            Paragraph(
+                "eTRM Data Specification",
+                style=PSTYLES["h3"]
+            )
+        )
+
+        self.story.add(
+            ExcelLink(
+                "eTRM - Data Specification.xls",
+                "https://google.com"
+            )
+        )
 
     def add_sunsetted_measures(self) -> None:
         section = resources.get_sunsetted_measures()
@@ -1031,11 +1087,13 @@ class MeasureSummary:
         self.story.add(*flowables)
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(SunsettedMeasuresTable(section.use_categories))
-        self.story.add(PageBreak())
 
     def add_appendix(self) -> None:
         self.story.add(Paragraph("APPENDIX", style=PSTYLES["h1"]))
         self.add_spreadsheets()
+        self.story.add(NextPageTemplate("data_spec"), PageBreak())
+        self.add_data_spec()
+        self.story.add(NextPageTemplate("sunsetted_measures"), PageBreak())
         self.add_sunsetted_measures()
 
     @overload
@@ -1113,7 +1171,7 @@ class MeasureSummary:
 
     def filter_measures(
         self,
-        min_end_date: datetime.date | None = None
+        min_end_date: dt.date | None = None
     ) -> None:
         """Filters the currently stored measures to meet the parameters.
         
@@ -1173,16 +1231,24 @@ class MeasureSummary:
 
         self._cur_measure = None
 
+    def _add_default_page_templates(self) -> None:
+        self.summary.addPageTemplates([
+            SummaryPageTemplate(id="default"),
+            SummaryPageTemplate(id="key_terminology"),
+            SummaryPageTemplate(id="data_table"),
+            SummaryPageTemplate(id="appendix"),
+            SummaryPageTemplate(id="data_spec"),
+            SummaryPageTemplate(id="sunsetted_measures")
+        ])
+
     def build(self, toc: bool = True) -> None:
-        template = SummaryPageTemplate(id="default")
-        self.summary.addPageTemplates(template)
+        self._add_default_page_templates()
         self.story.add(NextPageTemplate("default"))
 
         self.add_introduction()
         self.story.add(PageBreak())
         self.add_revision_log()
         if toc:
-            # self.story.add(NextPageTemplate("TOC"))
             self.story.add(PageBreak())
             self.add_table_of_contents()
 
@@ -1199,12 +1265,14 @@ class MeasureSummary:
                 if i != len(sorted_measures) - 1:
                     self._add_measure_template(sorted_measures[i + 1])
                 else:
-                    self.story.add(NextPageTemplate("default"))
+                    self.story.add(NextPageTemplate("key_terminology"))
 
                 self.story.add(PageBreak())
 
         self.add_key_terminology()
+        self.story.add(NextPageTemplate("data_table"), PageBreak())
         self.add_data_table()
+        self.story.add(NextPageTemplate("appendix"), PageBreak())
         self.add_appendix()
         if self.story.contents == []:
             raise RuntimeError("Cannot create an empty summary")
