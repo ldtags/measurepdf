@@ -318,52 +318,6 @@ class SummaryPageTemplate(PageTemplate):
         self.draw_header(canv, doc)
 
 
-def calc_row_heights(
-    data: list[list[str | Paragraph]],
-    table_style: TableStyle,
-    para_styles: tuple[ParagraphStyle, ...],
-    base_height: float,
-    base_widths: tuple[float, ...]
-) -> list[float]:
-    """Calculates row heights for static tables"""
-
-    vpadding = table_style.top_padding + table_style.bottom_padding
-    hpadding = table_style.left_padding + table_style.right_padding
-    height = base_height + vpadding
-    row_heights: list[float] = []
-    row_styles: tuple[ParagraphStyle, ...] = []
-    for row in data:
-        row_height = height
-        if isinstance(para_styles, ParagraphStyle):
-            row_styles = [para_styles] * len(row)
-        elif len(para_styles) == 1:
-            row_styles = para_styles * len(row)
-        elif len(para_styles) != len(row):
-            raise RuntimeError(f'Invalid number of paragraph styles')
-        else:
-            row_styles = para_styles
-
-        for i, cell in enumerate(row):
-            if isinstance(cell, str):
-                text = cell
-            else:
-                text = cell.text
-            re_match = re.search(r'<link .+>(.+)</link>', text)
-            if re_match != None:
-                text = str(re_match.group(1))
-            width = stringWidth(text,
-                                row_styles[i].font_name,
-                                row_styles[i].font_size)
-            width += hpadding
-            scale = width // (base_widths[i])
-            leading = row_styles[i].leading
-            cell_height = height + scale * leading
-            if cell_height > row_height:
-                row_height = cell_height
-        row_heights.append(row_height)
-    return row_heights
-
-
 def contains_all_climate_zones(labels: list[str]) -> bool:
     label_set = set([label.upper() for label in labels])
     for i in range(1, 17):
