@@ -1045,16 +1045,15 @@ class MeasureSummary:
         try:
             arg = args[0]
         except IndexError:
-            arg = kwargs.get('measure_id')
+            arg = kwargs.get("measure_id")
             if arg is None:
-                arg = kwargs.get('measure')
+                arg = kwargs.get("measure")
 
         if isinstance(arg, str):
             try:
                 measure = self.connection.get_measure(arg)
             except ETRMResponseError as err:
-                raise SummaryGenError(f'eTRM Connection Error ({err.status})'
-                                      f'\n{err.message}')
+                raise SummaryGenError(f"eTRM Connection Error ({err.status})\n{err.message}")
         elif isinstance(arg, Measure):
             measure = arg
         else:
@@ -1082,21 +1081,19 @@ class MeasureSummary:
         try:
             measure_ids = connection.get_all_measure_ids(use_category)
         except ETRMResponseError as err:
-            raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
-                                  f'\n{err.message}')
+            raise SummaryGenError(f"eTRM Connection Error ({err.status}):\n{err.message}")
 
         versions: list[str] = []
         for measure_id in measure_ids:
             try:
                 measure_versions = connection.get_measure_versions(measure_id)
             except ETRMResponseError as err:
-                raise SummaryGenError(f'eTRM Connection Error ({err.status}):'
-                                      f'\n{err.message}')
+                raise SummaryGenError(f"eTRM Connection Error ({err.status}):\n{err.message}")
 
             measure_versions.sort(key=utils.version_key)
             recent_version: str | None = None
             for measure_version in measure_versions:
-                if measure_version.count('-') == 1:
+                if measure_version.count("-") == 1:
                     recent_version = measure_version
                     break
 
@@ -1108,7 +1105,10 @@ class MeasureSummary:
 
     def filter_measures(
         self,
-        min_end_date: dt.date | None = None
+        min_start_date: dt.date | None = None,
+        max_start_date: dt.date | None = None,
+        min_end_date: dt.date | None = None,
+        max_end_date: dt.date | None = None
     ) -> None:
         """Filters the currently stored measures to meet the parameters.
         
@@ -1127,14 +1127,37 @@ class MeasureSummary:
                 in measures
         ]
 
+        # filter measures
+        measures = list(
+            filter(
+                lambda measure: (
+                    (
+                        min_start_date is None
+                        or measure.start_date >= min_start_date
+                    )
+                    and (
+                        max_start_date is None
+                        or measure.start_date < max_start_date
+                    )
+                    and (
+                        min_end_date is None
+                        or measure.end_date is None
+                        or measure.end_date >= min_end_date
+                    )
+                    and (
+                        max_end_date is None
+                        or (
+                            measure.end_date is not None
+                            and measure.end_date < max_end_date
+                        )
+                    )
+                ),
+                measures
+            )
+        )
+
         self.measures = {}
         for measure in measures:
-            end_date = measure.end_date
-            if not (min_end_date is None
-                    or end_date is None
-                    or end_date >= min_end_date):
-                continue
-
             self.add_measure(measure)
 
     def reset(self):

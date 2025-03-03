@@ -3,6 +3,7 @@ import sys
 import time
 import logging
 import argparse as ap
+import datetime as dt
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src import lookups, resources, _ROOT
@@ -22,7 +23,11 @@ class TestBuilder:
         self,
         file_name: str,
         measure_versions: list[str] | str | None = None,
-        use_categories: list[str] | str | None = None
+        use_categories: list[str] | str | None = None,
+        min_start_date: dt.date | None = None,
+        max_start_date: dt.date | None = None,
+        min_end_date: dt.date | None = None,
+        max_end_date: dt.date | None = None
     ) -> None:
         dir_path = os.path.join(_ROOT, "..", "summaries")
         measure_pdf = MeasureSummary(
@@ -49,6 +54,12 @@ class TestBuilder:
             logger.info(f"Adding use category: {use_category}")
             measure_pdf.add_use_category(use_category)
 
+        measure_pdf.filter_measures(
+            min_start_date=min_start_date,
+            max_start_date=max_start_date,
+            min_end_date=min_end_date,
+            max_end_date=max_end_date
+        )
         measure_pdf.build()
         logger.info(f"Summary {measure_pdf.file_name} was successfully created")
 
@@ -68,16 +79,16 @@ def parse_args() -> ap.Namespace:
     )
 
     parser.add_argument(
-        "-u", "--use-category",
-        metavar="use_category",
+        "-u", "--use-categories",
+        metavar="use_categories",
         nargs="*",
         default=[],
         help="Specifies the use category or categories to generate a summary for."
     )
 
     parser.add_argument(
-        "-n", "--name",
-        metavar="name",
+        "-o", "--output-file",
+        metavar="output_file",
         default="measure_summary",
         help="Specifies the name of the generated summary file."
     )
@@ -89,9 +100,31 @@ def parse_args() -> ap.Namespace:
     )
 
     parser.add_argument(
-        "-d", "--debug",
-        action="store_true",
-        help="Include to run the program in debug mode."
+        "--min-start-date",
+        type=dt.date.fromisoformat,
+        default=None,
+        help="Specifies the inclusive minimum start date (in ISO format) to filter measures by."
+    )
+
+    parser.add_argument(
+        "--max-start-date",
+        type=dt.date.fromisoformat,
+        default=None,
+        help="Specifies the non-inclusive maximum start date (in ISO format) to filter measures by."
+    )
+
+    parser.add_argument(
+        "--min-end-date",
+        type=dt.date.fromisoformat,
+        default=None,
+        help="Specifies the inclusive minimum end date (in ISO format) to filter measures by."
+    )
+
+    parser.add_argument(
+        "--max-end-date",
+        type=dt.date.fromisoformat,
+        default=None,
+        help="Specifies the non-inclusive maximum end date (in ISO format) to filter measures by."
     )
 
     return parser.parse_args()
@@ -100,33 +133,26 @@ def parse_args() -> ap.Namespace:
 if __name__ == '__main__':
     args = parse_args()
     measures = getattr(args, "measures", [])
-    use_categories = getattr(args, "use_category", [])
-    name = getattr(args, "name", "measure_summary")
+    use_categories = getattr(args, "use_categories", [])
+    name = getattr(args, "output_file", "measure_summary")
     _all = getattr(args, "all", False)
-    if _all and (measures or use_categories):
-        print("Usage: ./cli [-a | -m -u -n]")
-        exit(1)
+    if _all and (measures != [] or use_categories != []):
+        print("Usage: ./cli [-a | -m -u] ...")
+        sys.exit(1)
 
-    builder = TestBuilder()
-    start = time.time()
     if _all:
-        blacklist = ["WB"]
         use_categories = list(lookups.USE_CATEGORIES.keys())
-        for use_category in use_categories:
-            if use_category in blacklist:
-                continue
-            
-            print(f"Building summary for {use_category}")
-            builder.build(
-                f"SW{use_category}_Summary",
-                use_categories=use_category
-            )
-    else:
-        builder.build(
-            name,
-            measure_versions=measures,
-            use_categories=use_categories
-        )
 
+    start = time.time()
+    builder = TestBuilder()
+    builder.build(
+        name,
+        measure_versions=measures,
+        use_categories=use_categories,
+        min_start_date=getattr(args, "--min-start-date", None),
+        max_start_date=getattr(args, "--max-start-date", None),
+        min_end_date=getattr(args, "--min-end-date", None),
+        max_end_date=getattr(args, "--max-end-date", None)
+    )
     elapsed = time.time() - start
-    logger.info(f"Generation took {elapsed}s")
+    logger.info(f"Summary generation took {elapsed}s")
