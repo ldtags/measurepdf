@@ -184,7 +184,14 @@ class ETRMCache:
         table_name: str,
         version: str
     ) -> SharedValueTable | None:
-        return self.shared_value_tables.get(f"{table_name}-{version}")
+        key = f"{table_name}-{version}"
+        if self._use_persistent_cache:
+            tables: dict[str, Any] = self._p_cache.get("shared_tables", {})
+            table_dict = tables.get(key)
+            if table_dict is not None:
+                return SharedValueTable(table_dict)
+
+        return self.shared_value_tables.get(key)
 
     def add_shared_value_table(
         self,
@@ -192,7 +199,15 @@ class ETRMCache:
         version: str,
         value_table: SharedValueTable
     ) -> None:
-        self.shared_value_tables[f"{table_name}-{version}"] = value_table
+        key = f"{table_name}-{version}"
+        if self._use_persistent_cache:
+            if "shared_tables" not in self._p_cache:
+                self._p_cache["shared_tables"] = {}
+
+            self._p_cache["shared_tables"][key] = value_table.as_dict()
+            update_persistent_cache(self._p_cache)
+
+        self.shared_value_tables[key] = value_table
 
     @etrm_cache_request
     def get_shared_parameter(
@@ -204,12 +219,10 @@ class ETRMCache:
         if self._use_persistent_cache:
             params: dict[str, Any] = self._p_cache.get("shared_parameters", {})
             param_dict = params.get(key)
-            if param_dict is None:
-                return None
+            if param_dict is not None:
+                return SharedParameter(param_dict)
 
-            return SharedParameter(param_dict)
-        else:
-            return self.shared_parameters.get(key)
+        return self.shared_parameters.get(key)
 
     def add_shared_parameter(self, parameter: SharedParameter) -> None:
         if self._use_persistent_cache:
@@ -218,8 +231,8 @@ class ETRMCache:
 
             self._p_cache["shared_parameters"][parameter.version] = parameter.as_dict()
             update_persistent_cache(self._p_cache)
-        else:
-            self.shared_parameters[parameter.version] = parameter
+
+        self.shared_parameters[parameter.version] = parameter
 
 class ETRMConnection:
     """eTRM API connection layer"""

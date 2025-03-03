@@ -496,6 +496,14 @@ class Column:
     def __ne__(self, other) -> bool:
         return not self.__eq__(other)
 
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "api_name": self.api_name,
+            "unit": self.unit,
+            "reference_refs": self.reference_refs
+        }
+
 
 class ValueTable:
     def __init__(self, res_json: dict[str, Any]):
@@ -571,6 +579,26 @@ class SharedValueTable:
 
     def __ne__(self, other) -> bool:
         return not self.__eq__(other)
+
+    def as_dict(self) -> dict[str, Any]:
+        return {
+            "name": self.name,
+            "api_name": self.api_name,
+            "parameters": self.parameters,
+            "columns": [col.as_dict() for col in self.columns],
+            "values": self.values,
+            "references": self.references,
+            "version": self.version,
+            "status": self.status,
+            "change_description": self.change_description,
+            "owner": self.owner,
+            "is_published": self.is_published,
+            "committed_date": self.committed_date,
+            "last_updated_date": self.last_updated_date,
+            "type": self.type,
+            "versions_url": self.versions_url,
+            "url": self.url
+        }
 
 
 class SharedParameterVersion:
