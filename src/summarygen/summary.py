@@ -795,15 +795,10 @@ class MeasureSummary:
         self.story.add(KeepTogether([header, table]), NEWLINE)
 
     def add_streamlined_permutations(self) -> None:
-        file_name = f"SW{self._cur_measure.use_category.upper()}_Summary.xlsx"
+        file_name = rf"SW{self._cur_measure.use_category.upper()}_Summary.xlsx"
         self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["h5"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
-        self.story.add(
-            ExcelLink(
-                file_name,
-                "https://google.com"
-            )
-        )
+        self.story.add(ExcelLink(file_name, file_name))
 
     def get_shared_key_terminology_table(self, item: KeyTerminology) -> list[list[str]]:
         if not item.requires_etrm_table():
@@ -996,12 +991,8 @@ class MeasureSummary:
             )
         )
 
-        self.story.add(
-            ExcelLink(
-                "eTRM - Data Specification.xls",
-                "https://google.com"
-            )
-        )
+        file_name = "eTRM - Data Specification.xls"
+        self.story.add(ExcelLink(file_name, file_name))
 
     def add_spreadsheets(self) -> None:
         self.story.add(
@@ -1012,12 +1003,8 @@ class MeasureSummary:
         )
 
         for use_category, _ in lookups.USE_CATEGORIES.items():
-            self.story.add(
-                ExcelLink(
-                    f"SW{use_category}_Summary.xlsx",
-                    "https://google.com"
-                )
-            )
+            file_name = f"SW{use_category}_Summary.xlsx"
+            self.story.add(ExcelLink(file_name, file_name))
             self.story.add(Spacer(0.01, 8))
 
     def add_data_spec(self) -> None:
@@ -1028,12 +1015,8 @@ class MeasureSummary:
             )
         )
 
-        self.story.add(
-            ExcelLink(
-                "eTRM - Data Specification.xls",
-                "https://google.com"
-            )
-        )
+        file_name = "eTRM - Data Specification.xls"
+        self.story.add(ExcelLink(file_name, file_name))
 
     def add_sunsetted_measures(self) -> None:
         section = resources.get_sunsetted_measures()
