@@ -186,14 +186,6 @@ def _gen_pstyles() -> StyleSheet[ParagraphStyle]:
     )
     style_sheet.add(
         ParagraphStyle(
-            "TOCHeader",
-            font_name="MerriweatherB",
-            font_size=18,
-            alignment=TA_CENTER
-        )
-    )
-    style_sheet.add(
-        ParagraphStyle(
             "TerminologyHeader",
             text_color=COLORS["LightBrown"],
             parent=style_sheet["Paragraph"]

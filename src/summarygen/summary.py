@@ -147,98 +147,45 @@ class SummaryDocTemplate(BaseDocTemplate):
         self.page_height = pagesize[1]
         y_margin = self.top_margin + self.bottom_margin
         self.inner_height = self.page_height - y_margin
-        self.pt_index = -1
+        self._use_categories: set[str] = set()
 
-    def handle_nextPageTemplate(
-        self,
-        pt: str | int | list[str] | tuple[str, ...]
-    ) -> None:
-        return super().handle_nextPageTemplate(pt)
+    def get_page_template(self, id: str) -> PageTemplate | None:
+        for page_template in self.pageTemplates:
+            if page_template.id == id:
+                return page_template
 
-    def get_previous_page_template(self) -> PageTemplate | None:
-        if self.pageTemplates == []:
-            return None
+        return None
 
-        if self.pt_index == -1:
-            return None
+    def add_use_category_toc_entry(self, use_category: str) -> None:
+        full_name = lookups.USE_CATEGORIES.get(use_category)
+        if full_name is not None:
+            text = f"{full_name} - {use_category}"
+        else:
+            text = use_category
 
-        return self.pageTemplates[self.pt_index]
+        self.notify("TOCEntry", (0, text, self.page))
 
-    def get_current_pt_index(self) -> int:
-        if self.pageTemplates == []:
-            return -1
+    def add_measure_toc_entry(self, version_id: str) -> None:
+        self.notify("TOCEntry", (1, version_id, self.page))
+
+    def afterFlowable(self, flowable: Flowable) -> None:
+        if not isinstance(flowable, NextPageTemplate):
+            return
+
+        template_id = flowable.action[1]
+        re_match = re.fullmatch(patterns.VERSION_ID, template_id)
+        if re_match is None:
+            return
 
         try:
-            pt_index = self._nextPageTemplateIndex
-        except AttributeError:
-            return -1
+            use_category = str(re_match.group(4))
+        except ValueError as err:
+            raise SummaryGenError(f"Invalid use category: {re_match.group(4)}") from err
 
-        return pt_index
+        if use_category not in self._use_categories:
+            self.add_use_category_toc_entry(use_category)
 
-    def get_current_page_template(self) -> PageTemplate | None:
-        pt_index = self.get_current_pt_index()
-        if pt_index == -1:
-            return None
-        return self.pageTemplates[pt_index]
-
-    def add_toc_entry(
-        self,
-        level: int,
-        page: int,
-        use_category: str | None=None,
-        measure_id: str | None=None
-    ) -> None:
-        if use_category is not None and measure_id is not None:
-            raise RuntimeError('use_category and measure_id are mutually exclusive')
-
-        if use_category is not None:
-            try:
-                verbose_name = lookups.USE_CATEGORIES[use_category]
-            except KeyError:
-                raise SummaryGenError(f'Invalid use category: {use_category}')
-            text = f'{use_category} - {verbose_name}'
-        elif measure_id is not None:
-            text = measure_id
-        else:
-            raise SummaryGenError('One of either use_category or measure_id'
-                                  ' are required to create a TOC entry')
-
-        self.notify('TOCEntry', (level, text, page))
-
-    def after_page_toc_handler(self) -> None:
-        cur_template = self.get_current_page_template()
-        if cur_template is None or cur_template.id is None:
-            return
-
-        cur_match = re.fullmatch(patterns.VERSION_ID, cur_template.id)
-        if cur_match is None:
-            return
-
-        cur_uc = str(cur_match.group(4))
-        prev_template = self.get_previous_page_template()
-        if prev_template is None or prev_template.id is None:
-            self.add_toc_entry(0, self.page, use_category=cur_uc)
-            self.add_toc_entry(1, self.page, measure_id=cur_template.id)
-            self.pt_index = self.get_current_pt_index()
-            return
-
-        prev_match = re.fullmatch(patterns.VERSION_ID, prev_template.id)
-        if prev_match is None:
-            self.add_toc_entry(0, self.page, use_category=cur_uc)
-            self.add_toc_entry(1, self.page, measure_id=cur_template.id)
-            return
-
-        if cur_template.id != prev_template.id:
-            self.add_toc_entry(0, self.page + 1, measure_id=cur_template.id)
-
-        prev_uc = str(prev_match.group(4))
-        if cur_uc != prev_uc:
-            self.add_toc_entry(1, self.page + 1, use_category=cur_uc)
-
-        self.pt_index = self.get_current_pt_index()
-
-    def afterPage(self) -> None:
-        self.after_page_toc_handler()
+        self.add_measure_toc_entry(template_id)
 
 
 class SummaryPageTemplate(PageTemplate):
@@ -512,10 +459,13 @@ class MeasureSummary:
         self.story.add(*flowables)
 
     def add_table_of_contents(self) -> None:
-        self.story.add(NextPageTemplate("TOC"))
-        toc_header = Paragraph("Table of Contents", style=PSTYLES["TOCHeader"])
+        toc_header = Paragraph("TABLE OF CONTENTS", style=PSTYLES["h1"])
         self.story.add(toc_header, NEWLINE)
-        self.story.add(TableOfContents())
+        toc = TableOfContents()
+        # toc.levelStyles = [
+            
+        # ]
+        self.story.add(toc)
 
     def add_revision_log(self) -> None:
         logger.info("Generating revision log...")
@@ -1223,7 +1173,7 @@ class MeasureSummary:
 
         self._cur_measure = None
 
-    def build(self, toc: bool = False) -> None:
+    def build(self, toc: bool = True) -> None:
         template = SummaryPageTemplate(id="default")
         self.summary.addPageTemplates(template)
         self.story.add(NextPageTemplate("default"))
@@ -1232,6 +1182,7 @@ class MeasureSummary:
         self.story.add(PageBreak())
         self.add_revision_log()
         if toc:
+            # self.story.add(NextPageTemplate("TOC"))
             self.story.add(PageBreak())
             self.add_table_of_contents()
 
