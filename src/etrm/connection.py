@@ -285,11 +285,13 @@ class ETRMConnection:
         logger.info(f"Making request to {_url}")
         for i in range(4):
             try:
-                response = requests.get(_url,
-                                        params=params,
-                                        headers=req_headers,
-                                        stream=stream,
-                                        **kwargs)
+                response = requests.get(
+                    _url,
+                    params=params,
+                    headers=req_headers,
+                    stream=stream,
+                    **kwargs
+                )
                 logger.info(f"Request complete: {response.status_code}")
                 break
             except httpc.IncompleteRead:
@@ -340,13 +342,14 @@ class ETRMConnection:
         if cache_response is not None:
             return cache_response
 
-        params = {
+        params = {}
+        if use_category is not None:
+            params['use_category'] = use_category
+
+        params |= {
             'offset': str(offset),
             'limit': str(limit)
         }
-
-        if use_category is not None:
-            params['use_category'] = use_category
 
         response = self.get('/measures', params=params)
         response_body = MeasuresResponse(response.json())
