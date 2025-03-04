@@ -257,7 +257,7 @@ def version_key(full_version_id: str) -> int:
         version = int(version_id)
         draft = -1
 
-    key += version * -10
+    key += version * 10
     key += draft
     return key
 
