@@ -151,6 +151,7 @@ class SummaryDocTemplate(BaseDocTemplate):
         y_margin = self.top_margin + self.bottom_margin
         self.inner_height = self.page_height - y_margin
         self._use_categories: set[str] = set()
+        self._prev_measure_id: str | None = None
 
     def get_page_template(self, id: str) -> PageTemplate | None:
         for page_template in self.pageTemplates:
@@ -166,7 +167,8 @@ class SummaryDocTemplate(BaseDocTemplate):
         else:
             text = use_category
 
-        self.notify("TOCEntryUC", (text, self.page))
+        self._use_categories.add(use_category)
+        self.notify("TOCEntryUC", (text, self.page + 1))
 
     def add_measure_toc_entry(self, version_id: str) -> None:
         global _conn
@@ -184,9 +186,10 @@ class SummaryDocTemplate(BaseDocTemplate):
 
             active_life = f"{start_date} - {end_date}"
 
+        self._prev_measure_id = version_id
         self.notify(
             "TOCEntryM",
-            (version_id, self.page, measure_name, active_life)
+            (version_id, self.page + 1, measure_name, active_life)
         )
 
     def add_generic_toc_entry(self, id: str) -> None:
@@ -212,9 +215,36 @@ class SummaryDocTemplate(BaseDocTemplate):
             case _:
                 return
 
-        self.notify(key, (text, self.page))
+        self.notify(key, (text, self.page + 1))
         if id == "appendix":
             self.add_generic_toc_entry("summary_spreadsheets")
+
+    def _should_add_use_category(self, version_id: str) -> bool:
+        re_match = re.fullmatch(patterns.VERSION_ID, version_id)
+        if re_match is None:
+            return False
+
+        measure_type = int(re_match.group(5))
+        use_category = str(re_match.group(4))
+        version_num = int(re_match.group(6))
+
+        if self._prev_measure_id is None:
+            return True
+
+        re_match = re.fullmatch(patterns.VERSION_ID, self._prev_measure_id)
+        if re_match is None:
+            return False
+
+        if str(re_match.group(4)) != use_category:
+            return True
+
+        if measure_type > int(re_match.group(5)):
+            return False
+
+        if version_num > int(re_match.group(6)):
+            return False
+
+        return True
 
     def afterFlowable(self, flowable: Flowable) -> None:
         if not isinstance(flowable, NextPageTemplate):
@@ -231,7 +261,7 @@ class SummaryDocTemplate(BaseDocTemplate):
         except ValueError as err:
             raise SummaryGenError(f"Invalid use category: {re_match.group(4)}") from err
 
-        if use_category not in self._use_categories:
+        if self._should_add_use_category(template_id):
             self.add_use_category_toc_entry(use_category)
 
         self.add_measure_toc_entry(template_id)
@@ -511,15 +541,23 @@ class MeasureSummary:
 
         self.story.add(TitlePage(self._cur_measure))
 
-    def _add_value_table(self, api_name: str) -> None:
+    def _add_value_table(self, *api_names: str) -> None:
         measure_id = self._cur_measure.full_version_id
-        table = self._cur_measure.get_value_table(api_name)
+        table = None
+        for api_name in api_names:
+            table = self._cur_measure.get_value_table(api_name)
+            if table is not None:
+                break
+
         if table is None:
             raise SummaryGenError(f"Missing table for {api_name} in {measure_id}")
 
         headers: list[str] = []
         for api_name in table.determinants:
             determinant = self._cur_measure.get_determinant(api_name)
+            if determinant is None:
+                determinant = self._cur_measure.get_shared_parameter(api_name)
+
             if determinant is None:
                 raise SummaryGenError(f"Missing determinant for {api_name} in {measure_id}")
 
@@ -565,7 +603,7 @@ class MeasureSummary:
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(*self.convert_html(desc_obj.base_case))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
-        self._add_value_table("description")
+        self._add_value_table("description", "Desc")
         self.story.add(NEWLINE)
 
     def _get_shared_avg(
@@ -1033,132 +1071,13 @@ class MeasureSummary:
         self.story.add(NextPageTemplate("sunsetted_measures"), PageBreak())
         self.add_sunsetted_measures()
 
-    @overload
-    def add_measure(self, measure_id: str) -> None:
-        ...
-
-    @overload
     def add_measure(self, measure: Measure) -> None:
-        ...
-
-    def add_measure(self, *args, **kwargs) -> None:
-        try:
-            arg = args[0]
-        except IndexError:
-            arg = kwargs.get("measure_id")
-            if arg is None:
-                arg = kwargs.get("measure")
-
-        if isinstance(arg, str):
-            try:
-                measure = self.connection.get_measure(arg)
-            except ETRMResponseError as err:
-                raise SummaryGenError(f"eTRM Connection Error ({err.status})\n{err.message}")
-        elif isinstance(arg, Measure):
-            measure = arg
-        else:
-            raise RuntimeError(f'Unsupported arg type: {type(arg)}')
-
-        if self.contains(measure):
-            return
-
+        logger.info(f"Adding measure {measure.full_version_id}")
         try:
             self.measures[measure.use_category].append(measure)
             self.measures[measure.use_category].sort(key=Measure.sorting_key)
         except KeyError:
             self.measures[measure.use_category] = [measure]
-
-    def add_use_category(self, use_category: str) -> None:
-        """Adds the most recent published version of each measure in the
-        use category `use_category`.
-
-        Use when making a summary of a use category.
-        """
-
-        logger.info(f'Adding use category {use_category}')
-
-        connection = self.connection
-        try:
-            measure_ids = connection.get_all_measure_ids(use_category)
-        except ETRMResponseError as err:
-            raise SummaryGenError(f"eTRM Connection Error ({err.status}):\n{err.message}")
-
-        versions: list[str] = []
-        for measure_id in measure_ids:
-            try:
-                measure_versions = connection.get_measure_versions(measure_id)
-            except ETRMResponseError as err:
-                raise SummaryGenError(f"eTRM Connection Error ({err.status}):\n{err.message}")
-
-            measure_versions.sort(key=utils.version_key)
-            recent_version: str | None = None
-            for measure_version in measure_versions:
-                if measure_version.count("-") == 1:
-                    recent_version = measure_version
-                    break
-
-            if recent_version is not None:
-                versions.append(recent_version)
-
-        for version_id in versions:
-            self.add_measure(version_id)
-
-    def filter_measures(
-        self,
-        min_start_date: dt.date | None = None,
-        max_start_date: dt.date | None = None,
-        min_end_date: dt.date | None = None,
-        max_end_date: dt.date | None = None
-    ) -> None:
-        """Filters the currently stored measures to meet the parameters.
-        
-        Parameters:
-            `min_end_date` - A date representing the earliest the end date
-            of a measure can be. Any measures without an end date will still
-            be permitted.
-        """
-
-        # flattens the dict of measure lists
-        measures = [
-            measure
-                for measures
-                in self.measures.values()
-                for measure
-                in measures
-        ]
-
-        # filter measures
-        measures = list(
-            filter(
-                lambda measure: (
-                    (
-                        min_start_date is None
-                        or measure.start_date >= min_start_date
-                    )
-                    and (
-                        max_start_date is None
-                        or measure.start_date < max_start_date
-                    )
-                    and (
-                        min_end_date is None
-                        or measure.end_date is None
-                        or measure.end_date >= min_end_date
-                    )
-                    and (
-                        max_end_date is None
-                        or (
-                            measure.end_date is not None
-                            and measure.end_date < max_end_date
-                        )
-                    )
-                ),
-                measures
-            )
-        )
-
-        self.measures = {}
-        for measure in measures:
-            self.add_measure(measure)
 
     def reset(self):
         self.story.clear()
@@ -1221,6 +1140,9 @@ class MeasureSummary:
             self._add_measure_template(sorted_measures[0])
             self.story.add(PageBreak())
             for i, measure in enumerate(sorted_measures):
+                if resources.get_section_description(measure.full_version_id) is None:
+                    continue
+
                 self._build_summary(measure)
                 if i != len(sorted_measures) - 1:
                     self._add_measure_template(sorted_measures[i + 1])
