@@ -7,7 +7,6 @@ import warnings
 import argparse as ap
 import datetime as dt
 
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..")))
 from src import lookups, resources, patterns, utils, _ROOT
 from src.etrm import ETRMConnection, Measure
 from src.summarygen import MeasureSummary
@@ -16,10 +15,10 @@ from src.summarygen import MeasureSummary
 logger = logging.getLogger(__name__)
 
 
-class TestBuilder:
-    def __init__(self):
-        api_key = resources.get_api_key(role="user")
-        self.connection = ETRMConnection(api_key, use_persistent_cache=True)
+class Builder:
+    def __init__(self, api_key: str | None = None):
+        _api_key = api_key or resources.get_api_key(role="user")
+        self.connection = ETRMConnection(_api_key, use_persistent_cache=True)
 
     def _get_measures(
         self,
@@ -245,7 +244,7 @@ if __name__ == "__main__":
         use_categories = list(lookups.USE_CATEGORIES.keys())
 
     start = time.time()
-    builder = TestBuilder()
+    builder = Builder()
     builder.build(
         name,
         measure_versions=measures,
