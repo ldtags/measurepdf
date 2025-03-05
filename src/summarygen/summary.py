@@ -3,8 +3,7 @@ import re
 import math
 import shutil
 import logging
-import datetime as dt
-from typing import overload, TypeVar
+from typing import TypeVar
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
 from reportlab.platypus import (
@@ -18,14 +17,12 @@ from reportlab.platypus import (
     Spacer,
     Flowable
 )
-# from reportlab.platypus.tableofcontents import TableOfContents
 from reportlab.platypus.frames import Frame
 
 from src import (
     lookups,
     patterns,
     resources,
-    utils,
     _SYSTEM,
     START_TIME,
     TMP_DIR
@@ -41,8 +38,6 @@ from src.resources import KeyTerminology
 from src.summarygen.utils import get_flowable_height, get_flowable_width
 from src.summarygen.models import Story, SQUARE_BULLET
 from src.summarygen.styles import (
-    TableStyle,
-    ParagraphStyle,
     PAGESIZE,
     X_MARGIN,
     Y_MARGIN,
