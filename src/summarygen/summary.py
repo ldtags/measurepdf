@@ -224,24 +224,30 @@ class SummaryDocTemplate(BaseDocTemplate):
         if re_match is None:
             return False
 
-        measure_type = int(re_match.group(5))
-        use_category = str(re_match.group(4))
-        version_num = int(re_match.group(6))
-
         if self._prev_measure_id is None:
             return True
+
+        use_category = str(re_match.group(4))
+        measure_type = int(re_match.group(5))
+        version_num = int(re_match.group(6))
 
         re_match = re.fullmatch(patterns.VERSION_ID, self._prev_measure_id)
         if re_match is None:
             return False
 
-        if str(re_match.group(4)) != use_category:
+        prev_use_category = str(re_match.group(4))
+        prev_measure_type = int(re_match.group(5))
+        prev_version_num = int(re_match.group(6))
+
+        if prev_use_category != use_category:
             return True
 
-        if measure_type > int(re_match.group(5)):
+        if measure_type < prev_measure_type:
+            return True
+        elif measure_type > prev_measure_type:
             return False
 
-        if version_num > int(re_match.group(6)):
+        if version_num > prev_version_num:
             return False
 
         return True
@@ -250,7 +256,14 @@ class SummaryDocTemplate(BaseDocTemplate):
         if not isinstance(flowable, NextPageTemplate):
             return
 
-        template_id = flowable.action[1]
+        try:
+            template_id = str(flowable.action[1])
+        except ValueError:
+            raise SummaryGenError(f"Invalid template id: {flowable.action[1]}")
+
+        if template_id.lower() == "swfs001-03":
+            pass
+
         re_match = re.fullmatch(patterns.VERSION_ID, template_id)
         if re_match is None:
             self.add_generic_toc_entry(template_id)
