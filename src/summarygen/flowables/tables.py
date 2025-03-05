@@ -712,6 +712,9 @@ class SunsettedMeasuresTable(BasicTable):
         uc_row_indices: list[int] = []
         spans: list[_TableSpan] = []
         for i, use_category in enumerate(use_categories):
+            if use_category.measures == []:
+                continue
+
             data.append([use_category.name, "", "", "", "", "", ""])
             row_index = len(data) - 1
             uc_row_indices.append(row_index)

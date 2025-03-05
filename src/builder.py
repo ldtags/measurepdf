@@ -1,10 +1,7 @@
 import os
 import re
-import sys
 import time
 import logging
-import warnings
-import argparse as ap
 import datetime as dt
 
 from src import lookups, resources, patterns, utils, _ROOT
@@ -15,6 +12,71 @@ from src.summarygen import MeasureSummary
 logger = logging.getLogger(__name__)
 
 
+class MeasureFilter:
+    def __init__(
+        self,
+        use_categories: list[str] | None = None,
+        min_start_date: dt.datetime | None = None,
+        max_start_date: dt.datetime | None = None,
+        min_end_date: dt.datetime | None = None,
+        max_end_date: dt.datetime | None = None
+    ) -> None:
+        if use_categories is not None:
+            self.use_categories = set(use_categories)
+        else:
+            self.use_categories = None
+
+        self.min_start_date = min_start_date
+        self.max_start_date = max_start_date
+        self.min_end_date = min_end_date
+        self.max_end_date = max_end_date
+
+    def is_allowed_measure_id(self, measure_id: str) -> bool:
+        re_match = re.fullmatch(patterns.STWD_ID, measure_id)
+        if re_match is None:
+            return False
+
+        try:
+            use_category = str(re_match.group(3))
+        except ValueError:
+            return False
+
+        if self.use_categories is not None and use_category not in self.use_categories:
+            return False
+
+        return True
+
+    def is_allowed_measure(self, measure: Measure) -> bool:
+        if self.use_categories is not None and measure.use_category not in self.use_categories:
+            return False
+
+        if self.min_start_date is not None and measure.start_date < self.min_start_date:
+            return False
+
+        if self.max_start_date is not None and measure.start_date >= self.max_start_date:
+            return False
+
+        if (self.min_end_date is not None
+                and measure.end_date is not None
+                and measure.end_date < self.min_end_date):
+            return False
+
+        if (self.max_end_date is not None
+                and measure.end_date is not None
+                and measure.end_date >= self.max_end_date):
+            return False
+
+        return True
+
+    def filter_measures(self, measures: list[Measure]) -> list[Measure]:
+        return list(
+            filter(
+                lambda measure: self.is_allowed_measure(measure),
+                measures
+            )
+        )
+
+
 class Builder:
     def __init__(self, api_key: str | None = None):
         _api_key = api_key or resources.get_api_key(role="user")
@@ -22,31 +84,16 @@ class Builder:
 
     def _get_measures(
         self,
-        version_ids: list[str] | None = None,
-        min_start_date: dt.date | None = None,
-        max_start_date: dt.date | None = None,
-        min_end_date: dt.date | None = None,
-        max_end_date: dt.date | None = None,
+        version_ids: list[str],
+        _filter: MeasureFilter | None = None,
         limit: int | None = None        
     ) -> list[Measure]:
         measures: list[Measure] = []
+        _filter = _filter or MeasureFilter()
         version_ids.sort(key=utils.version_key)
         for version_id in version_ids:
             measure = self.connection.get_measure(version_id)
-            if min_start_date is not None and measure.start_date < min_start_date:
-                continue
-
-            if max_start_date is not None and measure.start_date >= max_start_date:
-                continue
-
-            if (min_end_date is not None
-                    and measure.end_date is not None
-                    and measure.end_date < min_end_date):
-                continue
-
-            if (max_end_date is not None
-                    and measure.end_date is not None
-                    and measure.end_date >= max_end_date):
+            if not _filter.is_allowed_measure(measure):
                 continue
 
             measures.append(measure)
@@ -57,63 +104,36 @@ class Builder:
 
     def get_measures(
         self,
+        _filter: MeasureFilter,
         measure_versions: list[str] | None = None,
-        use_categories: list[str] | None = None,
-        min_start_date: dt.date | None = None,
-        max_start_date: dt.date | None = None,
-        min_end_date: dt.date | None = None,
-        max_end_date: dt.date | None = None,
         limit: int | None = None
     ) -> list[Measure]:
         logger.info("Adding measures...")
         logger.info(f"\tMeasure Versions: {measure_versions}")
-        logger.info(f"\tUse Categories  : {use_categories}")
-        logger.info(f"\tMin Start Date  : {min_start_date}")
-        logger.info(f"\tMax Start Date  : {max_start_date}")
-        logger.info(f"\tMin End Date    : {min_end_date}")
-        logger.info(f"\tMax End Date    : {max_end_date}")
+        logger.info(f"\tUse Categories  : {_filter.use_categories}")
+        logger.info(f"\tMin Start Date  : {_filter.min_start_date}")
+        logger.info(f"\tMax Start Date  : {_filter.max_start_date}")
+        logger.info(f"\tMin End Date    : {_filter.min_end_date}")
+        logger.info(f"\tMax End Date    : {_filter.max_end_date}")
         logger.info(f"\tLimit           : {limit}")
 
         measures: list[Measure] = []
         if measure_versions is not None:
-            measures.extend(
-                self._get_measures(
-                    measure_versions,
-                    min_start_date,
-                    max_start_date,
-                    min_end_date,
-                    max_end_date,
-                    limit
-                )
-            )
+            measures.extend(self._get_measures(measure_versions, limit=limit))
 
         if limit is not None and len(measures) >= limit:
             return measures
 
         measure_ids = self.connection.get_all_measure_ids()
         for measure_id in measure_ids:
-            re_match = re.fullmatch(patterns.STWD_ID, measure_id)
-            if re_match is None:
-                warnings.warn(f"Invalid statewide ID [{measure_id}], skipping...", RuntimeWarning)
-                continue
-
-            try:
-                measure_use_category = str(re_match.group(3))
-            except ValueError:
-                warnings.warn(f"Invalid use category in {measure_id}, skipping...", RuntimeWarning)
-                continue
-
-            if use_categories is not None and measure_use_category not in use_categories:
+            if not _filter.is_allowed_measure_id(measure_id):
                 continue
 
             version_ids = self.connection.get_measure_versions(measure_id)
             measures.extend(
                 self._get_measures(
                     version_ids,
-                    min_start_date,
-                    max_start_date,
-                    min_end_date,
-                    max_end_date,
+                    _filter,
                     limit - len(measures) if limit is not None else limit
                 )
             )
@@ -126,12 +146,8 @@ class Builder:
     def build(
         self,
         file_name: str,
-        measure_versions: list[str] | str | None = None,
-        use_categories: list[str] | str | None = None,
-        min_start_date: dt.date | None = None,
-        max_start_date: dt.date | None = None,
-        min_end_date: dt.date | None = None,
-        max_end_date: dt.date | None = None,
+        measure_versions: list[str] | None = None,
+        _filter: MeasureFilter | None = None,
         limit: int | None = None
     ) -> None:
         dir_path = os.path.join(_ROOT, "..", "summaries")
@@ -143,11 +159,7 @@ class Builder:
 
         measures = self.get_measures(
             measure_versions=measure_versions,
-            use_categories=use_categories,
-            min_start_date=min_start_date,
-            max_start_date=max_start_date,
-            min_end_date=min_end_date,
-            max_end_date=max_end_date,
+            _filter=_filter or MeasureFilter(),
             limit=limit
         )
         for measure in measures:
@@ -157,103 +169,35 @@ class Builder:
         logger.info(f"Summary {measure_pdf.file_name} was successfully created")
 
 
-def parse_args() -> ap.Namespace:
-    parser = ap.ArgumentParser(
-        prog="eTRM Measure to PDF Tester",
-        description="Tests the eTRM measure summary generation process and package integrations."
-    )
-
-    parser.add_argument(
-        "-m", "--measures",
-        metavar="measures",
-        nargs="*",
-        default=[],
-        help="Specifies the measure or measures to generate a summary for."
-    )
-
-    parser.add_argument(
-        "-u", "--use-categories",
-        metavar="use_categories",
-        nargs="*",
-        default=[],
-        help="Specifies the use category or categories to generate a summary for."
-    )
-
-    parser.add_argument(
-        "-o", "--output-file",
-        metavar="output_file",
-        default="measure_summary",
-        help="Specifies the name of the generated summary file."
-    )
-
-    parser.add_argument(
-        "-a", "--all",
-        action="store_true",
-        help="Include to generate a summary that includes every measure in each use category."
-    )
-
-    parser.add_argument(
-        "-l", "--limit",
-        type=int,
-        default=None,
-        help="Specifies an upper limit of measures to generate a summary from."
-    )
-
-    parser.add_argument(
-        "--min-start-date",
-        type=dt.date.fromisoformat,
-        default=None,
-        help="Specifies the inclusive minimum start date (in ISO format) to filter measures by."
-    )
-
-    parser.add_argument(
-        "--max-start-date",
-        type=dt.date.fromisoformat,
-        default=None,
-        help="Specifies the non-inclusive maximum start date (in ISO format) to filter measures by."
-    )
-
-    parser.add_argument(
-        "--min-end-date",
-        type=dt.date.fromisoformat,
-        default=None,
-        help="Specifies the inclusive minimum end date (in ISO format) to filter measures by."
-    )
-
-    parser.add_argument(
-        "--max-end-date",
-        type=dt.date.fromisoformat,
-        default=None,
-        help="Specifies the non-inclusive maximum end date (in ISO format) to filter measures by."
-    )
-
-    return parser.parse_args()
-
-
-if __name__ == "__main__":
-    args = parse_args()
-    measures = getattr(args, "measures", [])
-    use_categories = getattr(args, "use_categories", [])
-    name = getattr(args, "output_file", "measure_summary")
-    _all = getattr(args, "all", False)
-    if _all and (measures != [] or use_categories != []):
-        print("Usage: ./cli [-a | -m -u] ...")
-        sys.exit(1)
-
-    if _all:
+def build(
+    file_name: str,
+    all_measures: bool = False,
+    measure_versions: list[str] | None = None,
+    use_categories: list[str] | None = None,
+    min_start_date: dt.datetime | None = None,
+    max_start_date: dt.datetime | None = None,
+    min_end_date: dt.datetime | None = None,
+    max_end_date: dt.datetime | None = None,
+    limit: int | None = None
+) -> None:
+    if all_measures:
         use_categories = list(lookups.USE_CATEGORIES.keys())
 
-    start = time.time()
-    builder = Builder()
-    builder.build(
-        name,
-        measure_versions=measures,
+    _filter = MeasureFilter(
         use_categories=use_categories,
-        min_start_date=getattr(args, "min_start_date", None),
-        max_start_date=getattr(args, "max_start_date", None),
-        min_end_date=getattr(args, "min_end_date", None),
-        max_end_date=getattr(args, "max_end_date", None),
-        limit=getattr(args, "limit", None)
+        min_start_date=min_start_date,
+        max_start_date=max_start_date,
+        min_end_date=min_end_date,
+        max_end_date=max_end_date
+    )
+
+    builder = Builder()
+    start = time.time()
+    builder.build(
+        file_name,
+        measure_versions=measure_versions,
+        _filter=_filter,
+        limit=limit
     )
     elapsed = time.time() - start
     logger.info(f"Summary generation took {elapsed}s")
