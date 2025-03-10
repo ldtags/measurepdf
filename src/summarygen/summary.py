@@ -59,7 +59,8 @@ from src.summarygen.flowables import (
     TitlePage,
     ExcelLink,
     SunsettedMeasuresTable,
-    TableOfContents
+    TableOfContents,
+    CoverPage
 )
 from src.summarygen.exceptions import SummaryGenError
 
@@ -1129,6 +1130,8 @@ class MeasureSummary:
         ])
 
     def build(self, toc: bool = True) -> None:
+        self.story.add(CoverPage())
+        self.story.add(PageBreak())
         self._add_default_page_templates()
         self.story.add(NextPageTemplate("default"))
 

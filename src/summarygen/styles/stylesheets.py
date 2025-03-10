@@ -1,6 +1,5 @@
 import copy
 from reportlab.lib import colors
-from reportlab.lib.enums import TA_CENTER
 from reportlab.lib.styles import getSampleStyleSheet
 
 from src.summarygen.types import _TableSpan
@@ -206,6 +205,46 @@ def _gen_pstyles() -> StyleSheet[ParagraphStyle]:
             text_color=COLORS["LightBlack"]
         )
     )
+    style_sheet.add(
+        ParagraphStyle(
+            "VersionContainer",
+            font_name=DEFAULT_FONT_NAME,
+            font_size=12,
+            text_color=colors.white
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "CoverCaption",
+            font_name=DEFAULT_FONT_NAME,
+            font_size=16,
+            text_color=COLORS["LightBlack"]
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "CoverTitle",
+            font_name=DEFAULT_FONT_NAME,
+            font_size=18,
+            text_color=COLORS["LightBlack"]
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "CoverPreDate",
+            font_name=DEFAULT_FONT_NAME,
+            font_size=DEFAULT_FONT_SIZE,
+            text_color=COLORS["LightBlack"]
+        )
+    )
+    style_sheet.add(
+        ParagraphStyle(
+            "CoverDate",
+            font_name=DEFAULT_FONT_NAME,
+            font_size=DEFAULT_FONT_SIZE,
+            text_color=COLORS["Green"]
+        )
+    )
 
     return style_sheet
 
@@ -348,6 +387,79 @@ def _gen_tstyles() -> StyleSheet[TableStyle]:
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("LEFTPADDING", (0, 0), (-1, -1), 5),
                 ("LINEABOVE", (0, 0), (-1, 0), 1, COLORS["RevisionLogGridLine"])
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            "CoverCaption",
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, -1), "TOP")
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            "CoverTopContent",
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (-1, 0), (-1, 0), "TOP")
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            "CoverMidContent",
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("SPAN", (0, 0), (-1, -1))
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            "CoverDateContent",
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("ALIGN", (0, 0), (0, 0), "RIGHT")
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            "CoverBottomContent",
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("ALIGN", (0, 0), (-1, -1), "RIGHT")
+            ]
+        )
+    )
+    style_sheet.add(
+        TableStyle(
+            "CoverContent",
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 0),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 0),
+                ("LEFTPADDING", (0, 0), (-1, -1), 0),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 0),
+                ("VALIGN", (0, 0), (-1, 0), "TOP"),
+                ("ALIGN", (-1, 1), (-1, -1), "RIGHT")
             ]
         )
     )

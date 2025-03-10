@@ -126,8 +126,8 @@ if __name__ == '__main__':
 
     match mode:
         case "build":
-            handle_build()
+            handle_build(args)
         case "app":
-            handle_app()
+            handle_app(args)
         case other:
             raise RuntimeError(f"Unknown run mode: {other}")

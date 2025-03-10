@@ -1,3 +1,7 @@
+__version__ = "1.0.0"
+__date__ = "March 10th, 2025"
+
+
 import os
 import sys
 import logging
