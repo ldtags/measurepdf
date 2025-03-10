@@ -10,11 +10,7 @@ from reportlab.platypus import (
     Paragraph
 )
 
-from src import (
-    lookups,
-    _SYSTEM,
-    START_TIME
-)
+from src import lookups
 from src.etrm.models import Measure
 from src.summarygen.styles import (
     ParagraphStyle,
@@ -287,10 +283,6 @@ class TitlePage(KeepTogether):
                                   f'{use_category} - {uc_title}',
                                   side='left')
 
-        pa_section = TitleSection('PA LEAD',
-                                  measure.pa_lead,
-                                  side='left')
-
         version_section = TitleSection('VERSION',
                                        measure.full_version_id,
                                        side='left')
@@ -303,21 +295,9 @@ class TitlePage(KeepTogether):
                                    measure.sunset_date or '',
                                    side='right')
 
-        if _SYSTEM == 'Windows':
-            fmt = '#'
-        else:
-            fmt = '-'
-
-        download_date = START_TIME.strftime(rf'%B %{fmt}d, %Y %{fmt}I:%M%p')
-        download_section = TitleSection(
-            'DOWNLOADED',
-            download_date,
-            side='right'
-        )        
-
         return TitleSectionContainer([
-            [uc_section, pa_section, version_section],
-            [start_section, end_section, download_section]
+            [uc_section, version_section],
+            [start_section, end_section]
         ])
 
     def add_text(self, text: str, style: ParagraphStyle) -> None:
