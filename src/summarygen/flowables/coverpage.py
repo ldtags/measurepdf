@@ -20,10 +20,10 @@ from src.summarygen.styles import (
 
 
 class VersionContainer(Flowable):
-    def __init__(self, ipadx: float = 8.0, ipady: float = 4.0) -> None:
+    def __init__(self, ipadx: float = 9.0, ipady: float = 4.0) -> None:
         self._ipadx = ipadx
         self._ipady = ipady
-        self._style = style = PSTYLES["VersionContainer"]
+        self._style = style = PSTYLES["VersionContainer"].bold
         self._text = f"VERSION {__version__}"
         text_width = stringWidth(self._text, style.font_name, style.font_size)
         self._width = text_width + ipadx * 2
