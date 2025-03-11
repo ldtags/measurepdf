@@ -877,6 +877,17 @@ class Measure:
                 return lookup_ref
         return None
 
+    def get_full_determinant_name(self, api_name: str) -> str | None:
+        determinant = self.get_determinant(api_name)
+        if determinant is not None:
+            return determinant.name
+
+        shared_determinant = self.get_shared_parameter(api_name)
+        if shared_determinant is not None:
+            return shared_determinant.name
+
+        return None
+
     @staticmethod
     def sorting_key(measure: Measure) -> int:
         return utils.version_key(measure.full_version_id)

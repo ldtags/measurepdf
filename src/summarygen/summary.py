@@ -1,8 +1,10 @@
 import os
 import re
+import csv
 import math
 import shutil
 import logging
+import xlsxwriter as xl
 from typing import TypeVar
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.pdfbase.pdfmetrics import stringWidth
@@ -28,7 +30,7 @@ from src import (
     TMP_DIR
 )
 from src.etrm import ETRM_URL
-from src.etrm.models import Measure
+from src.etrm.models import Measure, ValueTable
 from src.etrm.connection import ETRMConnection
 from src.etrm.exceptions import (
     ETRMConnectionError,
@@ -70,6 +72,24 @@ logger = logging.getLogger(__name__)
 _T = TypeVar("_T")
 
 _conn: ETRMConnection | None = None
+
+DATA_TABLE_FOLDER_NAME = "data_tables"
+DATA_TABLE_HEADERS = [
+    "Offering ID",
+    "Offering Description",
+    "Existing Description",
+    "Standard Description",
+    "Specific 1",
+    "Specific 2",
+    "Specific 3",
+    "Specific 4",
+    "Specific 5",
+    "Specific 6",
+    "Specific 7",
+    "Specific 8",
+    "Specific 9",
+    "Specific 10"
+]
 
 
 def clean():
@@ -375,6 +395,32 @@ def remove_all_climate_zones(labels: list[str]) -> None:
             labels.remove(label)
 
 
+def tables_need_splitting(*tables: BasicTable) -> bool:
+    total_height: float = 0
+    for table in tables:
+        table_height = math.fsum(table._argH)
+        if table_height >= INNER_HEIGHT:
+            return True
+
+        total_height += table_height
+
+    if total_height >= INNER_HEIGHT * 2:
+        return True
+
+    return False
+
+
+def sanitize_value_table_row(row: list[str | None]) -> list[str]:
+    sanitized_row: list[str] = []
+    for item in row:
+        if item is None:
+            sanitized_row.append("")
+        else:
+            sanitized_row.append(item)
+
+    return sanitized_row
+
+
 class MeasureSummary:
     """eTRM measure summary PDF generator"""
 
@@ -386,6 +432,7 @@ class MeasureSummary:
         override: bool = True
     ) -> None:
         clean()
+        os.mkdir(TMP_DIR)
         self.measures: dict[str, list[Measure]] = {}
         self._cur_measure: Measure | None = None
         self.story = Story()
@@ -550,7 +597,7 @@ class MeasureSummary:
 
         self.story.add(TitlePage(self._cur_measure))
 
-    def _add_value_table(self, *api_names: str) -> None:
+    def _get_value_table(self, *api_names: str) -> ValueTable:
         measure_id = self._cur_measure.full_version_id
         table = None
         for api_name in api_names:
@@ -561,6 +608,10 @@ class MeasureSummary:
         if table is None:
             raise SummaryGenError(f"Missing table for {api_name} in {measure_id}")
 
+        return table
+
+    def _get_value_table_data(self, table: ValueTable) -> list[list[str]]:
+        measure_id = self._cur_measure.full_version_id
         headers: list[str] = []
         for api_name in table.determinants:
             determinant = self._cur_measure.get_determinant(api_name)
@@ -568,7 +619,9 @@ class MeasureSummary:
                 determinant = self._cur_measure.get_shared_parameter(api_name)
 
             if determinant is None:
-                raise SummaryGenError(f"Missing determinant for {api_name} in {measure_id}")
+                raise SummaryGenError(
+                    f"Missing determinant for {api_name} in measure {measure_id}"
+                )
 
             headers.append(determinant.name)
 
@@ -586,7 +639,55 @@ class MeasureSummary:
 
             data.append(table_row)
 
-        self.story.add(BasicTable(data))
+        return data
+
+    def _build_value_table(self, table: ValueTable) -> BasicTable:
+        data = self._get_value_table_data(table)
+        return BasicTable(data)
+
+    def _add_to_data_table(self, offer_table: ValueTable, desc_table: ValueTable) -> None:
+        # assumes the following:
+        #   - tables have the same amount of values
+        #   - table rows are properly lined up
+        #   - tables have the same determinants
+        data: list[list[str]] = []
+        for i in range(len(offer_table.values)):
+            data_row: list[str] = []
+            offer_row = sanitize_value_table_row(offer_table.values[i])
+            for item in offer_row[len(offer_table.determinants):]:
+                data_row.append(item)
+
+            desc_row = sanitize_value_table_row(desc_table.values[i])
+            for j, item in enumerate(desc_row[len(desc_table.determinants):]):
+                if desc_table.columns[j].api_name == "ID":
+                    continue
+
+                data_row.append(item)
+
+            for item in offer_row[:len(offer_table.determinants)]:
+                data_row.append(item)
+
+            data.append(data_row)
+
+        # filling out the empty portions in each row
+        for row in data:
+            for _ in range(len(DATA_TABLE_HEADERS) - len(row)):
+                row.append("")
+
+        folder_path = os.path.join(TMP_DIR, DATA_TABLE_FOLDER_NAME)
+        if not os.path.exists(folder_path):
+            os.mkdir(folder_path)
+
+        measure_id = self._cur_measure.full_version_id
+        with open(os.path.join(folder_path, measure_id + ".csv"), "w+", newline="") as fp:
+            writer = csv.DictWriter(fp, fieldnames=DATA_TABLE_HEADERS)
+            writer.writeheader()
+            for row in data:
+                writer.writerow({
+                    key: val
+                    for (key, val)
+                    in zip(DATA_TABLE_HEADERS, row)
+                })
 
     def add_bc_mc_section(self) -> None:
         measure_id = self._cur_measure.full_version_id
@@ -601,18 +702,31 @@ class MeasureSummary:
             )
         )
 
+        overly_large = False
+        offer_value_table = self._get_value_table("offerId")
+        offer_table = self._build_value_table(offer_value_table)
+        desc_value_table = self._get_value_table("description", "Desc")
+        desc_table = self._build_value_table(desc_value_table)
+        if tables_need_splitting(offer_table, desc_table):
+            overly_large = True
+            self._add_to_data_table(offer_value_table, desc_value_table)
+
         self.story.add(Paragraph("Offering ID", style=PSTYLES["h4"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(*self.convert_html(desc_obj.offering_id))
-        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
-        self._add_value_table("offerId")
+        if not overly_large:
+            self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+            self.story.add(offer_table)
+
         self.story.add(NEWLINE)
 
         self.story.add(Paragraph("Base Case Description", style=PSTYLES["h4"]))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(*self.convert_html(desc_obj.base_case))
-        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
-        self._add_value_table("description", "Desc")
+        if not overly_large:
+            self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+            self.story.add(desc_table)
+
         self.story.add(NEWLINE)
 
     def _get_shared_avg(
@@ -1099,7 +1213,7 @@ class MeasureSummary:
         self.summary.addPageTemplates(template)
         self.story.add(NextPageTemplate(measure.full_version_id))
 
-    def _build_summary(self, measure: Measure | None = None) -> None:
+    def build_summary(self, measure: Measure | None = None) -> None:
         if measure is None:
             if self._cur_measure is None:
                 raise SummaryGenError("Cannot generate a summary without a measure")
@@ -1129,6 +1243,52 @@ class MeasureSummary:
             SummaryPageTemplate(id="sunsetted_measures")
         ])
 
+    def build_data_table(self) -> None:
+        folder_path = os.path.join(TMP_DIR, DATA_TABLE_FOLDER_NAME)
+        if not os.path.exists(folder_path):
+            return
+
+        wb_path = "summaries/eTRM_Data_Specification.xlsx"
+        if os.path.exists(wb_path):
+            os.remove(wb_path)
+
+        with xl.Workbook(wb_path) as wb:
+            align_right_fmt = wb.add_format()
+            align_right_fmt.set_align("right")
+            for file_name in os.listdir(folder_path):
+                version_id, ext = os.path.splitext(file_name)
+                if ext != ".csv":
+                    continue
+
+                data: list[str] = []
+                with open(os.path.join(folder_path, file_name), "r", newline="") as fp:
+                    reader = csv.reader(fp)
+                    for i, row in enumerate(reader):
+                        if i == 0:
+                            continue
+
+                        data.append(row)
+
+                ws = wb.add_worksheet(version_id)
+                measure = self.connection.get_measure(version_id)
+                ws.write_string(0, 0, "Statewide Measure ID:", align_right_fmt)
+                ws.write_string(0, 1, measure.statewide_measure_id)
+                ws.write_string(1, 0, "Measure Version ID:", align_right_fmt)
+                ws.write_string(1, 1, measure.full_version_id)
+                ws.write_string(2, 0, "Measure Name:", align_right_fmt)
+                ws.write_string(2, 1, measure.name)
+                ws.add_table(
+                    *(3, 0, len(data) + 3, len(DATA_TABLE_HEADERS) - 1),
+                    {
+                        "columns": [
+                            {"header": header} for header in DATA_TABLE_HEADERS
+                        ],
+                        "data": data
+                    }
+                )
+                ws.autofit()
+                ws.ignore_errors({"number_stored_as_text": f"C3:P{len(data)}"})
+
     def build(self, toc: bool = True) -> None:
         self.story.add(CoverPage())
         self.story.add(PageBreak())
@@ -1154,7 +1314,7 @@ class MeasureSummary:
                 if resources.get_section_description(measure.full_version_id) is None:
                     continue
 
-                self._build_summary(measure)
+                self.build_summary(measure)
                 if i != len(sorted_measures) - 1:
                     self._add_measure_template(sorted_measures[i + 1])
                 else:
@@ -1170,5 +1330,6 @@ class MeasureSummary:
         if self.story.contents == []:
             raise RuntimeError("Cannot create an empty summary")
 
+        self.build_data_table()
         self.summary.multiBuild(self.story.contents, canvasmaker=NumberedCanvas)
         clean()

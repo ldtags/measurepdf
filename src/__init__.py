@@ -22,7 +22,7 @@ _ROOT = os.path.abspath(os.path.dirname(__file__))
 
 IS_DEBUG_MODE: bool = False
 
-TMP_DIR = os.path.join(_ROOT, "assets", "images", "tmp")
+TMP_DIR = os.path.join(_ROOT, "tmp")
 
 def _configure_logger() -> None:
     date_str = dt.now().strftime(r"%Y-%m-%d_%H-%M-%S")
