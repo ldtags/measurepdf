@@ -382,11 +382,11 @@ def _gen_tstyles() -> StyleSheet[TableStyle]:
             "TOC",
             [
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
-                ("ALIGN", (0, -2), (-1, -2), "LEFT"),
-                ("ALIGN", (-1, 0), (-1, -1), "RIGHT"),
+                ("ALIGN", (1, 2), (3, -1), "LEFT"),
+                ("ALIGN", (4, 0), (4, -1), "RIGHT"),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("LEFTPADDING", (0, 0), (-1, -1), 5),
-                ("LINEABOVE", (0, 0), (-1, 0), 1, COLORS["RevisionLogGridLine"])
+                ("LINEABOVE", (0, 0), (-4, 0), 1, COLORS["RevisionLogGridLine"])
             ]
         )
     )
@@ -497,16 +497,33 @@ def is_spanned(x: int, y: int, spans: list[_TableSpan]) -> bool:
     return False
 
 
-def get_toc_style(uc_row_indices: list[int], generic_indices: list[int]) -> TableStyle:
+def get_toc_style(
+    uc_row_indices: list[int],
+    generic_indices: list[int],
+    res_indices: list[int],
+    mfc_indices: list[int],
+    nonres_indices: list[int]
+) -> TableStyle:
     style = copy.deepcopy(TSTYLES["TOC"])
     cmds = style.getCommands()
 
     for y in uc_row_indices:
-        cmds.append(("BACKGROUND", (0, y), (-1, y), COLORS["UseCategoryRowBG"]))
-        cmds.append(("SPAN", (0, y), (-2, y)))
+        cmds.append(("BACKGROUND", (0, y), (-4, y), COLORS["UseCategoryRowBG"]))
+        cmds.append(("SPAN", (0, y), (3, y)))
+        cmds.append(("SPAN", (5, y), (-1, y)))
+        cmds.append(("ALIGN", (5, y), (-1, y), "CENTER"))
 
     for y in generic_indices:
         cmds.append(("SPAN", (1, y), (-2, y)))
+
+    for y in res_indices:
+        cmds.append(("BACKGROUND", (5, y), (5, y), COLORS["ResGreen"]))
+
+    for y in mfc_indices:
+        cmds.append(("BACKGROUND", (6, y), (6, y), COLORS["MFCRed"]))
+
+    for y in nonres_indices:
+        cmds.append(("BACKGROUND", (7, y), (7, y), COLORS["NRBlue"]))
 
     return TableStyle(style.name, cmds)
 

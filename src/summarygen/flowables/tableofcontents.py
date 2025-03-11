@@ -1,12 +1,12 @@
 from ast import literal_eval
 from typing import Any, Literal
-from reportlab.lib.units import cm, inch
+from reportlab.lib.units import cm
 from reportlab.pdfgen.canvas import Canvas
 from reportlab.platypus import (
     IndexingFlowable,
     Paragraph,
-    Spacer,
-    Table
+    Table,
+    XPreformatted
 )
 
 from src.summarygen.styles import (
@@ -44,6 +44,10 @@ class TOCEntry:
         type: Literal["measure", "use_category", "generic"] = "generic",
         active_life: str | None = None,
         measure_name: str | None = None,
+        res: bool = False,
+        mfc: bool = False,
+        nonres: bool = False,
+        is_first: bool = False,
         key: str | None = None
     ) -> None:
         self.text = text
@@ -51,6 +55,10 @@ class TOCEntry:
         self.type = type
         self.active_life = active_life
         self.measure_name = measure_name
+        self.res = res
+        self.mfc = mfc
+        self.nonres = nonres
+        self.is_first = is_first
         self.key = key
 
     def __eq__(self, other: object) -> bool:
@@ -115,7 +123,8 @@ class TableOfContents(IndexingFlowable):
                     text=stuff[0],
                     page_num=stuff[1],
                     type="use_category",
-                    key=stuff[2] if len(stuff) > 2 else None
+                    is_first=stuff[2],
+                    key=stuff[3] if len(stuff) > 3 else None
                 )
             )
             return
@@ -128,7 +137,10 @@ class TableOfContents(IndexingFlowable):
                     type="measure",
                     measure_name=stuff[2],
                     active_life=stuff[3],
-                    key=stuff[4] if len(stuff) > 4 else None
+                    res=stuff[4],
+                    mfc=stuff[5],
+                    nonres=stuff[6],
+                    key=stuff[7] if len(stuff) > 7 else None
                 )
             )
             return
@@ -164,6 +176,9 @@ class TableOfContents(IndexingFlowable):
         table_data = []
         uc_row_indices: list[int] = []
         generic_indices: list[int] = []
+        res_indices: list[int] = []
+        mfc_indices: list[int] = []
+        nonres_indices: list[int] = []
         for y, entry in enumerate(_temp_entries):
             level = 0 if entry.type == "use_category" else 1
             style = self.get_level_style(level)
@@ -171,54 +186,74 @@ class TableOfContents(IndexingFlowable):
             text = entry.text
             if key is not None:
                 text = f"<a href=\"{key}\">{text}</a>"
-                key_val = repr(key).replace(",", "\\x2c").replace("\"", "\\x2c")
-            else:
-                key_val = None
 
             row = [Paragraph(text, style=style)]
             match entry.type:
                 case "use_category":
                     row.extend([""] * 3)
-                    uc_row_indices.append(y)
+                    row.append(Paragraph(f"{entry.page_num}", style=style))
+                    if entry.is_first:
+                        uc_row_indices.append(y)
+                        sector = Paragraph("Sector", style=style)
+                    else:
+                        uc_row_indices.append(y + 1)
+                        sector = ""
+
+                    row.extend([sector, "", ""])
                 case "generic":
                     row.insert(0, "")
                     row.extend([""] * 2)
-                    generic_indices.append(y)
+                    generic_indices.append(y + 1)
+                    row.append(Paragraph(f"{entry.page_num}", style=style))
+                    row.extend([""] * 3)
                 case "measure":
                     row.insert(0, "")
                     row.append(Paragraph(entry.measure_name, style=style))
                     row.append(Paragraph(entry.active_life, style=style))
+                    row.append(Paragraph(f"{entry.page_num}", style=style))
+                    row.extend(
+                        [XPreformatted("    ", style=style)] * 3
+                    )
+                    if entry.res:
+                        res_indices.append(y + 1)
+
+                    if entry.mfc:
+                        mfc_indices.append(y + 1)
+
+                    if entry.nonres:
+                        nonres_indices.append(y + 1)
                 case other:
                     raise ValueError(f"Invalid TOC entry type: {other}")
 
-            f_name = "draw_toc_entry_end"
-            f_kwargs: dict[str, Any] = {
-                "label": (entry.page_num, level, key_val)
-            }
-            kw_text = ""
-            for kw, arg in f_kwargs.items():
-                if isinstance(arg, tuple):
-                    kw_str = ",".join([str(arg_item) for arg_item in arg])
-                else:
-                    kw_str = str(arg)
-
-                kw_text += f" {kw}=\"{kw_str}\""
-
-            row.append(
-                Paragraph(
-                    f"{entry.page_num}<onDraw name=\"{f_name}\" {kw_text}/>",
-                    style=style
-                )
-            )
             table_data.append(row)
+            if entry.is_first:
+                table_data.append([
+                    "",
+                    Paragraph("Measure Version ID", style=style),
+                    Paragraph("Measure Name", style=style),
+                    Paragraph("Start Date - End Date", style=style),
+                    "",
+                    Paragraph("R", style=style),
+                    Paragraph("MFc", style=style),
+                    Paragraph("NR", style=style)
+                ])
 
-        table_style = self.table_style or get_toc_style(uc_row_indices, generic_indices)
+        table_style = self.table_style or get_toc_style(
+            uc_row_indices,
+            generic_indices,
+            res_indices,
+            mfc_indices,
+            nonres_indices
+        )
         col_widths = [
             avail_width * 0.03,
-            avail_width * 0.2,
-            avail_width * 0.37,
-            avail_width * 0.3,
-            avail_width * 0.1
+            avail_width * 0.19,
+            avail_width * 0.32,
+            avail_width * 0.23,
+            avail_width * 0.08,
+            avail_width * 0.05,
+            avail_width * 0.05,
+            avail_width * 0.05
         ]
         self._table = Table(table_data, colWidths=col_widths, style=table_style)
         self.width, self.height = self._table.wrapOn(self.canv, avail_width, avail_height)

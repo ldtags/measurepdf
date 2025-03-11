@@ -168,6 +168,7 @@ class SummaryDocTemplate(BaseDocTemplate):
         self.inner_height = self.page_height - y_margin
         self._use_categories: set[str] = set()
         self._prev_measure_id: str | None = None
+        self._first_measure_id: str | None = None
 
     def get_page_template(self, id: str) -> PageTemplate | None:
         for page_template in self.pageTemplates:
@@ -176,7 +177,7 @@ class SummaryDocTemplate(BaseDocTemplate):
 
         return None
 
-    def add_use_category_toc_entry(self, use_category: str) -> None:
+    def add_use_category_toc_entry(self, use_category: str, is_first: bool) -> None:
         full_name = lookups.USE_CATEGORIES.get(use_category)
         if full_name is not None:
             text = f"{full_name} - {use_category}"
@@ -184,9 +185,12 @@ class SummaryDocTemplate(BaseDocTemplate):
             text = use_category
 
         self._use_categories.add(use_category)
-        self.notify("TOCEntryUC", (text, self.page + 1))
+        self.notify("TOCEntryUC", (text, self.page + 1, is_first))
 
     def add_measure_toc_entry(self, version_id: str) -> None:
+        res = False
+        mfc = False
+        nonres = False
         global _conn
         if _conn is None:
             measure_name = ""
@@ -201,11 +205,34 @@ class SummaryDocTemplate(BaseDocTemplate):
                 end_date = measure.end_date.strftime(r"%Y-%m-%d")
 
             active_life = f"{start_date} - {end_date}"
+            bldg_type = measure.get_shared_parameter("BldgType")
+            blt_labels = set([label.lower() for label in bldg_type.active_labels])
+            if "mfmcmn" in blt_labels:
+                mfc = True
+
+            sector = measure.get_shared_parameter("sector")
+            sec_labels = set([label.lower() for label in sector.active_labels])
+            if "res" in sec_labels and blt_labels != {"mfmcmn"}:
+                res = True
+
+            if {"com", "ind", "ag"}.issubset(sec_labels):
+                nonres = True
 
         self._prev_measure_id = version_id
+        if self._first_measure_id is None:
+            self._first_measure_id = version_id
+
         self.notify(
             "TOCEntryM",
-            (version_id, self.page + 1, measure_name, active_life)
+            (
+                version_id,
+                self.page + 1,
+                measure_name,
+                active_life,
+                res,
+                mfc,
+                nonres
+            )
         )
 
     def add_generic_toc_entry(self, id: str) -> None:
@@ -231,9 +258,19 @@ class SummaryDocTemplate(BaseDocTemplate):
             case _:
                 return
 
-        self.notify(key, (text, self.page + 1))
+        stuff = (text, self.page + 1)
+        if key == "TOCEntryUC":
+            stuff = (*stuff, False)
+
+        self.notify(key, stuff)
         if id == "appendix":
             self.add_generic_toc_entry("summary_spreadsheets")
+
+    def _is_first_uc(self, version_id: str) -> bool:
+        if self._first_measure_id is None:
+            return True
+
+        return version_id == self._first_measure_id
 
     def _should_add_use_category(self, version_id: str) -> bool:
         re_match = re.fullmatch(patterns.VERSION_ID, version_id)
@@ -291,7 +328,7 @@ class SummaryDocTemplate(BaseDocTemplate):
             raise SummaryGenError(f"Invalid use category: {re_match.group(4)}") from err
 
         if self._should_add_use_category(template_id):
-            self.add_use_category_toc_entry(use_category)
+            self.add_use_category_toc_entry(use_category, self._is_first_uc(template_id))
 
         self.add_measure_toc_entry(template_id)
 

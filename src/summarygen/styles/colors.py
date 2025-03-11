@@ -20,5 +20,8 @@ COLORS = {
     "RevisionLogHeaderBG": rgb_color(241, 234, 227),
     "h1": rgb_color(140, 110, 74),
     "LightBlack": rgb_color(64, 64, 64),
-    "UseCategoryRowBG": rgb_color(232, 232, 232)
+    "UseCategoryRowBG": rgb_color(232, 232, 232),
+    "ResGreen": rgb_color(181, 230, 162),
+    "MFCRed": rgb_color(251, 226, 213),
+    "NRBlue": rgb_color(192, 230, 245)
 }
