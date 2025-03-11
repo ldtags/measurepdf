@@ -105,26 +105,74 @@
                 accessible from one central location.
             </li>
             <li>
-                <strong>Permutation Data Specification:</strong> An embedded Excel spreadsheet that lists 
-                the data specification fields applicable to all measures, in the order that they appear in 
-                the permutation tables, along with:
+                <strong>Permutation Data Specification:</strong> An embedded Excel workbook that lists the data 
+                specification fields in the eTRM permutation table or the POU TRM streamlined permutations table, 
+                in the order that they appear. The permutations tables (i.e., original eTRM and POU TRM 
+                streamlined permutations) are listed in their respective tabs.
+                <img
+                    src="./assets/images/perm_data_spec_intro.png"
+                    scale="70"    
+                />
+                The following columns describe each data specification fields:
                 <ul>
                     <li>
-                        <strong>[Field] Reporting Name:</strong> API name of the data specification fields. 
-                        This API "Reporting Name" is used in the API or Postgres SQL read-only database. The 
-                        human-readable "Verbose name" of the data specification field is used in the 
-                        permutation CSV file downloadable from eTRM measure pages. 
+                        <strong>[Field] Verbose Name</strong> Human-readable name of the data specification 
+                        field. For the eTRM, verbose name is used on the eTRM website or in the permutation 
+                        CSV file downloadable from eTRM measure page.
+                        <img
+                            src="./assets/images/verbose_name_intro_1.png"
+                            scale="50"
+                        />
+                        For the POU TRM, it is used in the PDF and the "Pivot Summary" tab of the streamlined 
+                        permutations file.
+                        <img
+                            src="./assets/images/verbose_name_intro_1.png"
+                            scale="50"
+                        />
                     </li>
                     <li>
-                        <strong>Order:</strong> Order in which the field appears in the permutation. List should be sequential.
+                        <strong>[Field] Reporting Name:</strong> API name of the data specification fields. 
+                        This API "Reporting Name" is used in the API or Postgres SQL read-only database and 
+                        the "Table Summary" tab of the POU TRM streamlined permutations file.
+                        <img
+                            src="./assets/images/reporting_name_intro.png"
+                            scale="65"
+                        />
+                    </li>
+                    <li>
+                        <strong>Order:</strong> Order in which the field appears in the permutation. List should 
+                        be sequential.
                     </li>
                     <li>
                         <strong>Grouping:</strong> Type or category of the data specification fields.
                     </li>
                     <li>
-                        <strong>Type:</strong> How fields are generated in the permutation tables (e.g., 
-                        automatically generated with measure metadata, input by the measure developer, or 
-                        uploaded data from external CET).
+                        <strong>Type:</strong>
+                        <ul>
+                            <li>
+                                How fields are generated in the permutation tables:
+                                <ul>
+                                    <li>Automatically generated with measure metadata</li>
+                                    <li>Manually input and mapped by the measure developer</li>
+                                    <li>Uploaded data from external CET</li>
+                                </ul>
+                            </li>
+                            <li>
+                                How fields are derived from the eTRM counterpart fields:
+                                <ul>
+                                    <li>Concatenation of >1 eTRM fields</li>
+                                    <li>
+                                        Average of eTRM numerical values (eTRM permutations are collapsed into 
+                                        1 POU TRM permutation)
+                                    </li>
+                                    <li>
+                                        Concatenation of eTRM string values (eTRM permutations are collapsed into 
+                                        1 POU TRM permutation)
+                                    </li>
+                                    <li>Calculated based on certain logics</li>
+                                </ul>
+                            </li>
+                        </ul>
                     </li>
                     <li>
                         <strong>Data type:</strong> Type of the values, such as "String" and "Decimal".
