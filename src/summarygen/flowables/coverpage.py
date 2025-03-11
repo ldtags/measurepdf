@@ -63,6 +63,7 @@ class CoverPage(KeepTogether):
             width = stringWidth(text, caption_style.font_name, caption_style.font_size)
             max_width = max(max_width, width)
 
+        # build top content container (eTRM logo and caption)
         title_obj = Table(
             [
                 [Paragraph("California", style=caption_style)],
@@ -87,68 +88,60 @@ class CoverPage(KeepTogether):
         data = [[top_table]]
         top_height = max(img_obj.drawHeight, caption_style.leading * 4)
 
+        # Build middle content container (cover page title)
+        title_para = Paragraph(
+            "Technical Reference Manual for California Municipal Utilities"
+                " Association: 2025 First Edition",
+            style=PSTYLES["CoverTitle"].bold
+        )
+        _, mid_height = title_para.wrap(INNER_WIDTH, 0)
         data.append([
             Table(
-                [[
-                    Paragraph(
-                        (
-                            "Technical Reference Manual for California Municipal Utilities"
-                            " Association: 2025 First Edition"
-                        ),
-                        style=PSTYLES["CoverTitle"].bold
-                    )
-                ]],
+                [[title_para]],
                 style=TSTYLES["CoverMidContent"],
                 hAlign="RIGHT"
             )
         ])
-        mid_height = PSTYLES["CoverTitle"].bold.leading
 
-        max_width = (
-            stringWidth("Last Updated  ", PSTYLES["CoverPreDate"].font_name, PSTYLES["CoverPreDate"].font_size)
-            + stringWidth(__date__, PSTYLES["CoverDate"].font_name, PSTYLES["CoverDate"].font_size)
+        # Build bottom content container (version and last updated date)
+        version_container = VersionContainer()
+        cpd_style = PSTYLES["CoverPreDate"].italic
+        cd_style = PSTYLES["CoverDate"]
+        cpd_text = "Last Updated  "
+        cpd_width = stringWidth(cpd_text, cpd_style.font_name, cpd_style.font_size)
+        cd_width = stringWidth(__date__, cd_style.font_name, cd_style.font_size)
+        max_width = cpd_width + cd_width
+        date_table = Table(
+            [[Paragraph(cpd_text, style=cpd_style.italic), Paragraph(__date__, style=cd_style)]],
+            colWidths=(cpd_width, cd_width),
+            style=TSTYLES["CoverDateContent"],
+            hAlign="RIGHT"
         )
-        bot_content = Table(
-            [
-                [VersionContainer()],
-                [""],
-                [
-                    Table(
-                        [[
-                            Paragraph("Last Updated  ", style=PSTYLES["CoverPreDate"].italic),
-                            Paragraph(__date__, style=PSTYLES["CoverDate"])
-                        ]],
-                        colWidths=(
-                            stringWidth("Last Updated ", PSTYLES["CoverPreDate"].font_name, PSTYLES["CoverPreDate"].font_size),
-                            stringWidth(__date__, PSTYLES["CoverDate"].font_name, PSTYLES["CoverDate"].font_size)
-                        ),
-                        style=TSTYLES["CoverDateContent"],
-                        hAlign="RIGHT"
-                    )
-                ]
-            ],
+        bottom_content = Table(
+            [[version_container], [""], [date_table]],
             style=TSTYLES["CoverBottomContent"],
             colWidths=max_width,
-            rowHeights=[VersionContainer()._height, 8, PSTYLES["CoverPreDate"].leading],
+            rowHeights=[version_container._height, 8, PSTYLES["CoverPreDate"].leading],
             hAlign="RIGHT"
         )
-        data.append([bot_content])
-        bottom_height = math.fsum(bot_content._argH)
+        data.append([bottom_content])
+        bottom_height = math.fsum(bottom_content._argH)
+
+        # Build content container and apply vertical spacing
         rem_height = INNER_HEIGHT - top_height - mid_height - bottom_height
-        spacer_1_height = rem_height * (1 / 3)
-        spacer_2_height = rem_height * (2 / 3)
         data.insert(1, [""])
         data.insert(3, [""])
-        content = Table(
-            data,
-            style=TSTYLES["CoverContent"],
-            rowHeights=[
-                top_height,
-                spacer_1_height,
-                mid_height,
-                spacer_2_height,
-                bottom_height
-            ],
-            hAlign="RIGHT"
-        )
-        super().__init__([content])
+        super().__init__([
+            Table(
+                data,
+                style=TSTYLES["CoverContent"],
+                rowHeights=[
+                    top_height,
+                    rem_height * (1 / 3),
+                    mid_height,
+                    rem_height * (2 / 3),
+                    bottom_height
+                ],
+                hAlign="RIGHT"
+            )
+        ])
