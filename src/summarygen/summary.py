@@ -646,6 +646,20 @@ class MeasureSummary:
         return BasicTable(data)
 
     def _add_to_data_table(self, offer_table: ValueTable, desc_table: ValueTable) -> None:
+        headers: list[str] = [
+            "Offering ID",
+            "Offering Description",
+            "Existing Description",
+            "Standard Description"
+        ]
+
+        for api_name in offer_table.determinants:
+            name = self._cur_measure.get_full_determinant_name(api_name)
+            if name is None:
+                name = "Unknown"
+
+            headers.append(name)
+
         # assumes the following:
         #   - tables have the same amount of values
         #   - table rows are properly lined up
@@ -669,24 +683,19 @@ class MeasureSummary:
 
             data.append(data_row)
 
-        # filling out the empty portions in each row
-        for row in data:
-            for _ in range(len(DATA_TABLE_HEADERS) - len(row)):
-                row.append("")
-
         folder_path = os.path.join(TMP_DIR, DATA_TABLE_FOLDER_NAME)
         if not os.path.exists(folder_path):
             os.mkdir(folder_path)
 
         measure_id = self._cur_measure.full_version_id
         with open(os.path.join(folder_path, measure_id + ".csv"), "w+", newline="") as fp:
-            writer = csv.DictWriter(fp, fieldnames=DATA_TABLE_HEADERS)
+            writer = csv.DictWriter(fp, fieldnames=headers)
             writer.writeheader()
             for row in data:
                 writer.writerow({
                     key: val
                     for (key, val)
-                    in zip(DATA_TABLE_HEADERS, row)
+                    in zip(headers, row)
                 })
 
     def add_bc_mc_section(self) -> None:
@@ -1286,14 +1295,15 @@ class MeasureSummary:
                 if ext != ".csv":
                     continue
 
-                data: list[str] = []
+                headers: list[str] = []
+                data: list[list[str]] = []
                 with open(os.path.join(folder_path, file_name), "r", newline="") as fp:
                     reader = csv.reader(fp)
                     for i, row in enumerate(reader):
                         if i == 0:
-                            continue
-
-                        data.append(row)
+                            headers.extend(row)
+                        else:
+                            data.append(row)
 
                 ws = wb.add_worksheet(version_id)
                 measure = self.connection.get_measure(version_id)
@@ -1304,10 +1314,10 @@ class MeasureSummary:
                 ws.write_string(2, 0, "Measure Name:", align_right_fmt)
                 ws.write_string(2, 1, measure.name)
                 ws.add_table(
-                    *(3, 0, len(data) + 3, len(DATA_TABLE_HEADERS) - 1),
+                    *(3, 0, len(data) + 3, len(headers) - 1),
                     {
                         "columns": [
-                            {"header": header} for header in DATA_TABLE_HEADERS
+                            {"header": header} for header in headers
                         ],
                         "data": data
                     }
