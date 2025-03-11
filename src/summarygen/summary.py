@@ -1198,7 +1198,7 @@ class MeasureSummary:
             )
         )
 
-        file_name = "eTRM - Data Specification.xls"
+        file_name = "eTRM - Data Tables.xlsx"
         self.story.add(ExcelLink(file_name, file_name))
 
     def add_spreadsheets(self) -> None:
