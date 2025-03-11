@@ -463,6 +463,18 @@ def _gen_tstyles() -> StyleSheet[TableStyle]:
             ]
         )
     )
+    style_sheet.add(
+        TableStyle(
+            "PermutationsSummarySpreadsheet",
+            [
+                ("TOPPADDING", (0, 0), (-1, -1), 4),
+                ("BOTTOMPADDING", (0, 0), (-1, -1), 4),
+                ("LEFTPADDING", (0, 0), (-1, -1), 4),
+                ("RIGHTPADDING", (0, 0), (-1, -1), 4),
+                ("VALIGN", (0, 0), (0, -1), "CENTER")
+            ]
+        )
+    )
 
     return style_sheet
 

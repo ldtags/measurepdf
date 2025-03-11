@@ -15,6 +15,7 @@ __all__ = [
     "get_section_description",
     "get_introduction_html",
     "get_data_table_html",
+    "get_use_category_intro_html",
 ]
 
 
@@ -121,6 +122,10 @@ def get_introduction_html() -> str:
 
 def get_data_table_html() -> str:
     return get_html("data_table.html")
+
+
+def get_use_category_intro_html() -> str:
+    return get_html("uc_intro.html")
 
 
 def get_sunsetted_measures() -> SunsettedMeasuresSection:

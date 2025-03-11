@@ -1163,15 +1163,41 @@ class MeasureSummary:
             )
         )
 
+        _html = resources.get_use_category_intro_html()
+        self.story.add(*self.convert_html(_html, newline_height=DEFAULT_PARA_SPACING))
+        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
+        data: list[list] = []
+        style = DEF_PSTYLE
+        max_text_width = 0
         for use_category, _ in lookups.USE_CATEGORIES.items():
             file_name = f"SW{use_category}_Summary.xlsx"
-            self.story.add(ExcelLink(file_name, file_name))
-            self.story.add(Spacer(0.01, 8))
+            full_name = lookups.USE_CATEGORIES.get(use_category)
+            if full_name is None:
+                full_name = f"SW{use_category}"
+            else:
+                full_name += f" - SW{use_category}"
+
+            full_name += ":"
+            text_width = stringWidth(full_name, style.font_name, style.font_size)
+            max_text_width = max(max_text_width, text_width)
+            data.append([
+                Paragraph(full_name, style=style),
+                ExcelLink(file_name, file_name)
+            ])
+
+        style = TSTYLES["PermutationsSummarySpreadsheet"]
+        padx = style.left_padding + style.right_padding
+        self.story.add(Table(
+            data,
+            style=style,
+            hAlign="LEFT",
+            colWidths=[max_text_width + padx, INNER_WIDTH - max_text_width - padx]
+        ))
 
     def add_data_spec(self) -> None:
         self.story.add(
             Paragraph(
-                "eTRM Data Specification",
+                "Permutation Data Specification",
                 style=PSTYLES["h3"]
             )
         )
