@@ -11,7 +11,7 @@ from src import utils
 from src.etrm.models import Measure
 from src.resources import SunsettedMeasureCollection
 from src.summarygen.utils import get_flowable_height, get_flowable_width
-from src.summarygen.types import _TableOrient, _TableSpan
+from src.summarygen.types import _TableSpan
 from src.summarygen.styles import (
     ParagraphStyle,
     TableStyle,
@@ -68,9 +68,6 @@ class TableCell(Table):
     def width(self) -> float:
         return max([line.width for line in self.elements])
 
-    def get_min_width(self) -> float:
-        return max([line.width for line in self.elements])
-
     @property
     def row_heights(self) -> list[float]:
         return [elem.height for elem in self.elements]
@@ -92,7 +89,7 @@ class BasicTable(Table):
     def __init__(
         self,
         data: list[list[str | ElementLine | Flowable]],
-        headers: int = 1,
+        header_indexes: list[int] | None = None,
         measure: Measure | None = None,
         spans: list[_TableSpan] | None = None,
         header_styles: _TABLE_STYLES = PSTYLES["TableHeader"],
@@ -162,9 +159,17 @@ class BasicTable(Table):
             super().__init__(data, **kwargs)
             return
 
+        self.header_indexes = set(header_indexes or [0])
+
         # Validate input data
-        assert data != []
-        assert headers > -1
+        if data == []:
+            raise SummaryGenError("Table date must not be empty")
+
+        for index in self.header_indexes:
+            if index < 0:
+                raise SummaryGenError(
+                    f"Invalid header index: [{index}] must be a nonnegative integer"
+                )
 
         # Ensure that each cell in each row has an associated size
         row_len: float | None = None
@@ -176,7 +181,6 @@ class BasicTable(Table):
 
         assert row_len is not None
 
-        self.header_count = headers
         self.measure = measure
         self.max_width = max_width
         self.spans = spans or []
@@ -189,7 +193,7 @@ class BasicTable(Table):
         # Apply the table style
         self.style = table_style or get_table_style(
             data=data,
-            headers=headers,
+            header_indexes=self.header_indexes,
             determinants=row_len,
             spans=self.spans
         )
@@ -201,7 +205,7 @@ class BasicTable(Table):
         if isinstance(header_styles, ParagraphStyle):
             self.header_styles = [header_styles] * style_count
         else:
-            assert len(header_styles) == headers
+            assert len(header_styles) == len(self.header_indexes)
             self.header_styles = header_styles
 
         self._body_style_orient: Literal["row", "col"] | None = None
@@ -212,7 +216,7 @@ class BasicTable(Table):
         elif body_row_styles is not None:
             self._body_style_orient = "row"
             body_styles = body_row_styles
-            style_count = len(data) - headers
+            style_count = len(data) - len(self.header_indexes)
         else:
             body_styles = PSTYLES["TableDeterminant"]
 
@@ -248,7 +252,9 @@ class BasicTable(Table):
         self.table_cells = self._convert_data(self.data)
 
         # Pull headers from the table data
-        self.headers = self.table_cells[0:headers]
+        self.headers: list[list[Flowable | TableCell | str]] = []
+        for index in self.header_indexes:
+            self.headers.append(self.data[index])
 
         # Apply horizontal padding to column widths
         for i, val in enumerate(self.col_widths):
@@ -264,7 +270,7 @@ class BasicTable(Table):
             for y, row in enumerate(self.table_cells):
                 for x, item in enumerate(row):
                     if isinstance(item, TableCell):
-                        width = item.get_min_width()
+                        width = item.width
                     elif isinstance(item, Flowable):
                         width, _ = item.wrap(self.col_widths[x], self.row_heights[y])
                     else:
@@ -291,12 +297,13 @@ class BasicTable(Table):
         )
 
     def get_style(self, x: int, y: int) -> ParagraphStyle:
-        is_header = y < self.header_count
-        if is_header:
+        """Returns the `ParagraphStyle` that the element at (x, y) should have."""
+
+        if y in self.header_indexes:
             return self.header_styles[x]
 
         if self._body_style_orient == "row":
-            return self.body_styles[y - self.header_count]
+            return self.body_styles[y - len(self.header_indexes)]
 
         return self.body_styles[x]
 
@@ -304,6 +311,8 @@ class BasicTable(Table):
         self,
         data: list[list[str | ElementLine | Flowable]]
     ) -> list[list[ElementLine | Flowable]]:
+        """Converts any raw strings to element lines."""
+
         sanitized_data: list[list[ElementLine | Flowable]] = []
         for y, row in enumerate(data):
             sanitized_row: list[ElementLine | Flowable] = []
@@ -384,11 +393,14 @@ class BasicTable(Table):
         """
 
         size = 1
+        count = 0
         prev_widths = self._calc_min_widths(data, size)
         while math.fsum(prev_widths) <= self.max_width:
             col_widths = self._calc_min_widths(data, size=size + 1)
             if col_widths == prev_widths:
-                break
+                count += 1
+                if count == 3:
+                    break
 
             if math.fsum(col_widths) > self.max_width:
                 differences: list[tuple[int, float]] = []
@@ -479,6 +491,13 @@ class BasicTable(Table):
         self,
         data: list[list[ElementLine | Flowable]]
     ) -> list[list[list[ElementLine] | Flowable]]:
+        """Wraps table data to fit the defined column widths.
+
+        Prioritizes minimal text wrapping (i.e., a wider table with minimal
+        text wrapping is preferred over a slim table with maximal text
+        wrapping).
+        """
+
         h_padding = self.style.left_padding + self.style.right_padding
         cell_widths = [
             math.ceil(width - h_padding)
@@ -515,6 +534,14 @@ class BasicTable(Table):
         self,
         data: list[list[ElementLine | Flowable]]
     ) -> list[list[TableCell | Flowable | str]]:
+        """Converts `ElementLine` objects to `TableCell` objects and raw
+        strings.
+
+        Empty `ElementLine` objects will be converted into raw strings.
+
+        `Flowable` objects are left unchanged.
+        """
+
         frags = self._wrap_data(data)
         table_cells: list[list[TableCell | Flowable | str]] = []
         for y, frag_line in enumerate(frags):
@@ -555,8 +582,8 @@ class ValueTable(BasicTable):
     def __init__(
         self,
         data: list[list[ElementLine]],
+        header_indexes: list[int] | None = None,
         measure: Measure | None = None,
-        headers: int = 1,
         determinants: int = 0,
         spans: list[_TableSpan] | None = None,
         **kwargs
@@ -567,14 +594,14 @@ class ValueTable(BasicTable):
 
         style = get_table_style(
             data=data,
-            headers=headers,
+            header_indexes=header_indexes,
             determinants=determinants,
             spans=spans or []
         )
 
         super().__init__(
             data=data,
-            headers=headers,
+            header_indexes=header_indexes,
             measure=measure,
             spans=spans,
             table_style=style

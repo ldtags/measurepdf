@@ -616,34 +616,41 @@ def get_key_terminology_table_style(num_cols: int, col_size: int) -> TableStyle:
 
 def get_table_style(
     data: list[list],
-    headers: int = 1,
+    header_indexes: list[int] | set[int] | None = None,
     determinants: int = 0,
     spans: list[_TableSpan] = [],
     alternate_row_bg: bool = False,
 ) -> TableStyle:
     table_style = copy.deepcopy(TSTYLES["BasicTable"])
     cmds = table_style.getCommands()
+    header_indexes = header_indexes or [0]
+    if not isinstance(header_indexes, set):
+        header_indexes = set(header_indexes)
 
-    # apply determinant header styles
-    if determinants > 0:
-        cmds.append((
-            "BACKGROUND",
-            (0, 0),
-            (determinants - 1, headers - 1),
-            COLORS["TableHeaderLight"]
-        ))
+    for y in header_indexes:
+        # apply determinant header styles
+        if determinants > 0:
+            cmds.append((
+                "BACKGROUND",
+                (0, y),
+                (determinants - 1, y),
+                COLORS["TableHeaderLight"]
+            ))
 
-    # apply non-determinant header styles
-    if len(data) > 0 and len(data[0]) > determinants:
-        cmds.append((
-            "BACKGROUND",
-            (determinants, 0),
-            (-1, headers - 1),
-            COLORS["TableHeaderDark"]
-        ))
+        # apply non-determinant header styles
+        if len(data) > 0 and len(data[0]) > determinants:
+            cmds.append((
+                "BACKGROUND",
+                (determinants, y),
+                (-1, y),
+                COLORS["TableHeaderDark"]
+            ))
 
     # apply table body styles
-    for y in range(headers, len(data)):
+    for y in range(len(data)):
+        if y in header_indexes:
+            continue
+
         row = data[y]
         for x in range(0, len(row)):
             if determinants > 0:
