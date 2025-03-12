@@ -74,22 +74,6 @@ _T = TypeVar("_T")
 _conn: ETRMConnection | None = None
 
 DATA_TABLE_FOLDER_NAME = "data_tables"
-DATA_TABLE_HEADERS = [
-    "Offering ID",
-    "Offering Description",
-    "Existing Description",
-    "Standard Description",
-    "Specific 1",
-    "Specific 2",
-    "Specific 3",
-    "Specific 4",
-    "Specific 5",
-    "Specific 6",
-    "Specific 7",
-    "Specific 8",
-    "Specific 9",
-    "Specific 10"
-]
 
 
 def clean():
@@ -215,7 +199,8 @@ class SummaryDocTemplate(BaseDocTemplate):
             if "res" in sec_labels and blt_labels != {"mfmcmn"}:
                 res = True
 
-            if {"com", "ind", "ag"}.issubset(sec_labels):
+            nonres_labels = {"com", "ind", "ag"}
+            if sec_labels.intersection(nonres_labels) != set():
                 nonres = True
 
         self._prev_measure_id = version_id
