@@ -248,9 +248,9 @@ class TableOfContents(IndexingFlowable):
         col_widths = [
             avail_width * 0.03,
             avail_width * 0.19,
-            avail_width * 0.32,
-            avail_width * 0.23,
-            avail_width * 0.08,
+            avail_width * 0.35,
+            avail_width * 0.22,
+            avail_width * 0.06,
             avail_width * 0.05,
             avail_width * 0.05,
             avail_width * 0.05
