@@ -8,7 +8,7 @@ p_cache.json
 
 # security
 config.ini
-eTRM_API_Documentation.pdf
+tests/etrm/resources/*.json
 
 # pyinstaller
 build
@@ -16,6 +16,7 @@ dist
 .spec
 
 # logging
-*.log
+/logs
 
-tests/etrm/resources/*.json
+# building
+/src/tmp
