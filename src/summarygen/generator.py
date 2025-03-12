@@ -19,7 +19,6 @@ from src.summarygen import utils
 from src.summarygen.styles import (
     Alignment,
     get_table_style,
-    get_list_style,
     INNER_WIDTH,
     PSTYLES,
     TSTYLES,
@@ -207,7 +206,7 @@ class FlowableGenerator:
         data=[*headers, *rows]
         style = get_table_style(
             data=data,
-            headers=len(headers),
+            header_indexes=list(range(0, len(headers))),
             spans=section.spans
         )
         return Table(
