@@ -797,7 +797,7 @@ class Measure:
         except IndexError:
             raise ETRMResponseError()
 
-        self.characterizations = self.__get_characterizations()
+        # self.characterizations = self.__get_characterizations()
         self.value_table_cache: dict[str, ValueTable] = {}
 
     def __eq__(self, other) -> bool:

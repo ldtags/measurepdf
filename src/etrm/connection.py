@@ -285,14 +285,25 @@ class ETRMConnection:
         logger.info(f"Making request to {_url}")
         for i in range(4):
             try:
-                response = requests.get(
-                    _url,
-                    params=params,
-                    headers=req_headers,
-                    stream=stream,
-                    **kwargs
-                )
-                logger.info(f"Request complete: {response.status_code}")
+                while True:
+                    response = requests.get(
+                        _url,
+                        params=params,
+                        headers=req_headers,
+                        stream=stream,
+                        **kwargs
+                    )
+
+                    if response.status_code == 429:
+                        logger.info("Rate limited, sleeping for five minutes...")
+                        time.sleep(300)
+                        continue
+
+                    break
+
+                if response.status_code != 429:
+                    logger.info(f"Request complete: {response.status_code}")
+
                 break
             except httpc.IncompleteRead:
                 logger.info("Request failed")
