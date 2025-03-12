@@ -498,56 +498,6 @@ class MeasureSummary:
     def file_path(self) -> str:
         return os.path.join(self.dir_path, self.file_name)
 
-    def contains(self, measure: Measure) -> bool:
-        try:
-            existing_measures = self.measures[measure.use_category]
-            for existing_measure in existing_measures:
-                if measure.full_version_id == existing_measure.full_version_id:
-                    return True
-        except KeyError:
-            pass
-        return False
-
-    def is_last(self, measure: Measure) -> bool:
-        if len(self.measures) == 0:
-            return False
-
-        if not self.contains(measure):
-            return False
-
-        last_uc = sorted(self.measures.keys())[-1]
-        if measure.use_category != last_uc:
-            return False
-
-        measures = self.measures[last_uc]
-        if len(measures) == 0:
-            return False
-
-        if measures[-1].full_version_id != measure.full_version_id:
-            return False
-
-        return True
-
-    def is_first(self, measure: Measure) -> bool:
-        if len(self.measures) == 0:
-            return False
-
-        if not self.contains(measure):
-            return False
-
-        first_uc = sorted(self.measures.keys())[0]
-        if measure.use_category != first_uc:
-            return False
-
-        measures = self.measures[first_uc]
-        if len(measures) == 0:
-            return False
-
-        if measures[0].full_version_id != measure.full_version_id:
-            return False
-
-        return True
-
     def convert_html(
         self,
         html: str,
