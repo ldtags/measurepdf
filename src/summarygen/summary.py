@@ -4,6 +4,7 @@ import csv
 import math
 import shutil
 import logging
+import datetime as dt
 import xlsxwriter as xl
 from typing import TypeVar
 from reportlab.pdfgen.canvas import Canvas
@@ -182,13 +183,15 @@ class SummaryDocTemplate(BaseDocTemplate):
         else:
             measure = _conn.get_measure(version_id)
             measure_name = measure.name
-            start_date = measure.start_date.strftime(r"%Y-%m-%d")
+            start_date = measure.start_date
             if measure.end_date is None:
-                end_date = "Unknown"
+                end_date = dt.date(start_date.year + 3, start_date.month, start_date.day)
             else:
-                end_date = measure.end_date.strftime(r"%Y-%m-%d")
+                end_date = measure.end_date
 
-            active_life = f"{start_date} - {end_date}"
+            start_date_str = start_date.strftime(r"%Y-%m-%d")
+            end_date_str = end_date.strftime(r"%Y-%m-%d")
+            active_life = f"{start_date_str} - {end_date_str}"
             bldg_type = measure.get_shared_parameter("BldgType")
             blt_labels = set([label.lower() for label in bldg_type.active_labels])
             if "mfmcmn" in blt_labels:
@@ -670,6 +673,18 @@ class MeasureSummary:
                     in zip(headers, row)
                 })
 
+    def add_section_description(self, header: str, flowables: list[Flowable]) -> None:
+        header_para = Paragraph(header, style=PSTYLES["h4"])
+        spacer = Spacer(0.01, DEFAULT_PARA_SPACING)
+        if flowables != []:
+            kt_flowables = [header_para, spacer, flowables[0]]
+        else:
+            kt_flowables = [header_para, spacer]
+
+        self.story.add(KeepTogether(kt_flowables))
+        if len(flowables) > 1:
+            self.story.add(*flowables[1:])
+
     def add_bc_mc_section(self) -> None:
         measure_id = self._cur_measure.full_version_id
         desc_obj = resources.get_section_description(measure_id)
@@ -692,23 +707,20 @@ class MeasureSummary:
             overly_large = True
             self._add_to_data_table(offer_value_table, desc_value_table)
 
-        self.story.add(Paragraph("Offering ID", style=PSTYLES["h4"]))
-        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
-        self.story.add(*self.convert_html(desc_obj.offering_id))
+        self.add_section_description("Offering ID", self.convert_html(desc_obj.offering_id))
         if not overly_large:
             self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
             self.story.add(offer_table)
 
         self.story.add(NEWLINE)
 
-        self.story.add(Paragraph("Base Case Description", style=PSTYLES["h4"]))
-        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
-        self.story.add(*self.convert_html(desc_obj.base_case))
+        self.add_section_description(
+            "Base Case Description",
+            self.convert_html(desc_obj.base_case)
+        )
         if not overly_large:
             self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
             self.story.add(desc_table)
-
-        self.story.add(NEWLINE)
 
     def _get_shared_avg(
         self,
@@ -819,7 +831,7 @@ class MeasureSummary:
 
         table = self._build_parameters_table(params, nd_params)
         table_header = Paragraph("Applicable Parameters:", PSTYLES["h2"])
-        self.story.add(KeepTogether([table_header, table]), NEWLINE)
+        self.story.add(KeepTogether([table_header, table]))
 
     def add_impact_table(self):
         if self._cur_measure is None:
@@ -934,13 +946,62 @@ class MeasureSummary:
         ]
         table = BasicTable(data, spans=spans)
         header = Paragraph("Average Impact:", style=PSTYLES["h2"])
-        self.story.add(KeepTogether([header, table]), NEWLINE)
+        self.story.add(KeepTogether([header, table]))
 
     def add_streamlined_permutations(self) -> None:
         file_name = rf"SW{self._cur_measure.use_category.upper()}_Summary.xlsx"
-        self.story.add(Paragraph("Streamlined Permutations:", style=PSTYLES["h5"]))
-        self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
-        self.story.add(ExcelLink(file_name, file_name))
+        header = Paragraph("Streamlined Permutations:", style=PSTYLES["h5"])
+        spacer = Spacer(0.01, DEFAULT_PARA_SPACING)
+        link = ExcelLink(file_name, file_name)
+        self.story.add(KeepTogether([header, spacer, link]))
+
+    def add_other_table(self) -> None:
+        measure_id = self._cur_measure.full_version_id
+        section = resources.get_section_description(measure_id)
+        if section is None:
+            logger.warning(f"No section description exists for {measure_id}")
+            return
+
+        sections = [
+            section.program_exclusion,
+            section.quality_assurance,
+            section.important_notes
+        ]
+        section_flowables: list[Flowable] = []
+        for section_html in sections:
+            if section_html == "":
+                section_html = "..."
+
+            flowables = self.convert_html(
+                section_html,
+                newline_height=DEFAULT_PARA_SPACING,
+                max_width=INNER_WIDTH - 10
+            )
+            if len(flowables) == 1:
+                section_flowables.append(flowables[0])
+            else:
+                section_flowables.append(
+                    Table(
+                        [[flowable] for flowable in flowables],
+                        style=TSTYLES["Unstyled"],
+                        rowHeights=[get_flowable_height(flowable) for flowable in flowables],
+                        colWidths=max([get_flowable_width(flowable) for flowable in flowables])
+                    )
+                )
+
+        header = Paragraph("Other:", style=PSTYLES["h2"])
+        table = BasicTable(
+            [
+                ["Program Exclusions"],
+                [section_flowables[0]],
+                ["Quality Assurance: Design, Installation, Commissioning, and Operation"],
+                [section_flowables[1]],
+                ["Important Notes"],
+                [section_flowables[2]]
+            ],
+            header_indexes=[0, 2, 4]
+        )
+        self.story.add(KeepTogether([header, table]))
 
     def get_shared_key_terminology_table(self, item: KeyTerminology) -> list[list[str]]:
         if not item.requires_etrm_table():
@@ -972,8 +1033,7 @@ class MeasureSummary:
         be used to build a reportlab Table flowable.
 
         Raises:
-            - SummaryGenError
-                : `item` does not contain a static data table.
+            - SummaryGenError : `item` does not contain a static data table.
         """
 
         if item.data is None:
@@ -1234,9 +1294,14 @@ class MeasureSummary:
 
         self.add_title_page()
         self.add_bc_mc_section()
+        self.story.add(NEWLINE)
         self.add_parameters_table()
+        self.story.add(NEWLINE)
         self.add_impact_table()
+        self.story.add(NEWLINE)
         self.add_streamlined_permutations()
+        self.story.add(NEWLINE)
+        self.add_other_table()
 
         self._cur_measure = None
 
