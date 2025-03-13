@@ -384,6 +384,8 @@ def _gen_tstyles() -> StyleSheet[TableStyle]:
                 ("VALIGN", (0, 0), (-1, -1), "TOP"),
                 ("ALIGN", (1, 2), (3, -1), "LEFT"),
                 ("ALIGN", (4, 0), (4, -1), "RIGHT"),
+                ("ALIGN", (5, 0), (-1, 1), "CENTER"),
+                ("SPAN", (5, 0), (-1, 0)),
                 ("RIGHTPADDING", (0, 0), (-1, -1), 0),
                 ("LEFTPADDING", (0, 0), (-1, -1), 5),
                 ("LINEABOVE", (0, 0), (-4, 0), 1, COLORS["RevisionLogGridLine"])
@@ -510,8 +512,6 @@ def get_toc_style(
     for y in uc_row_indices:
         cmds.append(("BACKGROUND", (0, y), (-4, y), COLORS["UseCategoryRowBG"]))
         cmds.append(("SPAN", (0, y), (3, y)))
-        cmds.append(("SPAN", (5, y), (-1, y)))
-        cmds.append(("ALIGN", (5, y), (-1, y), "CENTER"))
 
     for y in generic_indices:
         cmds.append(("SPAN", (1, y), (-2, y)))

@@ -52,7 +52,8 @@ from src.summarygen.styles import (
     DEF_PSTYLE,
     DEFAULT_INDENT_SIZE,
     DEFAULT_PARA_SPACING,
-    get_key_terminology_table_style
+    get_key_terminology_table_style,
+    ParagraphStyle
 )
 from src.summarygen.parser import HTMLParser
 from src.summarygen.generator import FlowableGenerator
@@ -505,11 +506,13 @@ class MeasureSummary:
         self,
         html: str,
         newline_height: float = NL_HEIGHT,
-        max_width: float = INNER_WIDTH
+        max_width: float = INNER_WIDTH,
+        style: ParagraphStyle = DEF_PSTYLE
     ) -> list[Flowable]:
         sections = self.parser.parse(
             html,
             indent_size=DEFAULT_INDENT_SIZE * (2 / 3),
+            base_style=style,
             trim_newlines=True
         )
         return self.generator.generate(
@@ -707,7 +710,14 @@ class MeasureSummary:
             overly_large = True
             self._add_to_data_table(offer_value_table, desc_value_table)
 
-        self.add_section_description("Offering ID", self.convert_html(desc_obj.offering_id))
+        self.add_section_description(
+            "Offering ID",
+            self.convert_html(
+                desc_obj.offering_id,
+                newline_height=DEFAULT_PARA_SPACING,
+                style=PSTYLES["TableDeterminant"]
+            )
+        )
         if not overly_large:
             self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
             self.story.add(offer_table)
@@ -716,7 +726,11 @@ class MeasureSummary:
 
         self.add_section_description(
             "Base Case Description",
-            self.convert_html(desc_obj.base_case)
+            self.convert_html(
+                desc_obj.base_case,
+                newline_height=DEFAULT_PARA_SPACING,
+                style=PSTYLES["TableDeterminant"]
+            )
         )
         if not overly_large:
             self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
@@ -970,7 +984,7 @@ class MeasureSummary:
         section_flowables: list[Flowable] = []
         for section_html in sections:
             if section_html == "":
-                section_html = "..."
+                section_html = "None"
 
             flowables = self.convert_html(
                 section_html,
@@ -1182,13 +1196,13 @@ class MeasureSummary:
     def add_data_table(self) -> None:
         logger.info("Adding the data table...")
 
-        self.story.add(Paragraph("DATA TABLE", style=PSTYLES["h1"]))
+        self.story.add(Paragraph("DATA TABLES", style=PSTYLES["h1"]))
         _html = resources.get_data_table_html()
         self.story.add(*self.convert_html(_html, newline_height=DEFAULT_PARA_SPACING))
         self.story.add(Spacer(0.01, DEFAULT_PARA_SPACING))
         self.story.add(
             Paragraph(
-                "eTRM Data Specification",
+                "Data Tables",
                 style=PSTYLES["h3"]
             )
         )
