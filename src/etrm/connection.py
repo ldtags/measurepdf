@@ -240,15 +240,24 @@ class ETRMConnection:
     def __init__(
         self,
         auth_token: str,
+        alt_tokens: list[str] | None = None,
         stage: bool = False,
         use_persistent_cache: bool = False
     ) -> None:
         self.auth_token = sanitizers.sanitize_auth_token(auth_token)
+        self._base_token = self.auth_token
+        self.alt_tokens: list[str] = []
+        for alt_token in alt_tokens or []:
+            self.alt_tokens.append(sanitizers.sanitize_auth_token(alt_token))
+
         self.api = STAGE_API if stage else PROD_API
-        self.headers = {
-            "Authorization": auth_token
-        }
         self.cache = ETRMCache(use_persistent_cache=use_persistent_cache)
+
+    @property
+    def _headers(self) -> dict[str, str]:
+        return {
+            "Authorization": self.auth_token
+        }
 
     def extract_id(self, url: str) -> str | None:
         URL_RE = re.compile(f"{self.api}/measures/([a-zA-Z0-9]+)/")
@@ -277,32 +286,30 @@ class ETRMConnection:
         if not _endpoint.endswith("/"):
             _endpoint += "/"
 
-        req_headers: dict[str, str] = {**self.headers}
-        if headers != None:
-            req_headers |= headers
-
         _url = f"{self.api}{_endpoint}"
         logger.info(f"Making request to {_url}")
-        for i in range(4):
+        for i in range(len(self.alt_tokens) + 1):
+            req_headers: dict[str, str] = {**self._headers}
+            if headers != None:
+                req_headers |= headers
+
             try:
-                while True:
-                    response = requests.get(
-                        _url,
-                        params=params,
-                        headers=req_headers,
-                        stream=stream,
-                        **kwargs
-                    )
+                response = requests.get(
+                    _url,
+                    params=params,
+                    headers=req_headers,
+                    stream=stream,
+                    **kwargs
+                )
 
-                    if response.status_code == 429:
-                        logger.info("Rate limited, sleeping for five minutes...")
-                        time.sleep(300)
-                        continue
+                if response.status_code == 429:
+                    try:
+                        self.auth_token = self.alt_tokens[i]
+                    except IndexError:
+                        raise ETRMResponseError("No more alt tokens to use")
 
-                    break
-
-                if response.status_code != 429:
-                    logger.info(f"Request complete: {response.status_code}")
+                    logger.info("Rate limited, switching API token...")
+                    continue
 
                 break
             except httpc.IncompleteRead:
@@ -314,6 +321,8 @@ class ETRMConnection:
                 logger.info("Trying again...")
             except requests.exceptions.ConnectionError as err:
                 raise ConnectionError() from err
+            finally:
+                self.auth_token = self._base_token
 
         match response.status_code:
             case 200:

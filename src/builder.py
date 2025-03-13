@@ -80,7 +80,12 @@ class MeasureFilter:
 class Builder:
     def __init__(self, api_key: str | None = None):
         _api_key = api_key or resources.get_api_key(role="user")
-        self.connection = ETRMConnection(_api_key, use_persistent_cache=True)
+        _alt_key = resources.get_api_key(role="admin")
+        self.connection = ETRMConnection(
+            _api_key,
+            alt_tokens=[_alt_key],
+            use_persistent_cache=True
+        )
 
     def _get_measures(
         self,
