@@ -12,6 +12,17 @@ from src.summarygen.styles import (
 from src.summarygen.exceptions import ElementJoinError, WidthExceededError
 
 
+def escape(text: str) -> str:
+    return (
+        text
+            .replace("&", "&amp;")
+            .replace("<", "&lt;")
+            .replace(">", "&gt;")
+            .replace("\"", "&quot;")
+            .replace("\'", "&#39;")
+    )
+
+
 class ParagraphElement:
     """Defines an element of a paragraph defined by the HTML.
 
@@ -103,7 +114,7 @@ class ParagraphElement:
         return self.style.leading
 
     def _generate_xml(self) -> str:
-        xml = self.text
+        xml = escape(self.text)
         if TextStyle.Strong in self.text_styles:
             xml = f"<b>{xml}</b>"
 
