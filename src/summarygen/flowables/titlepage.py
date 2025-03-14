@@ -1,4 +1,5 @@
 import math
+import datetime as dt
 from typing import Literal
 from reportlab.lib.units import inch
 from reportlab.pdfgen.canvas import Canvas
@@ -291,8 +292,16 @@ class TitlePage(KeepTogether):
                                      measure.effective_start_date,
                                      side='right')
 
+        end_date = measure.end_date
+        if end_date is None:
+            end_date = dt.date(
+                measure.start_date.year + 3,
+                measure.start_date.month,
+                measure.start_date.day
+            )
+
         end_section = TitleSection('END DATE',
-                                   measure.sunset_date or '',
+                                   end_date.strftime(r"%Y-%m-%d"),
                                    side='right')
 
         return TitleSectionContainer([
