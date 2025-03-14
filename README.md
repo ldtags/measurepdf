@@ -1,6 +1,10 @@
 
 # Measure Summary Generator
 
+To update the section descriptions, generate a new section_descriptions.json file by using the section_builder script.
+To update the sunsetted measures, generate a new sunsetted_measures.json file by using the section_builder script.
+
+
 ## Specs
 
 Python 3.11.9
